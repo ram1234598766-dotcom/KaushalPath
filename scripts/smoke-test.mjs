@@ -66,6 +66,9 @@ assert.match(api, /error\.status = 400/, "malformed upload payloads should retur
 assert.match(api, /error\.status = 413/, "oversized file payloads should return a payload-too-large error");
 assert.match(api, /randomUUID/, "API requests should receive server-generated trace IDs");
 assert.match(api, /Retry-After/, "rate-limited requests should tell clients when to retry");
+assert.match(api, /function createPinnedLookup\(addresses\)/, "research should pin validated DNS answers to prevent DNS-rebinding SSRF");
+assert.match(api, /lookup: createPinnedLookup\(addresses\)/, "page fetches should use only the prevalidated DNS addresses");
+assert.match(api, /requestPublicPage\(url, addresses\)/, "research HTTP requests should use the pinned public-address transport");
 assert.match(api, /X-Request-Id/, "trace IDs should be returned as a response header");
 assert.match(api, /study request failed:", requestId/, "backend failure logs should include the trace ID");
 assert.match(api, /function assertSafeZipArchive\(buffer\)/, "Office archive uploads should be checked before decompression");
