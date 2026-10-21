@@ -496,7 +496,16 @@ main{min-height:70vh}
 @media(max-width:980px){.planner-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.planner-layout{grid-template-columns:1fr}}
 @media(max-width:620px){.overview-actions{justify-content:flex-start}.planner-date-chip{align-self:flex-start}.planner-form-grid{grid-template-columns:1fr}.planner-metric{padding:13px}.planner-metric strong{font-size:1.6rem}.planner-task{gap:8px;padding:11px}}
 
+
+/* Installable app affordance */
+.install-app-button{border:1px solid #d9ccef;background:#fff;color:#5b359b;cursor:pointer}
+.install-app-button:hover{background:#f4eeff;border-color:#bca6ec}
+
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#101c35">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KaushalPath">
 </head>
 <body>
 <div class="workspace-shell">
@@ -530,7 +539,7 @@ main{min-height:70vh}
   <div class="workspace-eyebrow"><span class="spark">✦</span> YOUR WORKSPACE</div>
   <div class="overview-row">
     <div><h2>Small steps. Real progress.</h2><p>Learn a concept, practise it, then use your results to decide what to revise next.</p></div>
-    <div class="actions overview-actions"><a class="btn btn-purple" href="#tests" data-view="tests">Explore practice sets <span>→</span></a><a class="btn btn-light" href="#planner" data-view="planner">Plan my week <span>↗</span></a></div>
+    <div class="actions overview-actions"><a class="btn btn-purple" href="#tests" data-view="tests">Explore practice sets <span>→</span></a><a class="btn btn-light" href="#planner" data-view="planner">Plan my week <span>↗</span></a><button class="btn btn-light install-app-button hidden" id="installApp" type="button">Install app</button></div>
   </div>
   <div class="workspace-meta"><span><i class="meta-dot"></i> Learning workspace</span><span class="meta-divider"></span><span>Local mode · Your results stay in this browser</span></div>
 </section>
