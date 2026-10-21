@@ -28,6 +28,7 @@ assert.equal(wrongMethod.headers.allow, undefined, "GET denial should not falsel
 const health = await call({ method: "GET", headers: { "x-kaushalpath-status": "1" } });
 assert.equal(health.statusCode, 200, "the status endpoint should remain usable for health probes");
 assert.equal(health.payload.ready, true);
+assert.match(health.headers["x-request-id"], /^[0-9a-f-]{36}$/i, "every API response should have a server-generated request ID");
 assert.deepEqual(health.payload.features, { liveSearch: true, readPublicUrls: true, imageAnalysis: true });
 assert.doesNotMatch(JSON.stringify(health.payload), /model|provider|qwen|kilo|inclusionai|webgpu/i, "health output must not reveal model/provider/runtime metadata");
 
@@ -37,6 +38,7 @@ assert.equal(methodNotAllowed.headers.allow, "GET, POST");
 
 const malformed = await call({ method: "POST", headers: {}, body: "{broken json" });
 assert.equal(malformed.statusCode, 400);
+assert.match(malformed.headers["x-request-id"], /^[0-9a-f-]{36}$/i, "validation errors should retain a trace ID header");
 assert.match(malformed.payload.error, /valid JSON/i);
 
 const tooLarge = await call({ method: "POST", headers: { "content-length": "4100001" }, body: {} });
@@ -168,6 +170,7 @@ try {
   });
   assert.equal(textRoundtrip.statusCode, 200);
   assert.equal(textRoundtrip.payload.text, "Mocked study answer with checked steps.");
+assert.equal(textRoundtrip.payload.requestId, textRoundtrip.headers["x-request-id"], "successful responses should return the same trace ID as the header");
   const textInput = mockedRequests[0].messages.at(-1).content;
   assert.match(textInput, /Uploaded file: lesson\.txt/, "text attachment metadata should reach the model input");
   assert.match(textInput, /Photosynthesis uses light energy/, "extracted text should reach the model input");
@@ -184,6 +187,7 @@ try {
   });
   assert.equal(imageRoundtrip.statusCode, 200);
   assert.equal(imageRoundtrip.payload.text, "Mocked study answer with checked steps.");
+assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request-id"], "image responses should return the same trace ID as the header");
   const imageParts = mockedRequests[1].messages.at(-1).content;
   assert.ok(Array.isArray(imageParts), "image questions should use multimodal input");
   assert.ok(imageParts.some((part) => part.type === "image_url"), "the uploaded image should reach the multimodal model input");
