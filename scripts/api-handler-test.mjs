@@ -1,22 +1,40 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import handler, { createPinnedLookup } from "../api/study-guide.mjs";
 import { zipSync, strToU8 } from "fflate";
 
-function makeResponse() {
+function makeResponse({ blockFirstWrite = false, disconnectOnFirstWrite = false } = {}) {
+  const events = new EventEmitter();
   return {
     statusCode: 200,
     headers: {},
     payload: undefined,
     ended: false,
+    writableEnded: false,
+    finished: false,
+    _blockFirstWrite: blockFirstWrite,
+    _disconnectOnFirstWrite: disconnectOnFirstWrite,
+    _hasWritten: false,
     setHeader(name, value) { this.headers[name.toLowerCase()] = value; return this; },
     status(code) { this.statusCode = code; return this; },
-    json(value) { this.payload = value; this.ended = true; return this; },
-    write(value) { this.writes = (this.writes || "") + value; return true; },
-    end() { this.ended = true; return this; }
+    json(value) { this.payload = value; this.ended = true; this.writableEnded = true; return this; },
+    write(value) {
+      this.writes = (this.writes || "") + (typeof value === "string" ? value : Buffer.from(value).toString("utf8"));
+      if (!this._hasWritten) {
+        this._hasWritten = true;
+        if (this._blockFirstWrite) { queueMicrotask(() => events.emit("drain")); return false; }
+        if (this._disconnectOnFirstWrite) queueMicrotask(() => events.emit("close"));
+      }
+      return true;
+    },
+    end() { this.ended = true; this.writableEnded = true; this.finished = true; return this; },
+    once: events.once.bind(events),
+    on: events.on.bind(events),
+    removeListener: events.removeListener.bind(events),
+    emit: events.emit.bind(events)
   };
 }
-async function call(request) {
-  const response = makeResponse();
+async function call(request, response = makeResponse()) {
   await handler(request, response);
   return response;
 }
@@ -161,6 +179,21 @@ globalThis.fetch = async (url, options = {}) => {
   const lastMessage = payload.messages.at(-1);
   const requestText = typeof lastMessage.content === "string" ? lastMessage.content : Array.isArray(lastMessage.content) ? lastMessage.content.filter((part) => part.type === "text").map((part) => part.text).join(" ") : "";
   if (requestText.includes("RATE_LIMIT_TEST")) return new Response(JSON.stringify({ error: { message: "rate limit reached" } }), { status: 429, headers: { "content-type": "application/json; charset=utf-8" } });
+  if (payload.stream) {
+    const encoder = new TextEncoder();
+    const disconnectTest = requestText.includes("DISCONNECT_TEST");
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"streamed study chunk"}}]}\n\n'));
+        if (!disconnectTest) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } else {
+          options.signal.addEventListener("abort", () => controller.error(new Error("upstream cancelled")), { once: true });
+        }
+      }
+    }), { status: 200, headers: { "content-type": "text/event-stream; charset=utf-8" } });
+  }
   return new Response(JSON.stringify({
     id: "mock-request",
     choices: [{ message: { content: "Mocked study answer with checked steps." } }]
@@ -215,6 +248,24 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.equal(rateLimitedResponse.payload.requestId, rateLimitedResponse.headers["x-request-id"], "rate-limit errors should include their trace ID");
   assert.match(rateLimitedResponse.payload.error, /temporarily busy/i, "rate-limit errors should remain student-friendly");
   assert.doesNotMatch(JSON.stringify(rateLimitedResponse.payload), /kilo|inclusionai|provider|model/i, "rate-limit responses must not leak provider configuration");
+
+  const streamedResponse = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Please explain streaming study output step by step", stream: true }
+  }, makeResponse({ blockFirstWrite: true }));
+  assert.equal(streamedResponse.statusCode, 200, "streaming study requests should open an event stream");
+  assert.match(streamedResponse.headers["content-type"], /text\/event-stream/i);
+  assert.match(streamedResponse.headers["cache-control"], /no-store/i, "private streamed answers must not be cached");
+  assert.match(streamedResponse.writes, /streamed study chunk/, "upstream streamed content should reach the client");
+  assert.equal(streamedResponse.ended, true, "the stream should close after the upstream completion event");
+  assert.equal(streamedResponse._hasWritten, true, "the stream test should exercise response backpressure");
+
+  const disconnectedResponse = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Please explain DISCONNECT_TEST while I review for exams", stream: true }
+  }, makeResponse({ disconnectOnFirstWrite: true }));
+  assert.equal(disconnectedResponse._hasWritten, true, "the disconnect scenario should start receiving stream data");
+  assert.equal(disconnectedResponse.ended, false, "a disconnected client should not trigger a second response write/end");
 
 } finally {
   globalThis.fetch = originalFetch;
