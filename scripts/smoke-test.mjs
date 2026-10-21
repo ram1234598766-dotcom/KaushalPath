@@ -29,6 +29,8 @@ assert.match(app, /prepareAttachmentFile/, "the UI should prepare supported atta
 assert.match(app, /attachmentPayload/, "prepared files should be sent with study and chat requests");
 assert.match(api, /extractAttachmentText/, "the backend should extract text from uploaded documents");
 assert.match(api, /new PDFParse/, "the backend should read PDFs");
+assert.match(api, /getScreenshot/, "scanned PDFs should render pages for visual analysis");
+assert.match(api, /hasVisualInput/, "scanned PDF page images should use the vision route");
 assert.match(api, /mammoth\.extractRawText/, "the backend should read Word documents");
 assert.match(api, /WordExtractor/, "the backend should read legacy Word documents");
 assert.match(api, /XLSX\.read/, "the backend should read spreadsheet attachments");
