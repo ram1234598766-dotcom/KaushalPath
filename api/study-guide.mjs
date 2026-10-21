@@ -261,17 +261,29 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
   const parsed = readDataUrl(fileData, MAX_FILE_CHARS);
   const buffer = parsed.buffer;
   let text = "";
+  let renderedImages = [];
   if (ext === "pdf") {
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();
       text = String(result?.text || "");
+      if (!text.trim()) {
+        const screenshots = await parser.getScreenshot({ first: 3, desiredWidth: 1100, imageDataUrl: false, imageBuffer: true });
+        renderedImages = await Promise.all((screenshots.pages || []).slice(0, 3).map(async (page) => {
+          const jpeg = await sharp(Buffer.from(page.data), { limitInputPixels: 24000000 })
+            .flatten({ background: "#ffffff" })
+            .jpeg({ quality: 76 })
+            .toBuffer();
+          return "data:image/jpeg;base64," + jpeg.toString("base64");
+        }));
+      }
     } finally {
       await parser.destroy().catch(() => {});
     }
-    if (!text.trim()) {
-      throw new Error("No selectable text was found in this PDF. If it is a scanned worksheet, upload its pages as images instead.");
+    if (!text.trim() && !renderedImages.length) {
+      throw new Error("This PDF could not be read. Try exporting it again or uploading a page as an image.");
     }
+    if (!text.trim()) text = "This appears to be a scanned PDF. The first " + renderedImages.length + " page(s) are attached as images for visual reading.";
   } else if (ext === "docx") {
     const result = await mammoth.extractRawText({ buffer });
     text = result.value || "";
@@ -306,7 +318,7 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
   }
   text = String(text || "").replace(/\u0000/g, "").trim();
   if (!text) throw new Error("No readable text could be extracted from this file. Try exporting it to PDF or plain text.");
-  return { name: safeName, type: String(fileType || parsed.mime).slice(0, 100), text: text.slice(0, MAX_EXTRACTED_FILE_CHARS), truncated: text.length > MAX_EXTRACTED_FILE_CHARS };
+  return { name: safeName, type: String(fileType || parsed.mime).slice(0, 100), text: text.slice(0, MAX_EXTRACTED_FILE_CHARS), truncated: text.length > MAX_EXTRACTED_FILE_CHARS, images: renderedImages };
 }
 function searchIntent(text) {
   return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text || ""));
@@ -387,7 +399,10 @@ export default async function handler(req, res) {
   } catch (error) {
     return send(res, { error: String(error.message || "The attached file could not be read.").slice(0, 420) }, 422);
   }
-  const requestedModel = imageData ? VISION_MODEL : MODEL;
+  const fileImages = Array.isArray(attachment.images) ? attachment.images.slice(0, 3) : [];
+  const hasVisualInput = Boolean(imageData || fileImages.length);
+  const visualInputs = imageData ? [imageData] : fileImages;
+  const requestedModel = hasVisualInput ? VISION_MODEL : MODEL;
   const query = String(body.searchQuery || body.userPrompt || prompt).trim().slice(0, 260);
   const shouldSearch = Boolean(body.webSearch) || searchIntent(query) || searchIntent(prompt);
   let web = { sources: [], context: "", searched: false, pagesRead: 0, searchError: "" };
@@ -409,18 +424,15 @@ export default async function handler(req, res) {
     "Research mode: " + (web.searched || web.pagesRead ? "retrieved public source material is included below; cite it as [1], [2], etc." : "no source material may be available; do not claim to have browsed."),
     urls.length ? "Requested reference URLs (retrieved page content is included only when successfully fetched):\n" + urls.join("\n") : "No reference URLs were supplied.",
     web.context ? "Retrieved public research:\n" + web.context : "",
-    imageData ? "The learner attached an image. Inspect the supplied image if the routed model supports vision; use only visible details and be transparent if it cannot be interpreted." : "",
+    hasVisualInput ? "The learner attached image content, either an image file or rendered PDF pages. Inspect the visible details carefully and do not invent unreadable text." : "",
     attachment.text ? "Uploaded file: " + attachment.name + " (" + (attachment.type || "document") + "). The text below was extracted by the server. Use it as the learner's source material; if extraction is incomplete, state that clearly.\n\n" + attachment.text + (attachment.truncated ? "\n\n[File text truncated to fit the study context.]" : "") : "",
     "Student request:\n" + prompt
   ].filter(Boolean);
   const input = inputParts.join("\n\n");
   const messages = [{ role: "system", content: SYSTEM_INSTRUCTIONS }, ...history];
-  const lastUser = imageData ? {
+  const lastUser = hasVisualInput ? {
     role: "user",
-    content: [
-      { type: "text", text: input },
-      { type: "image_url", image_url: { url: imageData, detail: "high" } }
-    ]
+    content: [{ type: "text", text: input }, ...visualInputs.map((url) => ({ type: "image_url", image_url: { url, detail: "high" } }))]
   } : { role: "user", content: input };
   messages.push(lastUser);
   const wantsStream = body.stream === true;
@@ -470,7 +482,7 @@ export default async function handler(req, res) {
     const status = Number(error?.status || error?.statusCode || error?.httpStatusCode || 0);
     const message = String(error?.message || "");
     console.error("KaushalPath study request failed:", status || "unknown", message.slice(0, 300));
-    if (imageData && (status === 400 || status === 404 || /image_url|vision|multimodal|image input|not support.*image/i.test(message))) {
+    if (hasVisualInput && (status === 400 || status === 404 || /image_url|vision|multimodal|image input|not support.*image/i.test(message))) {
       const notice = "The image could not be analyzed right now. Try a clearer, smaller image or try again later.";
       if (streamStarted) { try { res.write("data: " + JSON.stringify({ error: notice }) + "\n\n"); res.end(); } catch {} return; }
       return send(res, { error: notice, sources: web.sources }, 422);
