@@ -7,7 +7,7 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 ## Features
 - CBSE study workspace for Classes 10, 11 and 12, including subject and chapter prompts.
 - AI-generated notes, explanations, revision sheets, practice questions and step-by-step solutions.
-- Optional Google Search grounding and public URL context in the AI guide.
+- Kilo Auto Free inference through the OpenAI-compatible Kilo AI Gateway endpoint.
 - Seven compact original practice sets across CBSE foundation, JEE Main and NEET UG topics.
 - Timed tests, answer explanations, result history, CSV/JSON exports and browser print-to-PDF.
 - Official CBSE, NCERT and NTA resource links.
@@ -17,14 +17,19 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 
 The app is configured for Vercel with root-level static frontend files `index.html` and `app.js` and a serverless AI endpoint at `api/study-guide.mjs`. The browser uses the same-origin `/api/study-guide` route.
 
-1. Open [Vercel New Project](https://vercel.com/new) and import `ram1234598766-dotcom/KaushalPath` from GitHub.
+1. Import `ram1234598766-dotcom/KaushalPath` from GitHub into Vercel.
 2. Keep the project root at the repository root and select **Other** as the framework preset. The Vercel configuration explicitly packages `index.html` and `app.js` as static files and `api/study-guide.mjs` as a Node serverless function.
-3. In **Project Settings → Environment Variables**, add `GEMINI_API_KEY` with a key created in [Google AI Studio](https://aistudio.google.com/app/apikey). Enable it for Production and Preview as needed. Keep the key server-side; never put it in browser-side files or commit it to GitHub.
+3. No provider API key is required for the current free-model path. The server calls the Kilo AI Gateway with model `kilo-auto/free` at `https://ai-gateway.kilo.ai/api/v1/chat/completions`.
 4. Deploy the project, then open your production URL and visit the AI Study Guide.
-5. To check if the API key is configured, send a GET request to `/api/study-guide` with header `x-kaushalpath-status: 1`. This only checks setup; submit a real prompt to verify model access.
-6. The default model is `gemini-3.8-flash`. You may override it with `KAUSHALPATH_AI_MODEL` if you use another supported Gemini model.
+5. To check setup, send a GET request to `/api/study-guide` with header `x-kaushalpath-status: 1`. This checks route readiness only; submit a real prompt to verify inference.
 
-Vercel Hobby is free within its usage limits for personal/non-commercial projects. Gemini model access, free-tier quota and usage limits depend on Google's current policies and your API project. Free hosting does not mean unlimited AI usage.
+### Auto Free limitations and privacy
+
+Kilo Auto Free chooses from available free models dynamically, so the underlying model can change and rate limits may apply. In Kilo's documentation, anonymous free-model requests are rate-limited by IP. Auto Free may route prompts to providers that log prompts and outputs; **do not submit personal or confidential information**.
+
+This setup does not provide live web search or automatic webpage retrieval. Reference URLs are treated as pointers only; paste relevant page text into your prompt when you need it analyzed. Verify important current facts against official CBSE, NCERT, NTA and government sources.
+
+Free hosting does not mean unlimited AI usage. Availability and rate limits depend on Kilo's current policies.
 
 ## Local checks
 
@@ -37,11 +42,11 @@ node --check app.js
 node --check api/study-guide.mjs
 ```
 
-The smoke tests check the frontend, API route and deployment configuration. Local AI requests need a valid `GEMINI_API_KEY`; set it in your shell rather than committing it.
+The smoke tests check the frontend, API route and deployment configuration. The AI endpoint uses the public Kilo Auto Free route; no AI key is stored in source code or sent to the browser.
 
-## Accuracy, sources and limits
+## Accuracy and limits
 
-The AI tutor can make mistakes. Verify important formulas, syllabus changes and examination rules against official sources. Search and URL context work only when Gemini's API and selected model support these tools for your key. URL context cannot bypass sign-in walls, paywalls or blocked websites and is not a full website crawler.
+The AI tutor can make mistakes. Verify important formulas, syllabus changes and examination rules against official sources.
 
 Built-in questions are original practice samples, not a verified archive of authentic previous-year questions. Compact practice sets are not full official-length mock examinations. Test history is stored in local browser storage and does not sync between devices.
 
