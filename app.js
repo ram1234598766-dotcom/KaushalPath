@@ -44,11 +44,9 @@ const questions=[
 {q:"A lens has focal length +0.5 m. Its power is:",o:["+0.5 D","+2 D","−2 D","+5 D"],a:1,e:"Power P=1/f in metres =1/0.5=+2 dioptres."},
 {q:"The oxidation number of manganese in KMnO₄ is:",o:["+2","+4","+6","+7"],a:3,e:"K is +1 and four oxygens total −8, so Mn must be +7 for a neutral compound."},
 {q:"The principal role of decomposers in an ecosystem is to:",o:["Fix solar energy","Recycle nutrients from organic matter","Produce all oxygen","Stop food chains"],a:1,e:"Decomposers break down organic matter and return nutrients to ecosystems."}]}
-,{id:"cbse12cs26",title:"CBSE Class XII Computer Science · Official SQP Sampler 2026–27",exam:"CBSE",level:"Official SQP",duration:8,mark:1,negativeMark:0,official:true,sourceUrl:"https://cbseacademic.nic.in/web_material/SQP/ClassXII_2026_27/ComputerScience-SQP.pdf",schemeUrl:"https://cbseacademic.nic.in/web_material/SQP/ClassXII_2026_27/ComputerScience-MS.pdf",desc:"Four exact MCQs from CBSE's 2026–27 official sample paper. The full paper is 3 hours and 70 marks; this is only a 4-mark sampler.",qs:[
-{q:"Which of the following data types in Python is mutable?",o:["Tuple","String","Integer","List"],a:3,e:"The official marking scheme identifies List as the correct answer."},
-{q:"A column in one table matching a primary key of another table is called a:",o:["Composite key","Candidate key","Foreign key","Super key"],a:2,e:"A foreign key references a key in another table."},
-{q:"Consider the following Python code: t = (1, 2, 3); l = [4, 5]; print(t + l). What will happen when this code is executed?",o:["[1, 2, 3, 4, 5]","(1, 2, 3, 4, 5)","Error, because a tuple cannot be concatenated with a list","((1, 2, 3), [4, 5])"],a:2,e:"Python does not concatenate a tuple and a list directly; this raises a TypeError."},
-{q:"What is the data type of the result when the expression 5 // 2 is evaluated in Python?",o:["float","int","string","None"],a:1,e:"In Python 3, floor division of two integers returns an integer."}
+
+,{id:"cbse12cs26",title:"CBSE Class XII Computer Science · Official SQP Sampler 2026–27",exam:"CBSE",level:"Official SQP",duration:3,mark:1,negativeMark:0,official:true,sourceUrl:"https://cbseacademic.nic.in/web_material/SQP/ClassXII_2026_27/ComputerScience-SQP.pdf",schemeUrl:"https://cbseacademic.nic.in/web_material/SQP/ClassXII_2026_27/ComputerScience-MS.pdf",desc:"One exact 1-mark MCQ from CBSE's 2026–27 official sample paper. Open the full 3-hour, 70-mark paper and marking scheme for complete practice.",qs:[
+{q:"Which of the following data types in Python is mutable?",o:["Tuple","String","Integer","List"],a:3,e:"A Python list is mutable; tuples, strings, and integers are immutable."}
 ]}
 ];
 let active=null,tick=null,lastAnswerText="",studyAttachment=null,chatAttachment=null,lastChatAttachment=null;
