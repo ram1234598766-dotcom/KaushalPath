@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import handler from "../api/study-guide.mjs";
+import handler, { createPinnedLookup } from "../api/study-guide.mjs";
 import { zipSync, strToU8 } from "fflate";
 
 function makeResponse() {
@@ -20,6 +20,16 @@ async function call(request) {
   await handler(request, response);
   return response;
 }
+
+const safeLookup = createPinnedLookup([{ address: "93.184.216.34", family: 4 }]);
+const pinnedResult = await new Promise((resolve, reject) => safeLookup("rebound.example", { all: false, family: 0 }, (error, address, family) => error ? reject(error) : resolve({ address, family })));
+assert.deepEqual(pinnedResult, { address: "93.184.216.34", family: 4 }, "research connections should use the exact prevalidated IP, not a second DNS lookup");
+const pinnedAll = await new Promise((resolve, reject) => safeLookup("rebound.example", { all: true }, (error, addresses) => error ? reject(error) : resolve(addresses)));
+assert.deepEqual(pinnedAll, [{ address: "93.184.216.34", family: 4 }], "the pinned lookup should preserve the validated address list");
+assert.throws(() => createPinnedLookup([{ address: "127.0.0.1", family: 4 }]), /validated public IP/i, "private destinations must never enter a pinned research lookup");
+assert.throws(() => createPinnedLookup([{ address: "169.254.169.254", family: 4 }]), /validated public IP/i, "cloud metadata destinations must never enter a pinned research lookup");
+assert.throws(() => createPinnedLookup([{ address: "93.184.216.34", family: 4 }, { address: "10.0.0.5", family: 4 }]), /validated public IP/i, "one unsafe DNS answer must reject the entire address set");
+assert.throws(() => createPinnedLookup([{ address: "::ffff:127.0.0.1", family: 6 }]), /validated public IP/i, "IPv4-mapped loopback destinations must be rejected");
 
 const wrongMethod = await call({ method: "GET", headers: {} });
 assert.equal(wrongMethod.statusCode, 405, "status details must not be returned without the status header");
