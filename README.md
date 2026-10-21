@@ -1,36 +1,41 @@
 # KaushalPath
 
-**Learning support for CBSE Classes 10–12, AI topic explanations, and JEE Main / NEET UG practice.**
+**A learning hub for CBSE Classes 10–12, grounded AI tutoring, and JEE Main / NEET UG practice.**
 
-This repository is configured for Netlify auto-deploy from `main`. The production website source is in `public/`, and the AI study guide is a Netlify Function at `netlify/functions/study-guide.mjs`.
+KaushalPath deploys to Netlify from the `main` branch. The site is in `public/`; the server-side AI tutor is a Netlify Function at `netlify/functions/study-guide.mjs`.
 
-## Website features
-- Class 10, 11 and 12 study hub with a free-text subject option for languages, electives and vocational subjects.
-- AI-generated notes, topic explanations, revision sheets, original practice questions and step-by-step solving (requires Netlify AI Gateway).
-- Six original JEE Main / NEET UG demo challenge sets and one CBSE foundation set.
-- Timed practice, answer explanations, downloadable CSV/JSON results and print-to-PDF results.
-- Browser-local practice history and official source links.
+## What's included
+- Responsive study hub for Classes 10, 11 and 12.
+- Free-text subject support for languages, electives and vocational subjects.
+- AI notes, explanations, revision sheets, practice questions and step-by-step help.
+- Optional live Google Search grounding and URL Context to read up to five public website pages or PDFs per request.
+- Six original JEE Main / NEET UG challenge sets and one CBSE foundation set.
+- Timed tests, answer explanations, CSV/JSON result exports and browser print-to-PDF.
+- Official CBSE, NCERT and NTA resource links.
 
-## Deploy
-1. Connect this GitHub repository to a Netlify project and use `main` as the production branch.
-2. Netlify uses `netlify.toml`: publish directory `public`, function directory `netlify/functions`, Node 22.
-3. The site auto-deploys after pushes to the connected production branch. Review the Deploys tab for the live URL and build status.
-4. AI uses Netlify AI Gateway from a serverless function. AI is optional; tests and result downloads work without AI. Publish a production deploy and ensure AI Features are enabled before expecting AI responses.
+## Netlify deployment
+1. Connect `ram1234598766-dotcom/KaushalPath` to Netlify and set `main` as the production branch.
+2. Netlify reads `netlify.toml`: publish directory `public`, functions directory `netlify/functions`, Node.js 22.
+3. Pushes to `main` trigger production deployment when Git continuous deployment is connected.
+4. Enable Netlify AI Features for the team. Netlify AI Gateway injects Gemini credentials at function runtime; never put provider keys into browser code or commit them.
+5. The AI health check is `GET /api/study-guide` with header `x-kaushalpath-status: 1`. A health check alone does not prove live inference: submit a real question and review the response.
+6. The default model is `gemini-3.6-flash`, selected for a speed/capability balance. To change it, set `KAUSHALPATH_AI_MODEL` in Netlify site environment variables and redeploy. AI usage may consume credits.
 
 ## Local checks
-Use Node.js 22 or newer:
 ```powershell
 npm install
 npm test
 ```
-For a local static preview, serve the `public` directory with any static file server. The AI endpoint requires Netlify's runtime; use `netlify dev` after linking the site to test functions locally.
+Use Node.js 22+. The AI function relies on the Netlify runtime's injected AI Gateway variables and should be tested through `netlify dev` after a production deployment activates the gateway.
 
-## Official learning resources
+## Accuracy, web data and limits
+The tutor uses live Google Search grounding by default and can read up to five public HTTP(S) pages or PDFs when you paste their full URLs. It cannot bypass sign-in walls, paywalls, blocked websites, YouTube or unsupported content. It does not automatically crawl every linked page. Webpage text is treated as untrusted source content. Citations appear when the provider returns them.
+
+No AI system can promise perfect correctness. Verify important formulas, syllabus changes and exam rules against official materials. Built-in questions are original practice samples, not a verified archive of authentic PYQs. Compact practice sets are not full official-length mock examinations. Test history stays in local browser storage and does not sync between devices.
+
+## Official sources
 - [CBSE Curriculum 2026–27](https://cbseacademic.nic.in/curriculum_2027.html)
-- [NCERT Textbook Catalogue](https://ncert.nic.in/textbook.php)
-- [JEE Main Documents](https://jeemain.nta.nic.in/documents/)
-- [NEET UG Official Website](https://neet.nta.nic.in/)
-- [NTA Downloads](https://nta.ac.in/Downloads)
-
-## Accuracy and limitations
-The built-in questions are original practice material, **not genuine PYQs**. Use official NTA portals for genuine previous-year papers and answer keys. The small demo sets are not full official-length mock exams, and their marking rule is a practice preset rather than a statement of current exam rules. AI-generated content and live-source summaries can still be wrong; cross-check important information against prescribed textbooks and official notices. Notes are generated on demand rather than claiming that a verified note exists offline for every chapter.
+- [NCERT Textbooks](https://ncert.nic.in/textbook.php)
+- [JEE Main documents](https://jeemain.nta.nic.in/documents/)
+- [NEET UG official website](https://neet.nta.nic.in/)
+- [NTA downloads](https://nta.ac.in/Downloads)
