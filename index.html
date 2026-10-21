@@ -448,6 +448,54 @@ main{min-height:70vh}
 .chat-session-empty{padding:10px 3px;margin:0;color:var(--muted);font-size:.75rem;line-height:1.55}
 .chat-session-privacy{font-size:.69rem;line-height:1.5;color:var(--muted);margin:10px 0 3px}
 
+
+/* Simple, local-first study planner */
+.overview-actions{margin-top:0;flex-wrap:wrap;justify-content:flex-end}
+.planner-date-chip{flex:0 0 auto;padding:9px 13px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.8rem;font-weight:800;background:#fff}
+.planner-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.planner-metric{padding:16px}
+.planner-metric span,.planner-metric small{display:block;font-size:.76rem;color:var(--muted)}
+.planner-metric strong{display:block;margin:6px 0 3px;font-size:1.85rem;line-height:1.1;letter-spacing:-.045em;color:#432667;font-variant-numeric:tabular-nums}
+.planner-layout{display:grid;grid-template-columns:minmax(265px,.82fr) minmax(0,1.35fr);gap:16px;align-items:start}
+.planner-form,.planner-board{min-width:0}
+.planner-form h3,.planner-board h3{font-size:1.15rem;margin:8px 0}
+.planner-form>.tiny{margin:0 0 16px}
+.planner-form .field{margin:14px 0}
+.planner-form .field input,.planner-form .field select{width:100%;max-width:none}
+.planner-form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.planner-form-actions{margin-top:18px;flex-wrap:wrap}
+.planner-local-note{line-height:1.55;margin-top:13px!important}
+.planner-board-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.planner-board-head .btn{flex:0 0 auto;padding:8px 10px;font-size:.76rem}
+.planner-progress-summary{padding:16px 0 14px}
+.planner-progress-summary p{margin:0 0 9px;font-size:.79rem;font-weight:750;color:var(--muted)}
+.planner-progress-track{height:9px;border-radius:99px;background:#eee8f6;overflow:hidden}
+.planner-progress-track span{display:block;width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,#7e52d8,#b295f1);transition:width .25s ease}
+.planner-filterbar{display:flex;flex-wrap:wrap;gap:6px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.planner-filterbar button{padding:7px 10px;border:1px solid transparent;border-radius:999px;color:var(--muted);font-size:.76rem;font-weight:800;background:transparent;cursor:pointer}
+.planner-filterbar button:hover,.planner-filterbar button.active{background:#f0e8fc;border-color:#decef7;color:#5d35a0}
+.planner-task-list{display:flex;flex-direction:column;gap:9px;padding-top:12px}
+.planner-task{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-radius:13px;padding:13px;background:#fff}
+.planner-task.is-complete{background:#fbfafc}
+.planner-task-check{flex:0 0 23px;width:23px;height:23px;border:1.5px solid #cfc2df;border-radius:7px;background:#fff;color:#fff;font-weight:900;line-height:1;cursor:pointer}
+.planner-task.is-complete .planner-task-check{background:#7651b6;border-color:#7651b6}
+.planner-task-main{flex:1;min-width:0}
+.planner-task-title{display:block;font-size:.88rem;line-height:1.4;overflow-wrap:anywhere;color:var(--ink)}
+.planner-task.is-complete .planner-task-title{text-decoration:line-through;color:var(--muted)}
+.planner-task-meta{font-size:.74rem;color:var(--muted);margin:5px 0 8px;line-height:1.5}
+.planner-task-badges{display:flex;flex-wrap:wrap;gap:5px}
+.planner-badge{font-size:.65rem;font-weight:800;border-radius:999px;padding:4px 7px;background:#f5f1fa;color:#756384}
+.planner-priority-high{background:#fff0e9;color:#a04b24}
+.planner-priority-normal{background:#f1ebfb;color:#6d4a9c}
+.planner-priority-low{background:#edf7f0;color:#3d7854}
+.planner-overdue{background:#fff0f0;color:#a43e45}
+.planner-due-today{background:#fff8e6;color:#93651d}
+.planner-task-delete{flex:0 0 auto;padding:5px 7px;border:0;border-radius:7px;background:transparent;color:#897d95;font-size:.72rem;cursor:pointer}
+.planner-task-delete:hover{background:#fff0f0;color:#a43e45}
+.planner-empty{padding:25px 14px;border:1px dashed #ded3eb;border-radius:12px;background:#fcfaff;font-size:.83rem;line-height:1.6}
+@media(max-width:980px){.planner-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.planner-layout{grid-template-columns:1fr}}
+@media(max-width:620px){.overview-actions{justify-content:flex-start}.planner-date-chip{align-self:flex-start}.planner-form-grid{grid-template-columns:1fr}.planner-metric{padding:13px}.planner-metric strong{font-size:1.6rem}.planner-task{gap:8px;padding:11px}}
+
 </style>
 </head>
 <body>
@@ -461,6 +509,7 @@ main{min-height:70vh}
   <nav class="side-nav">
     <a href="#overview" class="side-link active" data-view="overview"><span class="side-symbol">◈</span><span>Overview</span></a>
     <a href="#learn" class="side-link" data-view="learn"><span class="side-symbol">▤</span><span>CBSE Study Hub</span><span class="side-pill">10–12</span></a>
+    <a href="#planner" class="side-link" data-view="planner"><span class="side-symbol">◷</span><span>Study Planner</span></a>
     <a href="#tests" class="side-link" data-view="tests" data-show-exam="JEE Main"><span class="side-symbol">∑</span><span>JEE Main Prep</span></a>
     <a href="#tests" class="side-link" data-view="tests" data-show-exam="NEET UG"><span class="side-symbol">✳</span><span>NEET UG Prep</span></a>
     <a href="#tests" class="side-link" data-view="tests" data-show-exam="all"><span class="side-symbol">◷</span><span>Test Series</span></a>
@@ -481,7 +530,7 @@ main{min-height:70vh}
   <div class="workspace-eyebrow"><span class="spark">✦</span> YOUR WORKSPACE</div>
   <div class="overview-row">
     <div><h2>Small steps. Real progress.</h2><p>Learn a concept, practise it, then use your results to decide what to revise next.</p></div>
-    <a class="btn btn-purple" href="#tests" data-view="tests">Explore practice sets <span>→</span></a>
+    <div class="actions overview-actions"><a class="btn btn-purple" href="#tests" data-view="tests">Explore practice sets <span>→</span></a><a class="btn btn-light" href="#planner" data-view="planner">Plan my week <span>↗</span></a></div>
   </div>
   <div class="workspace-meta"><span><i class="meta-dot"></i> Learning workspace</span><span class="meta-divider"></span><span>Local mode · Your results stay in this browser</span></div>
 </section>
@@ -518,6 +567,37 @@ main{min-height:70vh}
  <div class="library-toolbar"><div class="field"><label for="librarySearch">Search your saved answers</label><input id="librarySearch" type="search" maxlength="180" placeholder="Search topics, subjects or answer text…"></div><button class="btn btn-light" type="button" id="clearLibrary">Clear library</button></div>
  <div id="savedLibraryList" class="library-list"><div class="empty library-empty">Your library is empty. Save a useful answer from Study Hub or AI Study Guide to keep it here.</div></div>
  <section id="savedViewer" class="panel saved-viewer hidden" aria-label="Saved answer"><div class="saved-viewer-head"><div><div class="kicker">SAVED ANSWER</div><h3 id="savedViewerTitle">Saved answer</h3><p class="tiny" id="savedViewerMeta"></p></div><button class="btn btn-light" type="button" id="savedViewerClose">Close</button></div><div id="savedViewerContent" class="output md-render"></div><div class="actions"><button class="btn btn-light" type="button" id="savedViewerCopy">Copy text</button><button class="btn btn-light" type="button" id="savedViewerDownload">Download Markdown</button><button class="btn btn-light" type="button" id="savedViewerDelete">Delete answer</button></div></section>
+</section>
+<section class="section wrap view-hidden" id="planner">
+ <div class="section-head"><div><div class="kicker">YOUR WEEK, MADE PRACTICAL</div><h2>One clear next step at a time.</h2><p>Break revision into small tasks, pick a realistic time estimate, and track what you finish. Your plan stays in this browser and is included in your progress backup.</p></div><div class="planner-date-chip" id="plannerTodayLabel">Today</div></div>
+ <div class="planner-metrics">
+  <div class="panel planner-metric"><span>Open tasks</span><strong id="plannerOpenCount">0</strong><small>Still to do</small></div>
+  <div class="panel planner-metric"><span>Due now</span><strong id="plannerDueCount">0</strong><small>Overdue or due today</small></div>
+  <div class="panel planner-metric"><span>Planned time</span><strong id="plannerPlannedMinutes">0m</strong><small>For unfinished tasks</small></div>
+  <div class="panel planner-metric"><span>Completed</span><strong id="plannerCompletedCount">0</strong><small>Tasks you have finished</small></div>
+ </div>
+ <div class="planner-layout">
+  <form class="panel planner-form" id="plannerTaskForm">
+   <div class="kicker">ADD A STUDY TASK</div><h3>Make the next step clear.</h3><p class="tiny">Aim for a task you can actually finish, not a perfect timetable.</p>
+   <div class="field"><label for="plannerTaskTitle">What will you work on?</label><input type="text" id="plannerTaskTitle" maxlength="160" placeholder="e.g., revise quadratic equations" required></div>
+   <div class="planner-form-grid">
+    <div class="field"><label for="plannerTaskSubject">Subject</label><select id="plannerTaskSubject"><option>Mathematics</option><option>Science</option><option>Physics</option><option>Chemistry</option><option>Biology</option><option>Computer Science</option><option>English</option><option>Social Science</option><option>Other</option></select></div>
+    <div class="field"><label for="plannerTaskDate">Due date</label><input type="date" id="plannerTaskDate" required></div>
+   </div>
+   <div class="planner-form-grid">
+    <div class="field"><label for="plannerTaskMinutes">Time needed</label><select id="plannerTaskMinutes"><option value="15">15 minutes</option><option value="25" selected>25 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></div>
+    <div class="field"><label for="plannerTaskPriority">Priority</label><select id="plannerTaskPriority"><option value="normal" selected>Normal</option><option value="high">High</option><option value="low">Low</option></select></div>
+   </div>
+   <div class="actions planner-form-actions"><button type="submit" class="btn btn-purple">Add to my plan</button><button type="button" class="btn btn-light" id="plannerStartFocus">Start a focus block</button></div>
+   <p class="tiny planner-local-note">Tasks are stored locally on this device. Download a full progress backup to move them to another browser.</p>
+  </form>
+  <section class="panel planner-board" aria-label="Study plan tasks">
+   <div class="planner-board-head"><div><div class="kicker">YOUR PLAN</div><h3>Progress you can see.</h3></div><button type="button" class="btn btn-light" id="plannerClearTasks">Clear tasks</button></div>
+   <div class="planner-progress-summary"><p id="plannerProgressLabel">0 of 0 tasks complete · 0%</p><div class="planner-progress-track" role="progressbar" aria-label="Study plan completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="plannerProgressBar"></span></div></div>
+   <div class="planner-filterbar" role="group" aria-label="Filter study tasks"><button type="button" class="active" data-planner-filter="today" aria-pressed="true">Due now</button><button type="button" data-planner-filter="upcoming" aria-pressed="false">Upcoming</button><button type="button" data-planner-filter="done" aria-pressed="false">Completed</button><button type="button" data-planner-filter="all" aria-pressed="false">All tasks</button></div>
+   <div id="plannerTaskList" class="planner-task-list"><div class="empty planner-empty">No overdue or due-today tasks. Add a small next step or check Upcoming.</div></div>
+  </section>
+ </div>
 </section>
 <section class="section wrap" id="tests"><div class="section-head"><div><div class="kicker">02 / Exam practice</div><h2>Put your understanding to the test.</h2><p>Timed short sets with explanations, answer review and downloadable reports. Every set is labelled as original practice or as sourced from an official paper.</p></div></div><div class="callout"><strong>Exam accuracy:</strong> Short practice sets are not full-length mocks. Only the set explicitly labelled “Official SQP” contains questions taken from CBSE’s published sample paper. Use the official paper links below for complete papers and marking schemes.</div><p class="tiny"><a href="#official-papers">Browse official question papers, marking schemes and current exam patterns ↗</a></p><div id="resumeTestBanner" class="resume-banner hidden" role="region" aria-label="Unfinished test"><div><strong>Resume your saved test</strong><p id="resumeTestTitle"></p><p id="resumeTestDetail" class="tiny"></p></div><div class="actions"><button class="btn btn-purple" id="resumeSavedTest" type="button">Resume test</button><button class="btn btn-light" id="discardSavedTest" type="button">Discard attempt</button></div></div><div id="testGrid" class="test-grid"></div><div id="examWorkspace" class="panel hidden" style="margin-top:20px"></div><div id="resultWorkspace" class="panel hidden" style="margin-top:20px"></div>
 </section>
