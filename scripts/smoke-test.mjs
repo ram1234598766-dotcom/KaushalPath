@@ -10,6 +10,18 @@ const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url
 assert.match(html, /KaushalPath/, "site brand should be present");
 assert.match(html, /studyForm/, "study form should exist");
 assert.match(html, /sourceUrls/, "manual website URL input should exist");
+assert.match(html, /id="ai-guide"/, "AI guide should have a dedicated workspace");
+assert.match(html, /id="chatMessages"/, "horizontal AI conversation should exist");
+assert.match(html, /id="chatPdf"/, "AI answers should have a PDF print/export tool");
+assert.match(html, /id="topicSuggestions"/, "class-aware study topics should be available");
+assert.match(html, /@media print/, "print-ready PDF styles should exist");
+assert.match(app, /streamStudyRequest/, "study requests should support streaming output");
+assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
+assert.match(app, /activateWorkspaceView/, "workspace sections should change via menu navigation");
+assert.match(app, /chatSpeak/, "AI study tools should include read-aloud");
+assert.match(api, /stream: wantsStream/, "API should request streamed provider output when asked");
+assert.match(api, /body.messages/, "AI requests should preserve short chat context");
+
 assert.match(html, /src="\/app\.js" defer/, "JavaScript should be external for CSP");
 assert.doesNotMatch(html, /<script>[\s\S]*?<\/script>/i, "inline scripts should be removed");
 assert.match(app, /\/api\/study-guide/, "frontend must call the Vercel API path");
