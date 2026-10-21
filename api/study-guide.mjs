@@ -2,6 +2,7 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
 const MODEL = "kilo-auto/free";
+const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
 const GATEWAY_URL = "https://api.kilo.ai/api/gateway/chat/completions";
 const MAX_PROMPT_CHARS = 12000;
 const MAX_URLS = 5;
@@ -230,8 +231,8 @@ export default async function handler(req, res) {
     if (req.headers["x-kaushalpath-status"] !== "1") return send(res, { error: "Use POST to ask the study guide a question." }, 405);
     return send(res, {
       ready: true, model: MODEL, provider: "Kilo Auto Free",
-      features: { liveSearch: true, readPublicUrls: true, imageAnalysis: "provider-dependent", localModel: "browser WebGPU, automatically warmed" },
-      message: "The backend supports bounded public web search and public-page reading. Image understanding depends on the model selected by the free gateway route.",
+      features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true, visionModel: VISION_MODEL, localModel: "browser WebGPU, automatically warmed" },
+      message: "The backend supports bounded public web search, public-page reading, and a dedicated free vision-model route for image questions.",
       notice: "Avoid submitting personal or confidential information to a third-party free model."
     });
   }
@@ -257,6 +258,7 @@ export default async function handler(req, res) {
       return send(res, { error: "The image must be a compressed JPEG, PNG or WebP data image." }, 400);
     }
   }
+  const requestedModel = imageData ? VISION_MODEL : MODEL;
   const query = String(body.searchQuery || body.userPrompt || prompt).trim().slice(0, 260);
   const shouldSearch = Boolean(body.webSearch) || searchIntent(query) || searchIntent(prompt);
   let web = { sources: [], context: "", searched: false, pagesRead: 0, searchError: "" };
@@ -298,7 +300,7 @@ export default async function handler(req, res) {
     if (process.env.KILO_API_KEY) headers.Authorization = "Bearer " + process.env.KILO_API_KEY;
     const response = await fetch(GATEWAY_URL, {
       method: "POST", headers,
-      body: JSON.stringify({ model: MODEL, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream }),
+      body: JSON.stringify({ model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream }),
       signal: AbortSignal.timeout(42000)
     });
     if (!response.ok) {
@@ -313,7 +315,7 @@ export default async function handler(req, res) {
       try { fallbackPayload = await response.json(); } catch {}
       const fallbackText = responseText(fallbackPayload?.choices?.[0]?.message?.content);
       if (!fallbackText) return send(res, { error: "Kilo did not return a usable response. Please retry.", sources: web.sources }, 502);
-      return send(res, { text: fallbackText, sources: web.sources, model: MODEL, provider: "Kilo Auto Free", liveSources: web.sources.length > 0, mode });
+      return send(res, { text: fallbackText, sources: web.sources, model: requestedModel, provider: imageData ? "Kilo Free Vision" : "Kilo Auto Free", liveSources: web.sources.length > 0, mode });
     }
     if (wantsStream) {
       if (!response.body) return send(res, { error: "Kilo did not open a streaming response. Try again.", sources: web.sources }, 502);
@@ -333,13 +335,13 @@ export default async function handler(req, res) {
     try { payload = await response.json(); } catch { payload = {}; }
     const answer = responseText(payload?.choices?.[0]?.message?.content);
     if (!answer) return send(res, { error: "Kilo Auto Free returned no text. Try a narrower question.", sources: web.sources }, 502);
-    return send(res, { text: answer, sources: web.sources, model: MODEL, provider: "Kilo Auto Free", liveSources: web.sources.length > 0, mode, requestId: payload?.id || null });
+    return send(res, { text: answer, sources: web.sources, model: requestedModel, provider: imageData ? "Kilo Free Vision" : "Kilo Auto Free", liveSources: web.sources.length > 0, mode, requestId: payload?.id || null });
   } catch (error) {
     const status = Number(error?.status || error?.statusCode || error?.httpStatusCode || 0);
     const message = String(error?.message || "");
     console.error("KaushalPath Kilo Auto Free request failed:", status || "unknown", message.slice(0, 300));
     if (imageData && (status === 400 || status === 404 || /image_url|vision|multimodal|image input|not support.*image/i.test(message))) {
-      const notice = "The currently routed Kilo Auto Free model rejected image input. Text and web research still work; image understanding needs a vision-capable model configured in the Kilo backend.";
+      const notice = "The configured free vision model rejected this image request. Try a clearer, smaller image or set KILO_VISION_MODEL in Vercel to a currently available vision-capable Kilo model.";
       if (streamStarted) { try { res.write("data: " + JSON.stringify({ error: notice }) + "\n\n"); res.end(); } catch {} return; }
       return send(res, { error: notice, sources: web.sources }, 422);
     }
