@@ -170,6 +170,22 @@ export default async function handler(req, res) {
       throw error;
     }
 
+    if (wantsStream && !(response.headers.get("content-type") || "").includes("text/event-stream")) {
+      let fallbackPayload = {};
+      try { fallbackPayload = await response.json(); } catch {}
+      const fallbackText = responseText(fallbackPayload?.choices?.[0]?.message?.content);
+      if (!fallbackText) return send(res, { error: "Kilo did not return a usable response. Please retry." }, 502);
+      return send(res, {
+        text: fallbackText,
+        sources: [],
+        model: MODEL,
+        provider: "Kilo Auto Free",
+        liveSources: false,
+        mode,
+        notice: NOTICE
+      });
+    }
+
     if (wantsStream) {
       if (!response.body) return send(res, { error: "Kilo did not open a streaming response. Try again." }, 502);
       res.status(200);
