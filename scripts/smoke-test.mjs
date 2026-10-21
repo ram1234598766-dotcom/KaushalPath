@@ -61,7 +61,7 @@ assert.equal(existsSync(new URL("../public/app.js", import.meta.url)), false, "l
 assert.equal(existsSync(new URL("../netlify.toml", import.meta.url)), false, "Netlify config should be removed");
 assert.equal(existsSync(new URL("../netlify/functions/study-guide.mjs", import.meta.url)), false, "Netlify AI function should be removed");
 assert.match(api, /kilo-auto\/free/, "AI should use Kilo Auto Free");
-assert.match(api, /ai-gateway\.kilo\.ai/, "AI should use the Kilo Gateway");
+assert.match(api, /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "AI should use the documented Kilo Gateway chat endpoint");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
 console.log("KaushalPath Vercel root static assets, Kilo Auto Free API, and cleanup checks passed.");
