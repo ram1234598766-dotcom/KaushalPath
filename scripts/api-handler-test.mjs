@@ -65,6 +65,27 @@ const invalidUrlScheme = await call({
 assert.equal(invalidUrlScheme.statusCode, 400);
 assert.match(invalidUrlScheme.payload.error, /public HTTP or HTTPS/i);
 
+const malformedImageData = await call({
+  method: "POST",
+  headers: {},
+  body: { prompt: "Please explain the attached figure for my exam", imageData: "not-a-data-url" }
+});
+assert.equal(malformedImageData.statusCode, 400);
+assert.match(malformedImageData.payload.error, /supported format/i);
+
+const malformedFileData = await call({
+  method: "POST",
+  headers: {},
+  body: {
+    prompt: "Please explain this document for my exam",
+    fileName: "lesson.pdf",
+    fileType: "application/pdf",
+    fileData: "not-a-data-url"
+  }
+});
+assert.equal(malformedFileData.statusCode, 400);
+assert.match(malformedFileData.payload.error, /supported format/i);
+
 const fakeImageMime = await call({
   method: "POST",
   headers: {},
