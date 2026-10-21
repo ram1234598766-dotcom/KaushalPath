@@ -138,6 +138,19 @@ assert.match(html, /jeemain\.nta\.nic\.in\/2026\//, "the official catalogue shou
 assert.match(html, /neet\.nta\.nic\.in\/2026/, "the official catalogue should link the NEET UG 2026 NTA portal");
 assert.match(html, /180 compulsory MCQs in 180 minutes, for 720 total marks/, "NEET card should reflect the current official pattern");
 assert.match(html, /75 questions, 300 marks/, "JEE Main card should reflect the current Paper 1 pattern");
+assert.match(html, /id="resumeTestBanner"/, "unfinished timed tests should have a recovery banner");
+assert.match(html, /id="resumeSavedTest"/, "students should be able to resume an autosaved test");
+assert.match(app, /function saveActiveTest\(\)/, "test answers and remaining deadline should autosave locally");
+assert.match(app, /function getSavedTest\(\)/, "saved test recovery should validate stored quiz state");
+assert.match(app, /function initFocusTimer\(\)/, "focus timer should restore its state after a refresh");
+assert.match(html, /id="focusStartPause"/, "students should have a controllable focus timer");
+assert.match(app, /function refreshMomentum\(\)/, "progress cards should calculate test accuracy and study streaks");
+assert.match(html, /id="momentumAccuracy"/, "learning momentum should show calculated answer accuracy");
+assert.match(app, /function exportProgressBackup\(\)/, "progress should support full JSON backup export");
+assert.match(app, /payload\.version!==1/, "progress imports should validate backup schema versions");
+assert.match(app, /payload\.results\.some\(function\(r\)\{return !validResult\(r\);\}\)/, "progress imports should reject malformed result records");
+assert.match(app, /function readLocalJSON\(key,fallback\)/, "local storage parsing should fail safely when browser data is unavailable");
+assert.match(html, /id="clearProgress"/, "students should be able to clear saved progress intentionally");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 
