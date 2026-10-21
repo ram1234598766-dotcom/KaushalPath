@@ -364,6 +364,16 @@ main{min-height:70vh}
  .chat-typing>span[aria-hidden="true"]{animation:none}
  .chat-topic-button,.chat-welcome-prompts button,.chat-composer .btn{transition:none}
 }
+
+/* Study output reliability: keep retries discoverable and failure messages readable. */
+.study-error-message{padding:16px 17px;border:1px solid #f0d9cf;background:#fff9f6;border-radius:13px;color:#68443e;white-space:normal;overflow-wrap:anywhere}
+.study-error-message strong{display:block;color:#7f382d;margin-bottom:7px}
+.study-error-message p{margin:6px 0;font-size:.86rem;line-height:1.6}
+.study-output-notice{margin:12px 0 0;padding:9px 11px;border-radius:9px;background:#f8f3ff;border:1px solid #eadff7;color:#765d91;font-size:.8rem;line-height:1.5;white-space:normal}
+.study-retry-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.study-retry-row .btn{min-height:39px}
+@media(prefers-reduced-motion:reduce){.study-retry-row .btn{transition:none}}
+
 </style>
 </head>
 <body>

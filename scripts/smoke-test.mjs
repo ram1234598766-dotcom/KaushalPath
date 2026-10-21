@@ -33,6 +33,12 @@ assert.match(html, /\.chat-typing/, "streaming responses should have a visible t
 assert.match(html, /prefers-reduced-motion:reduce/, "chat animations should respect reduced-motion preferences");
 
 assert.match(api, /stream: wantsStream/, "API should request streamed provider output when asked");
+assert.match(api, /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "the AI API should use the current documented Kilo Gateway endpoint");
+assert.match(api, /temperature: 0\.2/, "the tutor should favour consistent, accurate answers");
+assert.match(api, /notes: 1250/, "chapter notes should use a bounded token budget to reduce latency");
+assert.match(app, /study-retry-row/, "failed study generations should offer a retry action");
+assert.match(app, /response was interrupted before it finished/, "partial study output should be preserved on failure");
+assert.match(app, /lastStudyController!==controller/, "stale study requests should not overwrite a newer response");
 assert.match(api, /body.messages/, "AI requests should preserve short chat context");
 
 assert.match(html, /src="\/app\.js" defer/, "JavaScript should be external for CSP");

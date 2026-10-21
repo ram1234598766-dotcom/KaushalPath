@@ -234,9 +234,36 @@ $("studyForm").addEventListener("submit",async function(ev){
   lastAnswerText=answer;
   const note=document.createElement("p");note.className="tiny";note.textContent="Generated with Kilo Auto Free. Check important details against your textbook."; $("studyOutput").appendChild(note);
  }catch(err){
-  if(err.name==="AbortError"){$("studyOutput").textContent="Response stopped.";}
-  else{$("studyOutput").textContent="The AI could not complete this request.\n\n"+err.message+"\n\nTry a single focused question, or use the topic suggestions to narrow it down.";}
- }finally{if(lastStudyController===controller)lastStudyController=null;btn.disabled=false;btn.textContent="Generate study help ↗";}
+  if(lastStudyController!==controller)return;
+  const output=$("studyOutput"),partial=String(lastAnswerText||"").trim();
+  output.innerHTML="";
+  if(err.name==="AbortError"){
+   if(partial){
+    renderMarkdownInto(output,lastAnswerText);
+    const note=document.createElement("p");note.className="study-output-notice";note.textContent="Generation stopped. The partial answer is preserved.";output.appendChild(note);
+   }else{
+    const stopped=document.createElement("p");stopped.className="study-output-notice";stopped.textContent="Response stopped.";output.appendChild(stopped);
+   }
+  }else{
+   if(partial){
+    renderMarkdownInto(output,lastAnswerText);
+    const note=document.createElement("p");note.className="study-output-notice";note.textContent="The response was interrupted before it finished. The partial answer is preserved; retry to complete it.";output.appendChild(note);
+    $("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;
+   }else{
+    const error=document.createElement("div");error.className="study-error-message";error.setAttribute("role","alert");
+    const title=document.createElement("strong");title.textContent="Couldn't finish this study request";
+    const detail=document.createElement("p");detail.textContent=err.message||"The free AI model is temporarily unavailable.";
+    const help=document.createElement("p");help.textContent="Your question and study settings are still saved. Retry, or switch to a shorter task such as Explain a specific topic.";
+    error.append(title,detail,help);output.appendChild(error);
+   }
+   const actions=document.createElement("div");actions.className="study-retry-row";
+   const retry=document.createElement("button");retry.type="button";retry.className="btn btn-light";retry.textContent="↻ Retry request";
+   retry.addEventListener("click",function(){if(!btn.disabled)$("studyForm").requestSubmit();});
+   actions.appendChild(retry);output.appendChild(actions);
+  }
+ }finally{
+  if(lastStudyController===controller){lastStudyController=null;btn.disabled=false;btn.textContent="Generate study help ↗";}
+ }
 });
 
 function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
