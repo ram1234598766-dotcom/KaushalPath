@@ -9,7 +9,9 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - AI-generated notes, explanations, revision sheets, practice questions and step-by-step solutions.
 - Kilo Auto Free inference through the OpenAI-compatible Kilo AI Gateway endpoint.
 - Seven compact original practice sets across CBSE foundation, JEE Main and NEET UG topics.
-- Timed tests, answer explanations, result history, CSV/JSON exports and browser print-to-PDF.
+- Timed tests with autosave and resume after refresh, answer explanations, result history, CSV exports and downloadable PDF/JSON reports.
+- A focus timer with persistent countdowns, completed-session tracking, accuracy summaries and active-day streaks.
+- Full progress backup and restore as validated JSON, plus intentional progress clearing.
 - Official CBSE, NCERT and NTA resource links.
 - Mobile-friendly layout and accessible controls.
 
