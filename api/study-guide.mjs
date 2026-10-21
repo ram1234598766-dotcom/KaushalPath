@@ -358,8 +358,19 @@ export default async function handler(req, res) {
   if (imageData) {
     if (imageData.length > MAX_IMAGE_CHARS) return send(res, { error: "The compressed image is too large. Choose a smaller image." }, 413);
     if (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(imageData)) {
-      return send(res, { error: "The image must be a compressed JPEG, PNG or WebP data image." }, 400);
+      return send(res, { error: "This image could not be prepared. Try a PNG, JPG, WebP, GIF or BMP image." }, 400);
     }
+  }
+  const fileData = body.fileData == null ? "" : String(body.fileData);
+  const fileText = body.fileText == null ? "" : String(body.fileText);
+  const fileName = cleanAttachmentName(body.fileName || "attachment");
+  const fileType = String(body.fileType || "").slice(0, 100);
+  if (imageData && (fileData || fileText)) return send(res, { error: "Attach one file at a time." }, 400);
+  let attachment = { name: "", type: "", text: "" };
+  try {
+    if (fileData || fileText) attachment = await extractAttachmentText(fileData, fileName, fileType, fileText);
+  } catch (error) {
+    return send(res, { error: String(error.message || "The attached file could not be read.").slice(0, 420) }, 422);
   }
   const requestedModel = imageData ? VISION_MODEL : MODEL;
   const query = String(body.searchQuery || body.userPrompt || prompt).trim().slice(0, 260);
@@ -384,6 +395,7 @@ export default async function handler(req, res) {
     urls.length ? "Requested reference URLs (retrieved page content is included only when successfully fetched):\n" + urls.join("\n") : "No reference URLs were supplied.",
     web.context ? "Retrieved public research:\n" + web.context : "",
     imageData ? "The learner attached an image. Inspect the supplied image if the routed model supports vision; use only visible details and be transparent if it cannot be interpreted." : "",
+    attachment.text ? "Uploaded file: " + attachment.name + " (" + (attachment.type || "document") + "). The text below was extracted by the server. Use it as the learner's source material; if extraction is incomplete, state that clearly.\n\n" + attachment.text + (attachment.truncated ? "\n\n[File text truncated to fit the study context.]" : "") : "",
     "Student request:\n" + prompt
   ].filter(Boolean);
   const input = inputParts.join("\n\n");
