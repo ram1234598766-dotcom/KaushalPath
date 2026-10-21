@@ -273,13 +273,8 @@ $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$
 $("chatSubject").addEventListener("change",updateChatTopics);
 $("chapter").addEventListener("input",updateHubTopics);$("chapter").addEventListener("change",updateHubTopics);
 async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
- const local=window.KaushalPathLocalAI;
  const remoteTools=needsRemoteTools(payload);
- if(remoteTools&&onStatus)onStatus(payload&&payload.imageData?"Preparing image analysis…": "Searching the web and reading available source pages…");
- if(local&&local.isActive()&&!remoteTools){
-  if(onStatus)onStatus("Using on-device Qwen model · your prompt stays on this device");
-  return local.generate(payload,onText,signal,onStatus);
- }
+ if(remoteTools&&onStatus)onStatus(payload&&payload.imageData?"Preparing your image…": "Checking relevant public sources…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"text/event-stream, application/json"},body:JSON.stringify(Object.assign({},payload,{stream:true})),signal:signal});
  const contentType=response.headers.get("content-type")||"";
  if(!response.ok){const errorData=await response.json().catch(function(){return{};});throw new Error(errorData.error||"The AI guide is currently unavailable (HTTP "+response.status+").");}
@@ -300,10 +295,10 @@ async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
   const clean=String(line||"").trim();if(!clean.startsWith("data:"))return;
   const raw=clean.slice(5).trim();if(!raw||raw==="[DONE]")return;
   let event;try{event=JSON.parse(raw);}catch(e){return;}
-  if(event.error){streamError=new Error(typeof event.error==="string"?event.error:(event.error.message||"The AI provider stopped the response."));return;}
+  if(event.error){streamError=new Error(typeof event.error==="string"?event.error:(event.error.message||"The study assistant stopped responding. Please try again."));return;}
   if(onSources&&Array.isArray(event.sources))onSources(event.sources);
   const choice=event.choices&&event.choices[0];
-  if(choice&&choice.finish_reason==="error"){streamError=new Error("The AI provider stopped before returning an answer. Try again or use on-device AI.");return;}
+  if(choice&&choice.finish_reason==="error"){streamError=new Error("The study assistant stopped before returning an answer. Please try again.");return;}
   const delta=choice&&choice.delta,values=[delta&&delta.content,choice&&choice.message&&choice.message.content,choice&&choice.text,event.text,event.output_text,event.response&&event.response.output_text];
   let text="";for(let i=0;i<values.length;i++){text=contentText(values[i]);if(text)break;}
   if(text){answer+=text;onText(text);}
@@ -319,13 +314,13 @@ async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
 }
 async function retryCloudWithoutStream(payload,onText,signal,onStatus,onSources){
  if(signal&&signal.aborted)throw new DOMException("Request aborted","AbortError");
- if(onStatus)onStatus("The stream contained no answer · trying a standard completion…");
+ if(onStatus)onStatus("Trying an alternate response format…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(Object.assign({},payload,{stream:false})),signal:signal});
  const data=await response.json().catch(function(){return{};});if(onSources&&Array.isArray(data.sources))onSources(data.sources);
  if(!response.ok)throw new Error(data.error||"The AI service is temporarily unavailable (HTTP "+response.status+").");
  let answer=typeof data.text==="string"?data.text:"";
  if(!answer.trim()){const choice=data.choices&&data.choices[0],content=choice&&choice.message&&choice.message.content;if(typeof content==="string")answer=content;else if(Array.isArray(content))answer=content.map(function(part){return part&&typeof part.text==="string"?part.text:"";}).join("");}
- if(!answer.trim())throw new Error("Kilo returned no usable text in streaming or standard mode. Load on-device AI or retry later.");
+ if(!answer.trim())throw new Error("The study assistant did not return an answer. Please retry.");
  onText(answer);return answer;
 }
 function makePrompt(level,subject,chapter,mode,topic){
@@ -353,7 +348,7 @@ $("studyForm").addEventListener("submit",async function(ev){
  if(lastStudyController)lastStudyController.abort();
  lastStudyController=new AbortController();
  const controller=lastStudyController,btn=$("askBtn");btn.disabled=true;btn.textContent="Connecting…";
- $("sourceList").innerHTML="";$("studyOutput").textContent="Connecting to Kilo Auto Free…";lastAnswerText="";
+ $("sourceList").innerHTML="";$("studyOutput").textContent="Preparing your study help…";lastAnswerText="";
  $("copyAnswer").disabled=true;if($("saveStudyPdf"))$("saveStudyPdf").disabled=true;
  try{
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
@@ -361,10 +356,8 @@ $("studyForm").addEventListener("submit",async function(ev){
   const prompt=makePrompt(level,subject,chapter,mode,topic);
   const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode,imageData:studyImageData,searchQuery:topic,userPrompt:topic},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){if($("localAiStatus"))$("localAiStatus").textContent=status;btn.textContent=String(status).includes("standard completion")?"Retrying…":String(status).includes("on-device")||String(status).includes("locally")?"Generating locally…":String(status).includes("Searching")?"Researching…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
   lastAnswerText=answer;
-  const local=window.KaushalPathLocalAI,usingLocal=Boolean(local&&local.isActive());
-  const note=document.createElement("p");note.className="tiny";note.textContent=(usingLocal?"Generated on-device with Qwen. Your study prompt stayed on this device. ":"Generated with Kilo Auto Free. ")+"Check important details against your textbook.";
+  const note=document.createElement("p");note.className="tiny";note.textContent="Check important details against your prescribed textbook or official syllabus.";
   $("studyOutput").appendChild(note);
-  if($("localAiStatus"))$("localAiStatus").textContent=usingLocal?"Local AI is active · questions run on this device.":"Kilo Auto Free response completed.";
  }catch(err){
   if(lastStudyController!==controller)return;
   const output=$("studyOutput"),partial=String(lastAnswerText||"").trim();
@@ -384,7 +377,7 @@ $("studyForm").addEventListener("submit",async function(ev){
    }else{
     const error=document.createElement("div");error.className="study-error-message";error.setAttribute("role","alert");
     const title=document.createElement("strong");title.textContent="Couldn't finish this study request";
-    const detail=document.createElement("p");detail.textContent=err.message||"The free AI model is temporarily unavailable.";
+    const detail=document.createElement("p");detail.textContent=err.message||"The study assistant is temporarily unavailable.";
     const help=document.createElement("p");help.textContent="Your question and study settings are still saved. Retry, or switch to a shorter task such as Explain a specific topic.";
     error.append(title,detail,help);output.appendChild(error);
    }
@@ -392,50 +385,12 @@ $("studyForm").addEventListener("submit",async function(ev){
    const retry=document.createElement("button");retry.type="button";retry.className="btn btn-light";retry.textContent="↻ Retry request";
    retry.addEventListener("click",function(){if(!btn.disabled)$("studyForm").requestSubmit();});
    actions.appendChild(retry);
-   const local=window.KaushalPathLocalAI;
-   if(local&&local.isActive()){
-    const cloudRetry=document.createElement("button");cloudRetry.type="button";cloudRetry.className="btn btn-light";cloudRetry.textContent="Switch to Kilo and retry";
-    cloudRetry.addEventListener("click",function(){local.disable();updateLocalAiControls();if(!btn.disabled)$("studyForm").requestSubmit();});actions.appendChild(cloudRetry);
-   }else if(local&&local.isSupported()){
-    const localRetry=document.createElement("button");localRetry.type="button";localRetry.className="btn btn-light";localRetry.textContent="Load local AI and retry";
-    localRetry.addEventListener("click",function(){enableLocalAiAndRetry(true);});actions.appendChild(localRetry);
-   }
    output.appendChild(actions);
   }
  }finally{
   if(lastStudyController===controller){lastStudyController=null;btn.disabled=false;btn.textContent="Generate study help ↗";}
  }
 });
-
-function updateLocalAiControls(){
- const ai=window.KaushalPathLocalAI,status=$("localAiStatus"),enable=$("localAiEnable"),disable=$("localAiDisable");
- if(!ai||!status||!enable||!disable)return;
- const supported=ai.isSupported();
- if(ai.isActive()){status.textContent="Local AI is active · ordinary study prompts run on this device.";enable.hidden=true;disable.hidden=false;enable.disabled=false;}
- else if(ai.isLoading()){status.textContent=ai.getStatus?ai.getStatus():"Automatically preparing the local model…";enable.hidden=false;enable.disabled=true;enable.textContent="Preparing automatically…";disable.hidden=true;}
- else if(supported){status.textContent=ai.getStatus?ai.getStatus():"Local Qwen setup starts automatically on supported browsers.";enable.hidden=false;enable.disabled=false;enable.textContent="Retry local setup";disable.hidden=true;}
- else{status.textContent=ai.getStatus?ai.getStatus():"Local AI needs a WebGPU-capable browser. Cloud AI remains available.";enable.hidden=true;disable.hidden=true;}
-}
-window.addEventListener("kaushalpath:local-ai-progress",function(event){
- const detail=event.detail||{},status=$("localAiStatus");if(status)status.textContent=String(detail.text||"Preparing local AI…")+(typeof detail.progress==="number"?" · "+Math.round(detail.progress*100)+"%":"");
- if(detail.ready||(!detail.loading&&!detail.active))updateLocalAiControls();
-});
-async function enableLocalAiAndRetry(retryStudy){
- const ai=window.KaushalPathLocalAI,status=$("localAiStatus"),enable=$("localAiEnable");
- if(!ai||!ai.isSupported()){if(status)status.textContent="Local AI needs a secure WebGPU-capable browser. Use Kilo Auto Free instead.";toast("This browser or GPU does not support local AI.");return false;}
- if(enable){enable.disabled=true;enable.textContent="Preparing model…";}
- if(status)status.textContent="Loading the local model. The initial setup downloads model files; keep this tab open.";
- try{
-  await ai.load(function(progress){if(status)status.textContent=(progress.text||"Preparing local model…")+(progress.progress!==null&&progress.progress!==undefined?" · "+Math.round(progress.progress*100)+"%":"");});
-  updateLocalAiControls();toast("Local AI is ready. Study prompts now run on this device.");
-  if(retryStudy)$("studyForm").requestSubmit();
-  return true;
- }catch(error){if(status)status.textContent="Local model setup failed: "+(error.message||"unknown error")+" You can still try Kilo Auto Free.";toast("Local model could not load. Check WebGPU support and connection.");return false;}
- finally{if(enable){enable.disabled=false;enable.textContent="Load local AI";}updateLocalAiControls();}
-}
-if($("localAiEnable"))$("localAiEnable").addEventListener("click",function(){enableLocalAiAndRetry(false);});
-if($("localAiDisable"))$("localAiDisable").addEventListener("click",function(){const ai=window.KaushalPathLocalAI;if(ai)ai.disable();updateLocalAiControls();toast("Switched to Kilo Auto Free.");});
-updateLocalAiControls();
 
 function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function mathToHtml(raw){
@@ -545,12 +500,12 @@ async function sendChat(raw,regenerate){
   }
   messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
-  $("chatStatus").textContent=window.KaushalPathLocalAI&&window.KaushalPathLocalAI.isActive()&&!needsRemoteTools({imageData:imageForRequest,webSearch:webSearch,userPrompt:question})?"Answer ready · on-device Qwen":(needsRemoteTools({imageData:imageForRequest,webSearch:webSearch,userPrompt:question})?"Answer ready · web tools + cloud AI":"Answer ready · Kilo Auto Free");
+  $("chatStatus").textContent=needsRemoteTools({imageData:imageForRequest,webSearch:webSearch,userPrompt:question})?"Answer ready · sources checked":"Answer ready";
   enableChatTools(Boolean(answer));
  }catch(err){
   messageBox.classList.remove("is-pending");
   if(err.name==="AbortError"){$("chatStatus").textContent="Response stopped";if(waiting)node.textContent="Response stopped.";}
-  else{$("chatStatus").textContent="Unable to complete";node.textContent="The AI request could not finish.\n\n"+err.message+"\n\nTry a shorter question. Auto Free availability can vary, so you can retry without losing your earlier messages.";node.classList.add("chat-message-error");}
+  else{$("chatStatus").textContent="Unable to complete";node.textContent="The study assistant could not finish this response.\n\n"+err.message+"\n\nTry a shorter question or retry. Your earlier messages are saved.";node.classList.add("chat-message-error");}
   enableChatTools(Boolean(lastChatAnswer));
  }finally{
   if(activeChatController===controller)activeChatController=null;
