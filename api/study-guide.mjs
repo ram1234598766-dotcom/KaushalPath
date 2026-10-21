@@ -17,6 +17,9 @@ const MAX_IMAGE_CHARS = 3500000;
 const MAX_FILE_CHARS = 3600000;
 const MAX_TEXT_FILE_CHARS = 150000;
 const MAX_EXTRACTED_FILE_CHARS = 48000;
+const MAX_ARCHIVE_ENTRIES = 3000;
+const MAX_ARCHIVE_ENTRY_BYTES = 12 * 1024 * 1024;
+const MAX_ARCHIVE_TOTAL_BYTES = 32 * 1024 * 1024;
 const SUPPORTED_FILE_EXTENSIONS = new Set([
   "pdf", "txt", "md", "csv", "tsv", "json", "xml", "html", "htm", "rtf",
   "doc", "docx", "pptx", "xlsx", "xls", "ods", "odt"
@@ -238,6 +241,50 @@ function readDataUrl(data, maxChars) {
   if (!match) throw new Error("This file could not be uploaded in a supported format.");
   return { mime: match[1].toLowerCase(), buffer: Buffer.from(match[2].replace(/\s/g, ""), "base64") };
 }
+function assertSafeZipArchive(buffer) {
+  // Office documents are ZIP containers. Inspect their central directory before
+  // a parser can allocate large amounts of expanded data.
+  if (!Buffer.isBuffer(buffer) || buffer.length < 22) throw new Error("This Office document is not a valid ZIP archive.");
+  const minimum = Math.max(0, buffer.length - 22 - 0xffff);
+  let endOffset = -1;
+  for (let i = buffer.length - 22; i >= minimum; i--) {
+    if (buffer.readUInt32LE(i) !== 0x06054b50) continue;
+    const commentLength = buffer.readUInt16LE(i + 20);
+    if (i + 22 + commentLength === buffer.length) { endOffset = i; break; }
+  }
+  if (endOffset < 0) throw new Error("This Office document is not a valid ZIP archive.");
+  const diskNumber = buffer.readUInt16LE(endOffset + 4);
+  const centralDisk = buffer.readUInt16LE(endOffset + 6);
+  const diskEntries = buffer.readUInt16LE(endOffset + 8);
+  const entryCount = buffer.readUInt16LE(endOffset + 10);
+  const centralSize = buffer.readUInt32LE(endOffset + 12);
+  const centralOffset = buffer.readUInt32LE(endOffset + 16);
+  if (diskNumber !== 0 || centralDisk !== 0 || diskEntries !== entryCount) throw new Error("Multi-part Office archives are not supported.");
+  if (entryCount === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) throw new Error("ZIP64 Office archives are not supported by the safe upload reader.");
+  if (entryCount > MAX_ARCHIVE_ENTRIES) throw new Error("This document contains too many files to process safely.");
+  const centralEnd = centralOffset + centralSize;
+  if (centralEnd > endOffset || centralEnd > buffer.length) throw new Error("This Office document has an invalid ZIP directory.");
+  let cursor = centralOffset;
+  let totalExpandedBytes = 0;
+  for (let index = 0; index < entryCount; index++) {
+    if (cursor + 46 > centralEnd || buffer.readUInt32LE(cursor) !== 0x02014b50) throw new Error("This Office document has an invalid ZIP directory.");
+    const flags = buffer.readUInt16LE(cursor + 8);
+    const compressedBytes = buffer.readUInt32LE(cursor + 20);
+    const expandedBytes = buffer.readUInt32LE(cursor + 24);
+    const nameLength = buffer.readUInt16LE(cursor + 28);
+    const extraLength = buffer.readUInt16LE(cursor + 30);
+    const commentLength = buffer.readUInt16LE(cursor + 32);
+    const startDisk = buffer.readUInt16LE(cursor + 34);
+    const next = cursor + 46 + nameLength + extraLength + commentLength;
+    if (next > centralEnd || startDisk !== 0) throw new Error("This Office document has an invalid ZIP directory.");
+    if (flags & 1) throw new Error("Password-protected Office archives are not supported.");
+    if (compressedBytes === 0xffffffff || expandedBytes === 0xffffffff) throw new Error("ZIP64 Office archives are not supported by the safe upload reader.");
+    if (expandedBytes > MAX_ARCHIVE_ENTRY_BYTES) throw new Error("This document contains an archive entry that is too large to process safely.");
+    totalExpandedBytes += expandedBytes;
+    if (totalExpandedBytes > MAX_ARCHIVE_TOTAL_BYTES) throw new Error("This document expands beyond the safe processing limit.");
+    cursor = next;
+  }
+}
 function stripRtf(value) {
   return String(value || "").replace(/\\'[\da-f]{2}/gi, (m) => String.fromCharCode(parseInt(m.slice(2), 16)))
     .replace(/\\par[d]?\b/g, "\n").replace(/\\tab\b/g, " ").replace(/\\[a-z]+-?\d* ?/gi, "")
@@ -260,6 +307,7 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
   }
   const parsed = readDataUrl(fileData, MAX_FILE_CHARS);
   const buffer = parsed.buffer;
+  if (["docx", "pptx", "xlsx", "ods", "odt"].includes(ext)) assertSafeZipArchive(buffer);
   let text = "";
   let renderedImages = [];
   if (ext === "pdf") {
