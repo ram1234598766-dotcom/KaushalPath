@@ -118,4 +118,57 @@ const malformedOffice = await call({
 assert.equal(malformedOffice.statusCode, 422);
 assert.match(malformedOffice.payload.error, /not a valid ZIP archive/i);
 
+// Exercise valid text and image request paths with a mocked provider response.
+const originalFetch = globalThis.fetch;
+const mockedRequests = [];
+globalThis.fetch = async (url, options = {}) => {
+  assert.match(String(url), /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "valid study requests should call the configured server-side gateway");
+  const payload = JSON.parse(options.body);
+  mockedRequests.push(payload);
+  return new Response(JSON.stringify({
+    id: "mock-request",
+    choices: [{ message: { content: "Mocked study answer with checked steps." } }]
+  }), {
+    status: 200,
+    headers: { "content-type": "application/json; charset=utf-8" }
+  });
+};
+try {
+  const textRoundtrip = await call({
+    method: "POST",
+    headers: {},
+    body: {
+      prompt: "Explain this attached lesson for my exam revision",
+      mode: "explain",
+      fileName: "lesson.txt",
+      fileType: "text/plain",
+      fileText: "Photosynthesis uses light energy to convert carbon dioxide and water into sugars and oxygen."
+    }
+  });
+  assert.equal(textRoundtrip.statusCode, 200);
+  assert.equal(textRoundtrip.payload.text, "Mocked study answer with checked steps.");
+  const textInput = mockedRequests[0].messages.at(-1).content;
+  assert.match(textInput, /Uploaded file: lesson\.txt/, "text attachment metadata should reach the model input");
+  assert.match(textInput, /Photosynthesis uses light energy/, "extracted text should reach the model input");
+  assert.doesNotMatch(JSON.stringify(textRoundtrip.payload), /kilo-auto\/free|inclusionai|model|provider/i, "response payload should not expose provider metadata");
+
+  const imageRoundtrip = await call({
+    method: "POST",
+    headers: {},
+    body: {
+      prompt: "Explain this figure and identify its important exam labels",
+      mode: "solve",
+      imageData: "data:image/png;base64,YWJj"
+    }
+  });
+  assert.equal(imageRoundtrip.statusCode, 200);
+  assert.equal(imageRoundtrip.payload.text, "Mocked study answer with checked steps.");
+  const imageParts = mockedRequests[1].messages.at(-1).content;
+  assert.ok(Array.isArray(imageParts), "image questions should use multimodal input");
+  assert.ok(imageParts.some((part) => part.type === "image_url"), "the uploaded image should reach the multimodal model input");
+  assert.doesNotMatch(JSON.stringify(imageRoundtrip.payload), /kilo-auto\/free|inclusionai|model|provider/i, "image response payload should hide provider metadata");
+} finally {
+  globalThis.fetch = originalFetch;
+}
+
 console.log("KaushalPath API handler validation tests passed.");
