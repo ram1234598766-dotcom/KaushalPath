@@ -36,10 +36,10 @@ assert.match(api, /unzipSync/, "the backend should read PowerPoint and OpenDocum
 assert.match(api, /sharp\(/, "the backend should convert uncommon image formats before vision analysis");
 assert.match(api, /MAX_EXTRACTED_FILE_CHARS/, "document extraction should be bounded before model input");
 assert.match(app, /imageMimeForFile/, "image formats that the browser cannot decode should have a server-conversion fallback");
-assert.match(pkg.dependencies, /pdf-parse/, "the PDF parser dependency should be configured");
-assert.match(pkg.dependencies, /mammoth/, "the Word parser dependency should be configured");
-assert.match(pkg.dependencies, /xlsx/, "the spreadsheet parser dependency should be configured");
-assert.match(pkg.dependencies, /sharp/, "the image conversion dependency should be configured");
+assert.match(JSON.stringify(pkg.dependencies), /pdf-parse/, "the PDF parser dependency should be configured");
+assert.match(JSON.stringify(pkg.dependencies), /mammoth/, "the Word parser dependency should be configured");
+assert.match(JSON.stringify(pkg.dependencies), /xlsx/, "the spreadsheet parser dependency should be configured");
+assert.match(JSON.stringify(pkg.dependencies), /sharp/, "the image conversion dependency should be configured");
 assert.match(html, /id="chatWebSearch"/, "chat should offer an explicit web-search control");
 assert.match(html, /id="chatSources"/, "retrieved source links should be displayed in chat");
 assert.match(app, /activateWorkspaceView/, "workspace sections should change via menu navigation");
