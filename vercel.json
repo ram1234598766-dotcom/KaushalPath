@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm run test",
-  "outputDirectory": "public",
   "headers": [
     {
       "source": "/(.*)",
@@ -38,5 +36,29 @@
       "maxDuration": 60
     }
   },
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    {
+      "src": "api/**/*.mjs",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
 }
