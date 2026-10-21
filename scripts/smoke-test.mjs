@@ -103,6 +103,19 @@ assert.doesNotMatch(api, /provider: "Kilo Auto Free"|provider: imageData|sources
 assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|Kilo Auto Free is temporarily|KILO_API_KEY in Vercel/, "user-facing errors should not expose provider configuration");
 assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
+assert.match(app, /id:"cbse12cs26"/, "the question bank should include an official CBSE Class XII CS SQP sampler");
+assert.match(app, /ComputerScience-SQP\.pdf/, "the official sampler should link to its question paper");
+assert.match(app, /ComputerScience-MS\.pdf/, "the official sampler should link to the corresponding marking scheme");
+assert.match(app, /negativeMark:1/, "JEE and NEET practice sets should explicitly configure negative marking");
+assert.match(app, /const score=t\.qs\.reduce/, "scoring should honor per-question marks and configured penalties");
+assert.match(app, /Official sample-paper questions/, "question cards should distinguish official paper questions from original practice");
+assert.match(html, /id="official-papers"/, "the UI should expose an official paper catalogue");
+assert.match(html, /sqp_classx_2026-27\.html/, "the official catalogue should link CBSE Class X current papers");
+assert.match(html, /SQP_CLASSXII_2026-27\.html/, "the official catalogue should link CBSE Class XII current papers");
+assert.match(html, /document\/ib-2026/, "the official catalogue should link the JEE Main 2026 NTA archive");
+assert.match(html, /neet\.nta\.nic\.in\/2026/, "the official catalogue should link the NEET UG 2026 NTA portal");
+assert.match(html, /180 compulsory MCQs in 180 minutes, for 720 total marks/, "NEET card should reflect the current official pattern");
+assert.match(html, /75 questions, 300 marks/, "JEE Main card should reflect the current Paper 1 pattern");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 
