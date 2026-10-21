@@ -499,7 +499,7 @@ function printAsPdf(title,text){
  setTimeout(cleanup,12000);
 }
 $("saveStudyPdf").addEventListener("click",function(){if(lastAnswerText)printAsPdf("Study notes",lastAnswerText);});
-let chatHistory=[],activeChatController=null,lastChatAnswer="",lastChatPrompt="",chatBusy=false;
+let chatHistory=[],chatTranscript=[],currentChatSessionId="",activeChatController=null,lastChatAnswer="",lastChatPrompt="",chatBusy=false;
 function chatAddMessage(role,text){
  const root=$("chatMessages");
  const welcome=root.querySelector(".chat-welcome");if(welcome)welcome.remove();
@@ -527,7 +527,7 @@ async function sendChat(raw,regenerate){
   lastChatAttachment=chatAttachment;chatAttachment=null;
   if($("chatImage"))$("chatImage").value="";
   if($("chatImageHint"))$("chatImageHint").textContent=lastChatAttachment?"Attached: "+lastChatAttachment.name:"Attach an image, PDF, office document or text file.";
-  chatHistory.push({role:"user",content:question});chatAddMessage("user",question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):""));lastChatPrompt=question;
+  chatHistory.push({role:"user",content:question});lastChatPrompt=question;const displayedQuestion=question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):"");chatAddMessage("user",displayedQuestion);recordChatMessage("user",displayedQuestion);
  }else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
  const attachmentForRequest=lastChatAttachment,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
  chatBusy=true;activeChatController=new AbortController();
@@ -552,7 +552,7 @@ async function sendChat(raw,regenerate){
    waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
   }
   messageBox.dataset.rawAnswer=answer;
-  lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
+  lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);recordChatMessage("assistant",answer);
   $("chatStatus").textContent=needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready";
   enableChatTools(Boolean(answer));
  }catch(err){
@@ -562,7 +562,7 @@ async function sendChat(raw,regenerate){
   enableChatTools(Boolean(lastChatAnswer));
  }finally{
   if(activeChatController===controller)activeChatController=null;
-  chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();
+  chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();renderChatSessions();
  }
 }
 $("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatAttachment){toast("Wait for the selected file to finish preparing, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
@@ -584,10 +584,10 @@ $("chatPdf").addEventListener("click",function(){if(lastChatAnswer)printAsPdf("A
 $("chatText").addEventListener("click",function(){if(lastChatAnswer)download("kaushalpath-ai-answer.txt",lastChatAnswer,"text/plain");});
 $("chatSpeak").addEventListener("click",function(){if(!lastChatAnswer)return;if(!("speechSynthesis" in window)){toast("Read aloud is not supported in this browser.");return;}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(lastChatAnswer);utterance.lang="en-IN";window.speechSynthesis.speak(utterance);});
 $("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chatBusy)sendChat(lastChatPrompt,true);});
-$("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
+$("chatClear").addEventListener("click",function(){if(chatBusy){toast("Stop the current response before starting a new conversation.");return;}resetCurrentChat();});
 $("saveStudyPdf").disabled=true;
 
-const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library";
+const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library",CHAT_SESSIONS_KEY="kp-chat-sessions";
 function readLocalJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}}
 function writeLocalJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}}
 function validResult(r){return !!r&&typeof r==="object"&&typeof r.title==="string"&&r.title.length<=250&&typeof r.exam==="string"&&typeof r.date==="string"&&r.date.length<=120&&Number.isFinite(Number(r.score))&&Number.isFinite(Number(r.max))&&Number(r.max)>0&&Number.isFinite(Number(r.correct))&&Number.isFinite(Number(r.wrong))&&Number.isFinite(Number(r.blank));}
@@ -689,21 +689,23 @@ $("resumeSavedTest").addEventListener("click",function(){
 $("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
 window.addEventListener("beforeunload",function(){if(active)saveActiveTest();});
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&active)saveActiveTest();});
-function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
+function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary(),chatSessions:getChatSessions()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
 $("exportBackup").addEventListener("click",exportProgressBackup);
 $("importBackup").addEventListener("click",function(){$("backupFile").click();});
 $("backupFile").addEventListener("change",async function(){
  const file=$("backupFile").files&&$("backupFile").files[0];if(!file)return;
  try{
-  if(file.size>1000000)throw new Error("Choose a progress backup smaller than 1 MB.");
+  if(file.size>3*1024*1024)throw new Error("Choose a progress backup smaller than 3 MB.");
   const payload=JSON.parse(await file.text());
-  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40))throw new Error("This is not a supported KaushalPath progress backup.");
+  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40)||(payload.chatSessions!=null&&!Array.isArray(payload.chatSessions))||(Array.isArray(payload.chatSessions)&&payload.chatSessions.length>8))throw new Error("This is not a supported KaushalPath progress backup.");
   if(payload.results.some(function(r){return !validResult(r);}))throw new Error("The backup contains a result record with invalid fields.");
   if(payload.focusSessions.some(function(s){return !s||typeof s.date!=="string"||!Number.isFinite(Date.parse(s.date))||!Number.isInteger(Number(s.seconds))||Number(s.seconds)<60||Number(s.seconds)>7200||s.mode!=="focus";}))throw new Error("The backup contains an invalid focus-session record.");
   const importedLibrary=Array.isArray(payload.savedLibrary)?payload.savedLibrary:[];if(importedLibrary.some(function(item){return !validLibraryItem(item);}))throw new Error("The backup contains an invalid saved-study record.");
-  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), and "+getSavedLibrary().length+" saved answer(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), and "+importedLibrary.length+" saved answer(s) from this backup? Export your current progress first if you need a copy."))return;
-  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
-  clearSavedTest();renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Progress backup imported successfully.");
+  const importedChats=Array.isArray(payload.chatSessions)?payload.chatSessions:[];if(importedChats.some(function(item){return !validChatSession(item);}))throw new Error("The backup contains an invalid saved-chat record.");
+  if(chatBusy)throw new Error("Stop the current AI response before importing a progress backup.");
+  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), "+getSavedLibrary().length+" saved answer(s), and "+getChatSessions().length+" conversation(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), "+importedLibrary.length+" saved answer(s), and "+importedChats.length+" conversation(s) from this backup? Export your current progress first if you need a copy."))return;
+  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary(),previousChats=getChatSessions();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)||!writeLocalJSON(CHAT_SESSIONS_KEY,importedChats)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);writeLocalJSON(CHAT_SESSIONS_KEY,previousChats);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
+  clearSavedTest();renderHistory();renderSavedLibrary();resetCurrentChat();renderChatSessions();refreshResumeBanner();toast("Progress backup imported successfully.");
  }catch(error){toast(error&&error.message?error.message:"Could not import that backup.");}
  finally{$("backupFile").value="";}
 });
@@ -782,6 +784,80 @@ $("savedViewerDownload").addEventListener("click",function(){const item=getSaved
 $("savedViewerDelete").addEventListener("click",function(){if(selectedSavedLibraryId&&confirm("Delete this saved answer?"))deleteSavedLibraryItem(selectedSavedLibraryId);});
 $("clearLibrary").addEventListener("click",function(){if(!getSavedLibrary().length){toast("Your study library is already empty.");return;}if(!confirm("Delete all saved study answers? This cannot be undone."))return;if(!writeLocalJSON(LIBRARY_KEY,[])){toast("Could not clear the library in browser storage.");return;}selectedSavedLibraryId="";$("savedViewer").classList.add("hidden");renderSavedLibrary();toast("Study library cleared.");});
 
+
+function validChatSession(item){
+ return !!item&&typeof item==="object"&&typeof item.id==="string"&&item.id.length>0&&item.id.length<=120&&typeof item.title==="string"&&item.title.trim().length>0&&item.title.length<=100&&typeof item.createdAt==="string"&&Number.isFinite(Date.parse(item.createdAt))&&typeof item.updatedAt==="string"&&Number.isFinite(Date.parse(item.updatedAt))&&typeof item.lastPrompt==="string"&&item.lastPrompt.length<=3000&&typeof item.level==="string"&&item.level.length<=80&&typeof item.subject==="string"&&item.subject.length<=100&&typeof item.mode==="string"&&item.mode.length<=40&&Array.isArray(item.messages)&&item.messages.length<=24&&item.messages.every(function(message){return message&&["user","assistant"].includes(message.role)&&typeof message.content==="string"&&message.content.length>0&&message.content.length<=8000;});
+}
+function getChatSessions(){const stored=readLocalJSON(CHAT_SESSIONS_KEY,[]);return Array.isArray(stored)?stored.filter(validChatSession).sort(function(a,b){return Date.parse(b.updatedAt)-Date.parse(a.updatedAt);}).slice(0,8):[];}
+function chatSessionTitle(text){const clean=String(text||"Study conversation").split("\n")[0].replace(/\s+/g," ").trim()||"Study conversation";return clean.length>64?clean.slice(0,61)+"…":clean;}
+function recordChatMessage(role,content){
+ const original=String(content||"");if(!original.trim())return;
+ if(!currentChatSessionId)currentChatSessionId="chat-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+ const previous=getChatSessions(),existing=previous.find(function(session){return session.id===currentChatSessionId;}),now=new Date().toISOString(),storedContent=original.slice(0,8000);
+ chatTranscript=chatTranscript.concat([{role:role,content:storedContent}]).slice(-24);
+ if(original.length>8000)toast("Long conversation text was shortened in history. Save important full answers to your Saved Library.");
+ const firstUser=chatTranscript.find(function(message){return message.role==="user";});
+ const session={id:currentChatSessionId,title:existing?existing.title:chatSessionTitle(firstUser&&firstUser.content),createdAt:existing?existing.createdAt:now,updatedAt:now,lastPrompt:String(lastChatPrompt||"").slice(0,3000),level:$("chatClass").value,subject:$("chatSubject").value,mode:$("chatMode").value,messages:chatTranscript};
+ const updated=[session].concat(previous.filter(function(item){return item.id!==currentChatSessionId;})).slice(0,8);
+ if(!writeLocalJSON(CHAT_SESSIONS_KEY,updated)){toast("This conversation is still visible, but browser storage could not save it. Export a progress backup when possible.");return;}
+ renderChatSessions();
+}
+function chatWelcomeMarkup(){return '<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';}
+function resetCurrentChat(){
+ chatHistory=[];chatTranscript=[];currentChatSessionId="";lastChatAnswer="";lastChatPrompt="";chatAttachment=null;lastChatAttachment=null;
+ if($("chatImage"))$("chatImage").value="";
+ if($("chatImageHint"))$("chatImageHint").textContent="Attach an image, PDF, office document or text file.";
+ $("chatMessages").innerHTML=chatWelcomeMarkup();$("chatStatus").textContent="New conversation";
+ renderSourceLinks($("chatSources"),[]);enableChatTools(false);renderChatSessions();
+}
+function setKnownSelectValue(id,value){const select=$(id);if(!select||typeof value!=="string")return;const option=Array.from(select.options).find(function(item){return item.value===value||item.textContent===value;});if(option)select.value=option.value;}
+function restoreChatSession(id,silent){
+ if(chatBusy){toast("Stop the current response before switching conversations.");return;}
+ const session=getChatSessions().find(function(item){return item.id===id;});if(!session)return;
+ currentChatSessionId=session.id;chatTranscript=session.messages.map(function(message){return {role:message.role,content:message.content};});
+ chatHistory=chatTranscript.slice(-10).map(function(message){return {role:message.role,content:message.content};});
+ lastChatPrompt=session.lastPrompt||((chatTranscript.slice().reverse().find(function(message){return message.role==="user";})||{}).content||"");
+ lastChatAnswer=(chatTranscript.slice().reverse().find(function(message){return message.role==="assistant";})||{}).content||"";
+ setKnownSelectValue("chatClass",session.level);setKnownSelectValue("chatSubject",session.subject);setKnownSelectValue("chatMode",session.mode);
+ chatAttachment=null;lastChatAttachment=null;if($("chatImage"))$("chatImage").value="";if($("chatImageHint"))$("chatImageHint").textContent="Attach an image, PDF, office document or text file.";
+ const root=$("chatMessages");root.replaceChildren();
+ if(!chatTranscript.length)root.innerHTML=chatWelcomeMarkup();
+ else chatTranscript.forEach(function(message){const node=chatAddMessage(message.role,message.content);if(message.role==="assistant"){renderMarkdownInto(node,message.content);const box=node.closest(".chat-message");if(box)box.dataset.rawAnswer=message.content;}});
+ root.scrollTop=root.scrollHeight;renderSourceLinks($("chatSources"),[]);enableChatTools(Boolean(lastChatAnswer));
+ $("chatStatus").textContent="Saved conversation restored · "+chatTranscript.length+" messages. File attachments are not stored; reattach any files you need.";
+ renderChatSessions();if(!silent)root.scrollIntoView({behavior:"smooth",block:"end"});
+}
+function restoreLatestChatSession(){const sessions=getChatSessions();if(sessions.length)restoreChatSession(sessions[0].id,true);else renderChatSessions();}
+function renderChatSessions(){
+ const root=$("chatSessionList");if(!root)return;root.replaceChildren();
+ const query=String($("chatSessionSearch")&&$("chatSessionSearch").value||"").trim().toLowerCase();
+ const sessions=getChatSessions().filter(function(session){return !query||(session.title+" "+session.messages.map(function(message){return message.content;}).join(" ")).toLowerCase().includes(query);});
+ if(!sessions.length){const empty=document.createElement("p");empty.className="tiny chat-session-empty";empty.textContent=query?"No saved conversations match your search.":"Your recent conversations will appear here automatically.";root.appendChild(empty);return;}
+ sessions.forEach(function(session){
+  const row=document.createElement("div");row.className="chat-session-row"+(session.id===currentChatSessionId?" is-current":"");
+  const open=document.createElement("button");open.type="button";open.className="chat-session-open";open.dataset.openChatSession=session.id;open.disabled=chatBusy;open.setAttribute("aria-label","Open conversation: "+session.title);
+  const title=document.createElement("strong");title.textContent=session.title;
+  const meta=document.createElement("span");meta.textContent=session.messages.length+" messages · "+new Date(session.updatedAt).toLocaleDateString();
+  open.append(title,meta);if(session.id===currentChatSessionId){const current=document.createElement("span");current.className="chat-session-current";current.textContent="Current";open.appendChild(current);}
+  const remove=document.createElement("button");remove.type="button";remove.className="chat-session-delete";remove.dataset.deleteChatSession=session.id;remove.textContent="×";remove.title="Delete saved conversation";remove.setAttribute("aria-label","Delete conversation: "+session.title);remove.disabled=chatBusy;
+  row.append(open,remove);root.appendChild(row);
+ });
+}
+$("chatSessionSearch").addEventListener("input",renderChatSessions);
+$("chatSessionList").addEventListener("click",function(event){
+ if(chatBusy){toast("Stop the current response before switching or deleting conversations.");return;}
+ const remove=event.target.closest("[data-delete-chat-session]");
+ if(remove){
+  const id=remove.dataset.deleteChatSession,session=getChatSessions().find(function(item){return item.id===id;});if(!session)return;
+  if(!confirm("Delete this saved conversation? This cannot be undone."))return;
+  const next=getChatSessions().filter(function(item){return item.id!==id;});
+  if(!writeLocalJSON(CHAT_SESSIONS_KEY,next)){toast("Could not delete the conversation from browser storage.");return;}
+  if(currentChatSessionId===id)resetCurrentChat();else renderChatSessions();
+  toast("Saved conversation deleted.");return;
+ }
+ const open=event.target.closest("[data-open-chat-session]");if(open)restoreChatSession(open.dataset.openChatSession,false);
+});
+
 function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
 function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div><div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
@@ -798,7 +874,7 @@ async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
 document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();
 
 function activateWorkspaceView(view,clicked){
  const valid=["overview","learn","ai-guide","tests","history","resources","library"] ;
