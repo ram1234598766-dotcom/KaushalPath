@@ -14,6 +14,13 @@ assert.match(html, /id="ai-guide"/, "AI guide should have a dedicated workspace"
 assert.match(html, /id="chatMessages"/, "horizontal AI conversation should exist");
 assert.match(html, /id="chatPdf"/, "AI answers should have a PDF print/export tool");
 assert.match(html, /id="chatSave"/, "AI answers should be saveable to a personal study library");
+assert.match(html, /id="chatSessionSearch"/, "AI study conversations should be searchable");
+assert.match(html, /id="chatSessionList"/, "the AI Study Guide should expose recent saved conversations");
+assert.match(app, /function getChatSessions\(\)/, "AI conversations should persist locally");
+assert.match(app, /function validChatSession\(item\)/, "imported chat sessions should be validated");
+assert.match(app, /function restoreLatestChatSession\(\)/, "the latest conversation should restore after a reload");
+assert.match(app, /recordChatMessage\("assistant",answer\)/, "completed AI answers should be saved to their conversation");
+assert.match(app, /chatSessions:getChatSessions\(\)/, "progress backups should include chat history");
 assert.match(html, /id="librarySearch"/, "saved answers should be searchable");
 assert.match(html, /id="savedViewerContent"/, "saved answers should have a readable preview");
 assert.match(app, /function saveLibraryItem\(kind,title,text\)/, "answers should persist to a local saved library");
