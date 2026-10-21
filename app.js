@@ -254,7 +254,10 @@ $("studyForm").addEventListener("submit",async function(ev){
   const prompt=makePrompt(level,subject,chapter,mode,topic);
   const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){if($("localAiStatus"))$("localAiStatus").textContent=status;btn.textContent=String(status).includes("standard completion")?"Retrying…":String(status).includes("on-device")||String(status).includes("locally")?"Generating locally…":"Generating…";});
   lastAnswerText=answer;
-  const note=document.createElement("p");note.className="tiny";note.textContent="Generated with Kilo Auto Free. Check important details against your textbook."; $("studyOutput").appendChild(note);
+  const local=window.KaushalPathLocalAI,usingLocal=Boolean(local&&local.isActive());
+  const note=document.createElement("p");note.className="tiny";note.textContent=(usingLocal?"Generated on-device with Qwen. Your study prompt stayed on this device. ":"Generated with Kilo Auto Free. ")+"Check important details against your textbook.";
+  $("studyOutput").appendChild(note);
+  if($("localAiStatus"))$("localAiStatus").textContent=usingLocal?"Local AI is active · questions run on this device.":"Kilo Auto Free response completed.";
  }catch(err){
   if(lastStudyController!==controller)return;
   const output=$("studyOutput"),partial=String(lastAnswerText||"").trim();
@@ -423,7 +426,7 @@ async function sendChat(raw,regenerate){
   }
   messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
-  $("chatStatus").textContent="Answer ready · Kilo Auto Free";
+  $("chatStatus").textContent=window.KaushalPathLocalAI&&window.KaushalPathLocalAI.isActive()?"Answer ready · on-device Qwen":"Answer ready · Kilo Auto Free";
   enableChatTools(Boolean(answer));
  }catch(err){
   messageBox.classList.remove("is-pending");
