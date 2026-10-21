@@ -113,6 +113,8 @@ assert.match(app, /ComputerScience-SQP\.pdf/, "the official sampler should link 
 assert.match(app, /ComputerScience-MS\.pdf/, "the official sampler should link to the corresponding marking scheme");
 assert.match(app, /negativeMark:1/, "JEE and NEET practice sets should explicitly configure negative marking");
 assert.match(app, /const score=t\.qs\.reduce/, "scoring should honor per-question marks and configured penalties");
+assert.match(app, /const maxMarks=t\.qs\.reduce/, "test cards should display their real maximum marks");
+assert.match(app, /Scoring: '+marking/, "test cards should display correct, wrong and blank scoring explicitly");
 assert.match(app, /Official sample-paper questions/, "question cards should distinguish official paper questions from original practice");
 assert.match(html, /id="official-papers"/, "the UI should expose an official paper catalogue");
 assert.match(html, /sqp_classx_2026-27\.html/, "the official catalogue should link CBSE Class X current papers");
