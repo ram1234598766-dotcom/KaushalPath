@@ -26,7 +26,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://esm.sh 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://esm.sh https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com https://cdn-lfs.huggingface.co; worker-src 'self' blob: https://esm.sh; img-src 'self' data: https:; font-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self'; img-src 'self' data: https:; font-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
       ]
     }
@@ -39,10 +39,6 @@
     },
     {
       "src": "app.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "local-ai.js",
       "use": "@vercel/static"
     },
     {
