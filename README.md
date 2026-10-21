@@ -1,14 +1,24 @@
 # KaushalPath India — AI CBSE Learning Edition
 
-This repository contains the KaushalPath India AI-enabled CBSE learning project for Classes 10–12 and its humanized Seva First Challenge concept note.
+**Seva First Challenge · Shikshit & Kaushal Bharat**
 
-## Downloads
+KaushalPath India is designed to combine CBSE learning support for Classes 10–12 with practical skill discovery. The AI guide can help generate original notes, explanations, revision sheets, and practice questions when configured.
 
-- `KaushalPath_India_AI_CBSE_Classes_10_12.zip` — complete source package, setup guide, and project resources.
-- `KaushalPath_India_Humanized_Concept_Note.pdf` — concept note focused on why the project matters and what it does.
+## Repository contents
 
-## Scope and accuracy
+- [Human-centered concept note](KaushalPath_India_AI_Edition/Concept_Note.md)
+- [Project setup and AI guide instructions](KaushalPath_India_AI_Edition/README.md) — add the full project README and application files from the project package before treating this repository as runnable.
+- [Requirements](KaushalPath_India_AI_Edition/requirements.txt)
+- [Optional AI configuration example](KaushalPath_India_AI_Edition/.env.example)
+- [Project structure index](KaushalPath_India_AI_Edition/PROJECT_STRUCTURE.txt)
 
-The app is designed to help learners browse CBSE subjects and chapters, request AI-generated notes and explanations, practise questions, and track skill-development activities. The bundled offline notes are a starter library, not a complete offline copy of every CBSE textbook. For broader AI responses, configure the optional AI service as described in the ZIP's README and verify answers against the current official CBSE syllabus and prescribed NCERT textbooks.
+## Important upload note
 
-Official references: [CBSE Academic Curriculum](https://cbseacademic.nic.in/curriculum_2027.html) · [NCERT Textbooks](https://ncert.nic.in/textbook.php)
+The full project ZIP and standalone PDF have **not** been uploaded as binary files in this repository. The connected GitHub write action available in this session supports UTF-8 text files but does not expose a binary file upload operation, so the project application source and PDFs are not yet available here as complete downloadable files. The concept note is available above in Markdown form.
+
+## Official curriculum references
+
+- [CBSE Academic Curriculum 2026–27](https://cbseacademic.nic.in/curriculum_2027.html)
+- [NCERT Textbook Catalogue](https://ncert.nic.in/textbook.php)
+
+The bundled offline lessons are only a starter collection, not a complete copy of all CBSE textbooks. AI-generated explanations should be checked against the student's prescribed textbook and school syllabus.
