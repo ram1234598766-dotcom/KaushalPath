@@ -148,6 +148,12 @@ assert.ok(vercel.routes.some(r => r.src === "/api/study-guide" && r.dest === "/a
 assert.ok(Array.isArray(vercel.builds), "Vercel should explicitly build static files and the API");
 assert.ok(vercel.builds.some(b => b.src === "index.html" && b.use === "@vercel/static"), "homepage should be published as a static file");
 assert.ok(vercel.builds.some(b => b.src === "app.js" && b.use === "@vercel/static"), "browser script should be published as a static file");
+const offlineAssets = ["manifest.webmanifest", "app-icon.svg", "offline.html", "service-worker.js"];
+for (const asset of offlineAssets) {
+  assert.ok(existsSync(new URL("../" + asset, import.meta.url)), asset + " should exist in the repository");
+  assert.ok(vercel.builds.some((build) => build.src === asset && build.use === "@vercel/static"), asset + " must be explicitly published by Vercel");
+}
+
 assert.equal(vercel.builds.some(b => b.src === "local-ai.js"), false, "the model runtime should not be sent to the browser");
 assert.doesNotMatch(JSON.stringify(vercel), /esm\.sh|huggingface\.co|cdn-lfs/, "browser policy should not include unused local-model origins");
 assert.ok(vercel.builds.some(b => b.src === "api/study-guide.mjs" && b.use === "@vercel/node"), "AI endpoint should be deployed as a Node function");

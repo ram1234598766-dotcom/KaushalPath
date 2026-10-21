@@ -42,6 +42,22 @@
       "use": "@vercel/static"
     },
     {
+      "src": "manifest.webmanifest",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "app-icon.svg",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "offline.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "service-worker.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "api/study-guide.mjs",
       "use": "@vercel/node"
     }
