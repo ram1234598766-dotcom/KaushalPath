@@ -22,6 +22,7 @@ assert.match(api, /normalizeUrls/, "API validates user URLs");
 assert.match(api, /GEMINI_API_KEY/, "AI credentials are read server-side");
 assert.equal(pkg.dependencies["@google/genai"], "^2.30.0", "SDK version should support URL context");
 assert.equal(vercel.framework, null, "Vercel should use the Other framework preset");
+assert.equal(vercel.cleanUrls, true, "Vercel should expose the serverless endpoint without its .mjs extension");
 assert.ok(Array.isArray(vercel.builds), "Vercel should explicitly build static files and the API");
 assert.ok(vercel.builds.some(b => b.src === "index.html" && b.use === "@vercel/static"), "homepage should be published as a static file");
 assert.ok(vercel.builds.some(b => b.src === "app.js" && b.use === "@vercel/static"), "browser script should be published as a static file");
