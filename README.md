@@ -18,7 +18,7 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 The app is configured for Vercel with static frontend files in `public/` and a serverless AI endpoint at `api/study-guide.mjs`. The browser uses the same-origin `/api/study-guide` route.
 
 1. Open [Vercel New Project](https://vercel.com/new) and import `ram1234598766-dotcom/KaushalPath` from GitHub.
-2. Keep the project root at the repository root. Use the included `vercel.json`; it publishes `public/` and runs the quality checks.
+2. Keep the project root at the repository root. Use the included `vercel.json`; it runs the quality checks and copies `public/` to a fresh `dist/` directory for Vercel to publish.
 3. In **Project Settings → Environment Variables**, add `GEMINI_API_KEY` with a key created in [Google AI Studio](https://aistudio.google.com/app/apikey). Enable it for Production and Preview as needed. Keep the key server-side; never put it in `public/` or commit it to GitHub.
 4. Deploy the project, then open your production URL and visit the AI Study Guide.
 5. To check if the API key is configured, send a GET request to `/api/study-guide` with header `x-kaushalpath-status: 1`. This only checks setup; submit a real prompt to verify model access.
@@ -32,9 +32,10 @@ Use Node.js 22+:
 
 ```sh
 npm install
-npm test
+npm run build
 node --check public/app.js
 node --check api/study-guide.mjs
+node --check scripts/build.mjs
 ```
 
 The smoke tests check the frontend, API route and deployment configuration. Local AI requests need a valid `GEMINI_API_KEY`; set it in your shell rather than committing it.
