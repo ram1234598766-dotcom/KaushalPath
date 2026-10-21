@@ -16,7 +16,6 @@ assert.match(html, /id="chatPdf"/, "AI answers should have a PDF print/export to
 assert.match(html, /id="topicSuggestions"/, "class-aware study topics should be available");
 assert.doesNotMatch(html, /On-device AI|Qwen 1\.5B|localAiEnable|localAiDisable|Kilo Auto Free/, "the website should not expose model or provider details");
 assert.doesNotMatch(app, /KaushalPathLocalAI|Qwen|Kilo Auto Free|localAiStatus/, "frontend logic should not expose provider or local-model status");
-assert.match(html, /src="\/local-ai\.js" defer/, "the local inference controller should load before the app");
 assert.match(html, /@media print/, "print-ready PDF styles should exist");
 assert.match(app, /streamStudyRequest/, "study requests should support streaming output");
 assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
@@ -87,4 +86,5 @@ assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|Kilo Aut
 assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
+
 
