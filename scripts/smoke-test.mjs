@@ -6,8 +6,26 @@ const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+const manifest = JSON.parse(readFileSync(new URL("../manifest.webmanifest", import.meta.url), "utf8"));
+const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
+const offline = readFileSync(new URL("../offline.html", import.meta.url), "utf8");
 
 assert.match(html, /KaushalPath/, "site brand should be present");
+
+assert.equal(manifest.display, "standalone", "the web manifest should enable a standalone app window");
+assert.equal(manifest.start_url, "/#overview", "install should open the workspace overview");
+assert.ok(Array.isArray(manifest.icons) && manifest.icons.some((icon) => icon.src === "/app-icon.svg" && icon.type === "image/svg+xml"), "the manifest should provide a KaushalPath SVG icon");
+assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/, "the webpage should link to its install manifest");
+assert.match(html, /id="installApp"/, "the overview should expose an install control");
+assert.match(html, /rel="icon" type="image\/svg\+xml" href="\/app-icon\.svg"/, "the app icon should also be the site favicon");
+assert.match(app, /navigator\.serviceWorker\.register\("\/service-worker\.js"/, "the browser should register the local offline shell");
+assert.match(serviceWorker, /const SHELL_FILES = \[/, "offline install should precache the static app shell");
+assert.match(serviceWorker, /if \(url\.pathname === "\/api" \|\| url\.pathname\.startsWith\("\/api\/"\)\) return;/, "the service worker must never intercept the AI API");
+assert.match(serviceWorker, /const STATIC_FILES = new Set\(\[/, "only an explicit list of fixed public assets should be cache-eligible");
+assert.match(serviceWorker, /if \(request\.method !== "GET" \|\| request\.headers\.has\("authorization"\)\) return;/, "writes and authenticated requests must bypass the service worker cache");
+assert.match(serviceWorker, /caches\.match\("\/offline\.html"\)/, "navigation should fall back to the offline helper");
+assert.match(offline, /AI explanations, live research and new uploads need an internet connection/, "offline guidance should explain which services require connectivity");
+
 assert.match(html, /studyForm/, "study form should exist");
 assert.match(html, /sourceUrls/, "manual website URL input should exist");
 assert.match(html, /id="ai-guide"/, "AI guide should have a dedicated workspace");
