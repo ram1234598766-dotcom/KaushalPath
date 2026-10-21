@@ -160,7 +160,8 @@ async function requestPublicPage(url, addresses) {
       method: "GET",
       headers: {
         "User-Agent": "KaushalPathStudyResearch/1.0 (+public educational page reader)",
-        "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1"
+        "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",
+        "Accept-Encoding": "identity"
       },
       lookup: createPinnedLookup(addresses),
       signal: AbortSignal.timeout(8500),
@@ -200,6 +201,8 @@ async function fetchPublicRaw(rawUrl, maxBytes = 600000) {
       continue;
     }
     if (!response.ok) throw new Error("The page returned HTTP " + response.status + ".");
+    const contentEncoding = (response.headers.get("content-encoding") || "").toLowerCase();
+    if (contentEncoding && contentEncoding !== "identity") throw new Error("This page uses an unsupported compressed encoding.");
     const contentType = (response.headers.get("content-type") || "").toLowerCase();
     if (!/(text\/html|application\/xhtml\+xml|text\/plain)/i.test(contentType)) {
       throw new Error("This URL does not return a readable public HTML or text page.");
