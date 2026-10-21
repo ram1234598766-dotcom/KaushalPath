@@ -153,7 +153,7 @@ export function createPinnedLookup(addresses) {
   };
 }
 
-async function requestPublicPage(url, addresses) {
+async function requestPublicPage(url, addresses, signal) {
   return new Promise((resolve, reject) => {
     const transport = url.protocol === "https:" ? requestHttps : requestHttp;
     const request = transport(url, {
@@ -164,7 +164,7 @@ async function requestPublicPage(url, addresses) {
         "Accept-Encoding": "identity"
       },
       lookup: createPinnedLookup(addresses),
-      signal: AbortSignal.timeout(8500),
+      signal: signal ? AbortSignal.any([AbortSignal.timeout(8500), signal]) : AbortSignal.timeout(8500),
       maxHeaderSize: 16384
     }, (incoming) => {
       const headers = {
@@ -182,13 +182,13 @@ async function requestPublicPage(url, addresses) {
   });
 }
 
-async function fetchPublicRaw(rawUrl, maxBytes = 600000) {
+async function fetchPublicRaw(rawUrl, maxBytes = 600000, signal) {
   let current = String(rawUrl);
   for (let hop = 0; hop <= 3; hop++) {
     const { url, addresses } = await assertPublicUrl(current);
     let response;
     try {
-      response = await requestPublicPage(url, addresses);
+      response = await requestPublicPage(url, addresses, signal);
     } catch (error) {
       if (/timeout|abort/i.test(String(error && error.message || ""))) throw new Error("The page request timed out.");
       throw new Error("The page request failed.");
@@ -237,16 +237,16 @@ function extractPage(raw) {
     .replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/tr|\/section)\b[^>]*>/gi, "\n"));
   return { url: raw.url, title: title.slice(0, 180), text: text.slice(0, 7600) };
 }
-async function readPublicPage(url) {
-  const raw = await fetchPublicRaw(url, 800000);
+async function readPublicPage(url, signal) {
+  const raw = await fetchPublicRaw(url, 800000, signal);
   const page = extractPage(raw);
   if (!page.text.trim()) throw new Error("No readable text was found on that page.");
   return { source: { url: page.url, title: page.title, snippet: page.text.slice(0, 300) }, context: "[" + page.title + "] " + page.url + "\n" + page.text };
 }
-async function searchWeb(query) {
+async function searchWeb(query, signal) {
   const clean = String(query || "").replace(/\s+/g, " ").trim().slice(0, 260);
   if (!clean) return { sources: [], context: "" };
-  const raw = await fetchPublicRaw("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(clean), 850000);
+  const raw = await fetchPublicRaw("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(clean), 850000, signal);
   const html = raw.body, results = [], used = new Set();
   const anchors = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
   for (const match of anchors) {
@@ -445,15 +445,15 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
 function searchIntent(text) {
   return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text || ""));
 }
-async function research(urls, shouldSearch, query) {
+async function research(urls, shouldSearch, query, signal) {
   // Fetch selected pages and search concurrently to reduce latency.
   const [tasks, searchResult] = await Promise.all([
     Promise.all(urls.map(async (url) => {
-      try { return await readPublicPage(url); }
+      try { return await readPublicPage(url, signal); }
       catch (error) { return { source: { url, title: "Could not read page", snippet: String(error.message || "Retrieval failed.").slice(0, 240) }, context: "" }; }
     })),
     shouldSearch
-      ? searchWeb(query).then((data) => ({ data, error: "" })).catch((error) => ({
+      ? searchWeb(query, signal).then((data) => ({ data, error: "" })).catch((error) => ({
           data: { sources: [], context: "" },
           error: String(error.message || "Search failed.").slice(0, 220)
         }))
@@ -470,8 +470,38 @@ async function research(urls, shouldSearch, query) {
   const noData = (shouldSearch || urls.length) && !pageContext && !searched.context ? "\nNo usable source content was retrieved. State that clearly and answer only from general knowledge." : "";
   return { sources, context: (pageContext + searchContext + warning + noData).slice(0, 22000), searched: Boolean(searched.sources.length), pagesRead: pages.length, searchError };
 }
+
+function waitForResponseDrain(res, signal) {
+  if (signal.aborted) return Promise.reject(signal.reason || new Error("Client disconnected"));
+  if (typeof res.once !== "function") return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      if (typeof res.removeListener === "function") {
+        res.removeListener("drain", onDrain);
+        res.removeListener("close", onClose);
+      }
+      signal.removeEventListener("abort", onAbort);
+    };
+    const onDrain = () => { cleanup(); resolve(); };
+    const onClose = () => { cleanup(); reject(new Error("Client disconnected")); };
+    const onAbort = () => { cleanup(); reject(signal.reason || new Error("Client disconnected")); };
+    res.once("drain", onDrain);
+    res.once("close", onClose);
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+  });
+}
+
 export default async function handler(req, res) {
   const requestId = randomUUID();
+  const clientAbortController = new AbortController();
+  const abortForDisconnect = () => {
+    if (res.writableEnded || res.finished || clientAbortController.signal.aborted) return;
+    clientAbortController.abort(new Error("Client disconnected"));
+  };
+  if (typeof req.once === "function") req.once("aborted", abortForDisconnect);
+  if (typeof res.once === "function") res.once("close", abortForDisconnect);
+  if (req.aborted) abortForDisconnect();
   res.setHeader("X-Request-Id", requestId);
   if (req.method === "GET") {
     if (req.headers["x-kaushalpath-status"] !== "1") return send(res, { error: "Use POST to ask the study guide a question." }, 405);
@@ -538,9 +568,10 @@ export default async function handler(req, res) {
   const shouldSearch = Boolean(body.webSearch) || searchIntent(query) || searchIntent(prompt);
   let web = { sources: [], context: "", searched: false, pagesRead: 0, searchError: "" };
   if (urls.length || shouldSearch) {
-    try { web = await research(urls, shouldSearch, query); }
+    try { web = await research(urls, shouldSearch, query, clientAbortController.signal); }
     catch (error) { web = { ...web, searchError: String(error.message || "Research failed.").slice(0, 220) }; }
   }
+  if (clientAbortController.signal.aborted) return;
 
   const mode = ["notes", "explain", "revision", "questions", "solve"].includes(body.mode) ? body.mode : "explain";
   const budget = ({ explain: 520, revision: 700, solve: 900, questions: 1050, notes: 1250 })[mode];
@@ -574,7 +605,7 @@ export default async function handler(req, res) {
     const response = await fetch(GATEWAY_URL, {
       method: "POST", headers,
       body: JSON.stringify({ model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream }),
-      signal: AbortSignal.timeout(38000)
+      signal: AbortSignal.any([AbortSignal.timeout(38000), clientAbortController.signal])
     });
     if (!response.ok) {
       let payload = {};
@@ -593,14 +624,14 @@ export default async function handler(req, res) {
     if (wantsStream) {
       if (!response.body) return send(res, { error: "The study assistant could not start a response. Please try again.", sources: web.sources }, 502);
       res.status(200);res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-      res.setHeader("Cache-Control", "no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "no-store, no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");
       streamStarted = true;
-      if (web.sources.length) res.write("data: " + JSON.stringify({ sources: web.sources, research: true }) + "\n\n");
+      if (web.sources.length && !res.write("data: " + JSON.stringify({ sources: web.sources, research: true }) + "\n\n")) await waitForResponseDrain(res, clientAbortController.signal);
       const reader = response.body.getReader();
       while (true) {
         const chunk = await reader.read();
         if (chunk.done) break;
-        if (chunk.value && chunk.value.byteLength) res.write(chunk.value);
+        if (chunk.value && chunk.value.byteLength && !res.write(chunk.value)) await waitForResponseDrain(res, clientAbortController.signal);
       }
       res.end();return;
     }
@@ -610,6 +641,7 @@ export default async function handler(req, res) {
     if (!answer) return send(res, { error: "The study assistant did not return an answer. Try a more focused question.", sources: web.sources }, 502);
     return send(res, { text: answer, sources: web.sources, liveSources: web.sources.length > 0, mode, requestId });
   } catch (error) {
+    if (clientAbortController.signal.aborted) return;
     const status = Number(error?.status || error?.statusCode || error?.httpStatusCode || 0);
     const message = String(error?.message || "");
     const rateLimited = status === 429 || /rate.?limit|too many requests|quota/i.test(message);
