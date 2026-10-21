@@ -1,0 +1,20 @@
+{
+  "name": "KaushalPath — Learn with direction",
+  "short_name": "KaushalPath",
+  "description": "CBSE study, exam practice, revision notes and local progress tools.",
+  "id": "/",
+  "start_url": "/#overview",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f8fc",
+  "theme_color": "#101c35",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
