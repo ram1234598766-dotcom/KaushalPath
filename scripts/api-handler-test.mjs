@@ -148,6 +148,9 @@ globalThis.fetch = async (url, options = {}) => {
   assert.match(String(url), /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "valid study requests should call the configured server-side gateway");
   const payload = JSON.parse(options.body);
   mockedRequests.push(payload);
+  const lastMessage = payload.messages.at(-1);
+  const requestText = typeof lastMessage.content === "string" ? lastMessage.content : Array.isArray(lastMessage.content) ? lastMessage.content.filter((part) => part.type === "text").map((part) => part.text).join(" ") : "";
+  if (requestText.includes("RATE_LIMIT_TEST")) return new Response(JSON.stringify({ error: { message: "rate limit reached" } }), { status: 429, headers: { "content-type": "application/json; charset=utf-8" } });
   return new Response(JSON.stringify({
     id: "mock-request",
     choices: [{ message: { content: "Mocked study answer with checked steps." } }]
@@ -192,6 +195,17 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.ok(Array.isArray(imageParts), "image questions should use multimodal input");
   assert.ok(imageParts.some((part) => part.type === "image_url"), "the uploaded image should reach the multimodal model input");
   assert.doesNotMatch(JSON.stringify(imageRoundtrip.payload), /kilo-auto\/free|inclusionai|model|provider/i, "image response payload should hide provider metadata");
+  const rateLimitedResponse = await call({
+    method: "POST",
+    headers: {},
+    body: { prompt: "Please run RATE_LIMIT_TEST and explain my revision topic" }
+  });
+  assert.equal(rateLimitedResponse.statusCode, 429, "upstream rate limiting should remain distinguishable to callers");
+  assert.equal(rateLimitedResponse.headers["retry-after"], "15", "rate-limited responses should say when to retry");
+  assert.equal(rateLimitedResponse.payload.requestId, rateLimitedResponse.headers["x-request-id"], "rate-limit errors should include their trace ID");
+  assert.match(rateLimitedResponse.payload.error, /temporarily busy/i, "rate-limit errors should remain student-friendly");
+  assert.doesNotMatch(JSON.stringify(rateLimitedResponse.payload), /kilo|inclusionai|provider|model/i, "rate-limit responses must not leak provider configuration");
+
 } finally {
   globalThis.fetch = originalFetch;
 }
