@@ -46,5 +46,11 @@
       "use": "@vercel/node"
     }
   ],
-  "cleanUrls": true
+  "cleanUrls": true,
+  "routes": [
+    {
+      "src": "/api/study-guide",
+      "dest": "/api/study-guide.mjs"
+    }
+  ]
 }
