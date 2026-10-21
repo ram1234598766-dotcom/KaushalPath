@@ -51,7 +51,7 @@ function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
 function renderTests(){const grid=$("testGrid");grid.innerHTML="";questions.forEach(function(t){const card=document.createElement("article");card.className="test-card";card.dataset.exam=t.exam;const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>Practice set</span></div><button class="btn btn-blue" type="button" data-start="'+t.id+'">Start test ↗</button>';grid.appendChild(card);});}
-function renderStudyText(answer){const out=$("studyOutput");out.textContent=answer;lastAnswerText=answer;$("copyAnswer").disabled=!answer;}
+function renderStudyText(answer){const out=$("studyOutput");out.innerHTML=markdownToHtml(answer);lastAnswerText=answer;$("copyAnswer").disabled=!answer;if($("saveStudyPdf"))$("saveStudyPdf").disabled=!answer;}
 $("copyAnswer").addEventListener("click",async function(){if(!lastAnswerText)return;try{await navigator.clipboard.writeText(lastAnswerText);toast("Study text copied.");}catch(e){toast("Copy was blocked by this browser.");}});
 const subjectSets={
  "Class 10":["Mathematics","Science","English","Social Science","Hindi","Computer Applications","Physical Education","Other subject / language…"],
@@ -230,7 +230,7 @@ $("studyForm").addEventListener("submit",async function(ev){
  try{
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
   const prompt=makePrompt(level,subject,chapter,mode,topic);
-  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if($("studyOutput").textContent==="Connecting to Kilo Auto Free…")$("studyOutput").textContent="";$("studyOutput").textContent+="" + delta;lastAnswerText+="" + delta;$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal);
+  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal);
   lastAnswerText=answer;
   const note=document.createElement("p");note.className="tiny";note.textContent="Generated with Kilo Auto Free. Check important details against your textbook."; $("studyOutput").appendChild(note);
  }catch(err){
@@ -238,11 +238,54 @@ $("studyForm").addEventListener("submit",async function(ev){
   else{$("studyOutput").textContent="The AI could not complete this request.\n\n"+err.message+"\n\nTry a single focused question, or use the topic suggestions to narrow it down.";}
  }finally{if(lastStudyController===controller)lastStudyController=null;btn.disabled=false;btn.textContent="Generate study help ↗";}
 });
-function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function mathToHtml(raw){
+ let s=String(raw||""),fr=[];
+ const hold=function(h){const mark="\uE100"+fr.length+"\uE101";fr.push(h);return mark;};
+ s=s.replace(/\\(?:,|;|:|!|\s)/g," ").replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,(_,n,d)=>hold('<span class="math-fraction"><span>'+escapeHtml(n)+'</span><span>'+escapeHtml(d)+'</span></span>'));
+ s=s.replace(/\\sqrt\s*\{([^{}]+)\}/g,"√($1)").replace(/\\(?:mathrm|text|mathbf|mathit)\{([^{}]*)\}/g,"$1").replace(/\\bar\s*\{?([A-Za-z])\}?/g,"$1̄");
+ const symbols={Delta:"Δ",delta:"δ",theta:"θ",pi:"π",cdot:"·",times:"×",approx:"≈",neq:"≠",leq:"≤",geq:"≥",infty:"∞",mu:"μ",alpha:"α",beta:"β",gamma:"γ",lambda:"λ",omega:"ω",pm:"±",degree:"°",rightarrow:"→",Rightarrow:"⇒"};
+ s=s.replace(/\\(Delta|delta|theta|pi|cdot|times|approx|neq|leq|geq|infty|mu|alpha|beta|gamma|lambda|omega|pm|degree|rightarrow|Rightarrow)\b/g,(_,k)=>symbols[k]||k);
+ s=escapeHtml(s).replace(/_\{([^{}]+)\}|_([A-Za-z0-9])/g,"<sub>$1$2</sub>").replace(/\^\{([^{}]+)\}|\^([A-Za-z0-9])/g,"<sup>$1$2</sup>");
+ return s.replace(/\uE100(\d+)\uE101/g,(_,n)=>fr[Number(n)]||"");
+}
+function inlineMarkdown(raw){
+ const slots=[],hold=h=>{const mark="\uE000"+slots.length+"\uE001";slots.push(h);return mark;};
+ let s=String(raw==null?"":raw).replace(/\x60([^\x60]+)\x60/g,(_,v)=>hold("<code>"+escapeHtml(v)+"</code>"));
+ s=s.replace(/\\\[((?:.|\n)+?)\\\]/g,(_,m)=>hold('<span class="math-inline">'+mathToHtml(m)+'</span>'))
+  .replace(/\\\(((?:.|\n)+?)\\\)/g,(_,m)=>hold('<span class="math-inline">'+mathToHtml(m)+'</span>'))
+  .replace(/\$([^$\n]+)\$/g,(_,m)=>hold('<span class="math-inline">'+mathToHtml(m)+'</span>'));
+ s=escapeHtml(s).replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,(_,label,url)=>'<a href="'+escapeHtml(url.replace(/&amp;/g,"&"))+'" target="_blank" rel="noopener noreferrer">'+label+'</a>');
+ s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/__([^_]+)__/g,"<strong>$1</strong>").replace(/\*([^*\n]+)\*/g,"<em>$1</em>");
+ s=s.replace(/\uE000(\d+)\uE001/g,(_,n)=>slots[Number(n)]||"");
+ return s.replace(/\n/g," ");
+}
+function splitTableRow(line){let s=String(line).trim();if(s.startsWith("|"))s=s.slice(1);if(s.endsWith("|"))s=s.slice(0,-1);return s.split("|").map(v=>v.trim());}
+function isTableSeparator(line){return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line||"");}
+function isListLine(line){return /^\s*(?:[-*+]|\d+[.)])\s+/.test(line||"");}
+function isBlockStart(lines,i){const s=lines[i]||"";return /^\s{0,3}#{1,4}\s+/.test(s)||/^\s*(?:---+|\*\*\*+|___+)\s*$/.test(s)||/^\s*\x60{3}/.test(s)||/^\s*>/.test(s)||isListLine(s)||/^\s*(?:\$\$|\\\[)/.test(s)||(i+1<lines.length&&isTableSeparator(lines[i+1]));}
+function markdownToHtml(markdown){
+ const lines=String(markdown==null?"":markdown).replace(/\r\n?/g,"\n").split("\n"),out=[];let i=0;
+ while(i<lines.length){
+  const line=lines[i];if(!line.trim()){i++;continue;}
+  if(/^\s*\x60{3}/.test(line)){const lang=(line.match(/^\s*\x60{3}([\w+-]*)/)||[])[1]||"text";i++;const code=[];while(i<lines.length&&!/^\s*\x60{3}/.test(lines[i]))code.push(lines[i++]);if(i<lines.length)i++;out.push('<pre class="md-code"><code class="language-'+escapeHtml(lang)+'">'+escapeHtml(code.join("\n"))+"</code></pre>");continue;}
+  if(/^\s*(?:---+|\*\*\*+|___+)\s*$/.test(line)){out.push('<hr class="md-rule">');i++;continue;}
+  if(/^\s*(?:\$\$|\\\[)/.test(line)){const opener=line.trim(),end=opener.startsWith("$$")?"$$":"\\]";let m=opener.startsWith("$$")?opener.replace(/^\$\$\s?/,"").replace(/\s?\$\$$/,""):opener.replace(/^\\\[\s?/,"").replace(/\s?\\\]$/,"");i++;if(!opener.endsWith(end)){while(i<lines.length&&!lines[i].trim().endsWith(end))m+=(m?"\n":"")+lines[i++];if(i<lines.length)m+=(m?"\n":"")+lines[i++].trim().replace(end,"");}out.push('<div class="md-math-block">'+mathToHtml(m)+"</div>");continue;}
+  const h=line.match(/^\s{0,3}(#{1,4})\s+(.+?)\s*#*\s*$/);if(h){const n=h[1].length;out.push("<h"+n+' class="md-heading">'+inlineMarkdown(h[2])+"</h"+n+">");i++;continue;}
+  if(i+1<lines.length&&isTableSeparator(lines[i+1])){const heads=splitTableRow(line),sep=splitTableRow(lines[i+1]);i+=2;const rows=[];while(i<lines.length&&lines[i].includes("|")&&lines[i].trim())rows.push(splitTableRow(lines[i++]));let t='<div class="md-table-wrap"><table class="md-table"><thead><tr>';heads.forEach((v,c)=>{const a=(sep[c]||"").startsWith(":")&&(sep[c]||"").endsWith(":")?"center":(sep[c]||"").endsWith(":")?"right":"left";t+='<th style="text-align:'+a+'">'+inlineMarkdown(v)+"</th>";});t+="</tr></thead><tbody>";rows.forEach(row=>{t+="<tr>";heads.forEach((_,c)=>t+="<td>"+inlineMarkdown(row[c]||"")+"</td>");t+="</tr>";});out.push(t+"</tbody></table></div>");continue;}
+  if(isListLine(line)){const ordered=/^\s*\d+[.)]\s+/.test(line),tag=ordered?"ol":"ul",items=[];while(i<lines.length&&isListLine(lines[i])&&(/^\s*\d+[.)]\s+/.test(lines[i]))===ordered){items.push((lines[i].match(/^\s*(?:[-*+]|\d+[.)])\s+(.+)$/)||[])[1]||"");i++;}out.push("<"+tag+' class="md-list">'+items.map(v=>"<li>"+inlineMarkdown(v)+"</li>").join("")+"</"+tag+">");continue;}
+  if(/^\s*>/.test(line)){const q=[];while(i<lines.length&&/^\s*>/.test(lines[i]))q.push(lines[i++].replace(/^\s*>\s?/,""));out.push('<blockquote class="md-quote">'+inlineMarkdown(q.join(" "))+"</blockquote>");continue;}
+  const p=[line];i++;while(i<lines.length&&lines[i].trim()&&!isBlockStart(lines,i))p.push(lines[i++]);out.push('<p class="md-paragraph">'+inlineMarkdown(p.join("\n"))+"</p>");
+ }
+ return '<div class="md-content">'+out.join("")+"</div>";
+}
+function renderMarkdownInto(node,markdown){node.innerHTML=markdownToHtml(markdown);}
+
 function printAsPdf(title,text){
  const mount=$("printMount");if(!mount){toast("PDF print area is unavailable.");return;}
  const previousTitle=document.title;document.title="KaushalPath - "+title;
- mount.innerHTML='<article class="print-document"><div class="print-kicker">KAUSHALPATH · LEARN WITH DIRECTION</div><h1>'+escapeHtml(title)+'</h1><p class="print-date">Created '+escapeHtml(new Date().toLocaleString())+'</p><pre>'+escapeHtml(text)+'</pre><footer>Use generated study content as a learning aid. Verify important facts with official materials.</footer></article>';
+ mount.innerHTML='<article class="print-document"><div class="print-kicker">KAUSHALPATH · LEARN WITH DIRECTION</div><h1>'+escapeHtml(title)+'</h1><p class="print-date">Created '+escapeHtml(new Date().toLocaleString())+'</p>'+markdownToHtml(text)+'<footer>Use generated study content as a learning aid. Verify important facts with official materials.</footer></article>';
  mount.style.display="block";
  const cleanup=function(){mount.innerHTML="";mount.style.display="none";document.title=previousTitle;window.removeEventListener("afterprint",cleanup);};
  window.addEventListener("afterprint",cleanup,{once:true});
@@ -278,8 +321,8 @@ async function sendChat(raw,regenerate){
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
   answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6)},function(delta){
-   if(waiting){node.textContent="";waiting=false;}
-   node.textContent+=delta;answer+=delta;$("chatMessages").scrollTop=$("chatMessages").scrollHeight;
+   if(waiting){node.innerHTML="";waiting=false;}
+   answer+=delta;renderMarkdownInto(node,answer);$("chatMessages").scrollTop=$("chatMessages").scrollHeight;
    $("chatStatus").textContent="Answering · "+answer.length+" characters";
   },controller.signal);
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
