@@ -5,6 +5,7 @@ import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
 import XLSX from "xlsx";
 import { unzipSync, strFromU8 } from "fflate";
+import sharp from "sharp";
 
 const MODEL = "kilo-auto/free";
 const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
@@ -354,11 +355,25 @@ export default async function handler(req, res) {
   let urls;
   try { urls = normalizeUrls(body.urls); } catch (error) { return send(res, { error: error.message }, 400); }
 
-  const imageData = body.imageData == null ? "" : String(body.imageData);
+  let imageData = body.imageData == null ? "" : String(body.imageData);
   if (imageData) {
-    if (imageData.length > MAX_IMAGE_CHARS) return send(res, { error: "The compressed image is too large. Choose a smaller image." }, 413);
-    if (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(imageData)) {
-      return send(res, { error: "This image could not be prepared. Try a PNG, JPG, WebP, GIF or BMP image." }, 400);
+    let parsedImage;
+    try { parsedImage = readDataUrl(imageData, MAX_IMAGE_CHARS); }
+    catch (error) { return send(res, { error: error.message || "The image could not be uploaded." }, 413); }
+    if (!parsedImage.mime.startsWith("image/")) return send(res, { error: "The selected file is not a supported image." }, 400);
+    if (!["image/jpeg", "image/png", "image/webp"].includes(parsedImage.mime)) {
+      try {
+        const converted = await sharp(parsedImage.buffer, { limitInputPixels: 40000000, animated: false })
+          .rotate()
+          .flatten({ background: "#ffffff" })
+          .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 84 })
+          .toBuffer();
+        imageData = "data:image/jpeg;base64," + converted.toString("base64");
+      } catch (error) {
+        return send(res, { error: "This image format could not be converted. Try saving it as PNG or JPG." }, 422);
+      }
+      if (imageData.length > MAX_IMAGE_CHARS) return send(res, { error: "The converted image is too large. Choose a smaller image." }, 413);
     }
   }
   const fileData = body.fileData == null ? "" : String(body.fileData);
