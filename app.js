@@ -332,7 +332,7 @@ function activateWorkspaceView(view,clicked){
  const overviewNodes=[document.getElementById("overview"),document.querySelector("main > .hero"),document.querySelector("main > .quickstats"),document.getElementById("learningPath")];
  overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
  ["learn","ai-guide","tests","resources","history"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
- document.querySelectorAll(".side-link").forEach(function(link){link.classList.toggle("active",link.dataset.view===target&&(link.dataset.showExam?Boolean(clicked&&clicked.dataset.showExam):true));});
+ const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
  const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
