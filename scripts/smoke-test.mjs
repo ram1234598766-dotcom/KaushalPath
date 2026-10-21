@@ -19,6 +19,12 @@ assert.match(app, /streamStudyRequest/, "study requests should support streaming
 assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
 assert.match(app, /activateWorkspaceView/, "workspace sections should change via menu navigation");
 assert.match(app, /chatSpeak/, "AI study tools should include read-aloud");
+assert.match(app, /function markdownToHtml/, "AI answers should render Markdown into readable HTML");
+assert.match(app, /md-table-wrap/, "Markdown tables should be rendered as responsive tables");
+assert.match(app, /mathToHtml/, "Inline and block equations should get readable math formatting");
+assert.match(app, /renderMarkdownInto\(node,answer\)/, "streamed chat output should re-render formatted Markdown");
+assert.match(html, /\.md-table/, "readable chat Markdown styles should exist");
+
 assert.match(api, /stream: wantsStream/, "API should request streamed provider output when asked");
 assert.match(api, /body.messages/, "AI requests should preserve short chat context");
 
