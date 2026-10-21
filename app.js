@@ -182,36 +182,58 @@ $("chatClass").addEventListener("change",function(){syncClass(this);});
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";updateHubTopics();});
 $("chatSubject").addEventListener("change",updateChatTopics);
 $("topic").addEventListener("input",function(){});
-async function streamStudyRequest(payload,onText,signal){
+async function streamStudyRequest(payload,onText,signal,onStatus){
+ const local=window.KaushalPathLocalAI;
+ if(local&&local.isActive()){
+  if(onStatus)onStatus("Using on-device Qwen model · your prompt stays on this device");
+  return local.generate(payload,onText,signal,onStatus);
+ }
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"text/event-stream, application/json"},body:JSON.stringify(Object.assign({},payload,{stream:true})),signal:signal});
  const contentType=response.headers.get("content-type")||"";
  if(!response.ok){const errorData=await response.json().catch(function(){return{};});throw new Error(errorData.error||"The AI guide is currently unavailable (HTTP "+response.status+").");}
+ const contentText=function(value){
+  if(typeof value==="string")return value;
+  if(Array.isArray(value))return value.map(function(part){return typeof part==="string"?part:(part&&typeof part.text==="string"?part.text:(part&&typeof part.content==="string"?part.content:""));}).join("");
+  if(value&&typeof value.text==="string")return value.text;
+  return "";
+ };
  if(!response.body||!contentType.includes("text/event-stream")){
-  const data=await response.json();if(data.error)throw new Error(data.error);const text=String(data.text||"");if(text)onText(text);return text;
+  const data=await response.json().catch(function(){return{};});if(data.error)throw new Error(data.error);
+  const value=data.text||(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content);
+  const text=contentText(value);if(text.trim()){onText(text);return text;}
+  return retryCloudWithoutStream(payload,onText,signal,onStatus);
  }
- const reader=response.body.getReader(),decoder=new TextDecoder();
- let pending="",answer="",streamError=null;
+ const reader=response.body.getReader(),decoder=new TextDecoder();let pending="",answer="",streamError=null;
  function consume(line){
-  if(!line.startsWith("data:"))return;
-  const raw=line.slice(5).trim();if(!raw||raw==="[DONE]")return;
+  const clean=String(line||"").trim();if(!clean.startsWith("data:"))return;
+  const raw=clean.slice(5).trim();if(!raw||raw==="[DONE]")return;
   let event;try{event=JSON.parse(raw);}catch(e){return;}
   if(event.error){streamError=new Error(typeof event.error==="string"?event.error:(event.error.message||"The AI provider stopped the response."));return;}
   const choice=event.choices&&event.choices[0];
-  const piece=choice&&choice.delta&&choice.delta.content;
-  const text=typeof piece==="string"?piece:(typeof event.text==="string"?event.text:"");
+  if(choice&&choice.finish_reason==="error"){streamError=new Error("The AI provider stopped before returning an answer. Try again or use on-device AI.");return;}
+  const delta=choice&&choice.delta,values=[delta&&delta.content,choice&&choice.message&&choice.message.content,choice&&choice.text,event.text,event.output_text,event.response&&event.response.output_text];
+  let text="";for(let i=0;i<values.length;i++){text=contentText(values[i]);if(text)break;}
   if(text){answer+=text;onText(text);}
  }
  while(true){
   const result=await reader.read();pending+=decoder.decode(result.value||new Uint8Array(),{stream:!result.done});
-  const lines=pending.split(/\r?\n/);pending=lines.pop()||"";
-  lines.forEach(consume);
-  if(streamError)throw streamError;
-  if(result.done)break;
+  const lines=pending.split(/\r?\n/);pending=lines.pop()||"";lines.forEach(consume);
+  if(streamError)throw streamError;if(result.done)break;
  }
- if(pending)consume(pending);
- if(streamError)throw streamError;
- if(!answer)throw new Error("The AI returned an empty response. Try a shorter question.");
- return answer;
+ if(pending)consume(pending);if(streamError)throw streamError;
+ if(answer.trim())return answer;
+ return retryCloudWithoutStream(payload,onText,signal,onStatus);
+}
+async function retryCloudWithoutStream(payload,onText,signal,onStatus){
+ if(signal&&signal.aborted)throw new DOMException("Request aborted","AbortError");
+ if(onStatus)onStatus("The stream contained no answer · trying a standard completion…");
+ const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(Object.assign({},payload,{stream:false})),signal:signal});
+ const data=await response.json().catch(function(){return{};});
+ if(!response.ok)throw new Error(data.error||"The AI service is temporarily unavailable (HTTP "+response.status+").");
+ let answer=typeof data.text==="string"?data.text:"";
+ if(!answer.trim()){const choice=data.choices&&data.choices[0],content=choice&&choice.message&&choice.message.content;if(typeof content==="string")answer=content;else if(Array.isArray(content))answer=content.map(function(part){return part&&typeof part.text==="string"?part.text:"";}).join("");}
+ if(!answer.trim())throw new Error("Kilo returned no usable text in streaming or standard mode. Load on-device AI or retry later.");
+ onText(answer);return answer;
 }
 function makePrompt(level,subject,chapter,mode,topic){
  const task=({"notes":"Create useful but compact chapter notes with headings, key ideas, definitions or formulas, one worked example, common mistakes and a recap.","explain":"Explain the concept in plain language, step by step, with one worked or everyday example and a short self-check.","revision":"Create a compact revision sheet with high-yield points, formulas or facts, common mistakes and five recall prompts.","questions":"Create five original practice questions, then provide their answers with short explanations.","solve":"Solve the learner's question step by step, show calculations and units, state assumptions, and check the result."})[mode]||"Explain this clearly with a short example.";
@@ -230,7 +252,7 @@ $("studyForm").addEventListener("submit",async function(ev){
  try{
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
   const prompt=makePrompt(level,subject,chapter,mode,topic);
-  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal);
+  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){if($("localAiStatus"))$("localAiStatus").textContent=status;btn.textContent=String(status).includes("standard completion")?"Retrying…":String(status).includes("on-device")||String(status).includes("locally")?"Generating locally…":"Generating…";});
   lastAnswerText=answer;
   const note=document.createElement("p");note.className="tiny";note.textContent="Generated with Kilo Auto Free. Check important details against your textbook."; $("studyOutput").appendChild(note);
  }catch(err){
@@ -259,12 +281,45 @@ $("studyForm").addEventListener("submit",async function(ev){
    const actions=document.createElement("div");actions.className="study-retry-row";
    const retry=document.createElement("button");retry.type="button";retry.className="btn btn-light";retry.textContent="↻ Retry request";
    retry.addEventListener("click",function(){if(!btn.disabled)$("studyForm").requestSubmit();});
-   actions.appendChild(retry);output.appendChild(actions);
+   actions.appendChild(retry);
+   const local=window.KaushalPathLocalAI;
+   if(local&&local.isActive()){
+    const cloudRetry=document.createElement("button");cloudRetry.type="button";cloudRetry.className="btn btn-light";cloudRetry.textContent="Switch to Kilo and retry";
+    cloudRetry.addEventListener("click",function(){local.disable();updateLocalAiControls();if(!btn.disabled)$("studyForm").requestSubmit();});actions.appendChild(cloudRetry);
+   }else if(local&&local.isSupported()){
+    const localRetry=document.createElement("button");localRetry.type="button";localRetry.className="btn btn-light";localRetry.textContent="Load local AI and retry";
+    localRetry.addEventListener("click",function(){enableLocalAiAndRetry(true);});actions.appendChild(localRetry);
+   }
+   output.appendChild(actions);
   }
  }finally{
   if(lastStudyController===controller){lastStudyController=null;btn.disabled=false;btn.textContent="Generate study help ↗";}
  }
 });
+
+function updateLocalAiControls(){
+ const ai=window.KaushalPathLocalAI,status=$("localAiStatus"),enable=$("localAiEnable"),disable=$("localAiDisable");
+ if(!ai||!status||!enable||!disable)return;
+ const supported=ai.isSupported();
+ if(ai.isActive()){status.textContent="Local AI is active · questions run on this device.";enable.hidden=true;disable.hidden=false;enable.disabled=false;}
+ else{status.textContent=supported?"Optional local model is available. First setup downloads the model and may take a few minutes; later starts use browser cache.":"Local AI needs a WebGPU-capable browser and compatible GPU. Kilo Auto Free remains available.";enable.hidden=false;disable.hidden=true;enable.disabled=!supported;}
+}
+async function enableLocalAiAndRetry(retryStudy){
+ const ai=window.KaushalPathLocalAI,status=$("localAiStatus"),enable=$("localAiEnable");
+ if(!ai||!ai.isSupported()){if(status)status.textContent="Local AI needs a secure WebGPU-capable browser. Use Kilo Auto Free instead.";toast("This browser or GPU does not support local AI.");return false;}
+ if(enable){enable.disabled=true;enable.textContent="Preparing model…";}
+ if(status)status.textContent="Loading the local model. The initial setup downloads model files; keep this tab open.";
+ try{
+  await ai.load(function(progress){if(status)status.textContent=(progress.text||"Preparing local model…")+(progress.progress!==null&&progress.progress!==undefined?" · "+Math.round(progress.progress*100)+"%":"");});
+  updateLocalAiControls();toast("Local AI is ready. Study prompts now run on this device.");
+  if(retryStudy)$("studyForm").requestSubmit();
+  return true;
+ }catch(error){if(status)status.textContent="Local model setup failed: "+(error.message||"unknown error")+" You can still try Kilo Auto Free.";toast("Local model could not load. Check WebGPU support and connection.");return false;}
+ finally{if(enable){enable.disabled=false;enable.textContent="Load local AI";}updateLocalAiControls();}
+}
+if($("localAiEnable"))$("localAiEnable").addEventListener("click",function(){enableLocalAiAndRetry(false);});
+if($("localAiDisable"))$("localAiDisable").addEventListener("click",function(){const ai=window.KaushalPathLocalAI;if(ai)ai.disable();updateLocalAiControls();toast("Switched to Kilo Auto Free.");});
+updateLocalAiControls();
 
 function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function mathToHtml(raw){
@@ -362,7 +417,7 @@ async function sendChat(raw,regenerate){
    answer+=delta;renderMarkdownInto(node,answer);
    if(shouldFollow)messages.scrollTop=messages.scrollHeight;
    $("chatStatus").textContent="Writing your answer · "+answer.length+" characters";
-  },controller.signal);
+  },controller.signal,function(status){$("chatStatus").textContent=status;});
   if(!String(answer||"").trim()){
    waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
   }
