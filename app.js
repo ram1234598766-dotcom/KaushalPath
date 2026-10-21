@@ -948,6 +948,33 @@ document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.a
 
 renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();
 
+
+let pendingPwaInstall = null;
+function initPWA() {
+ if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(function(){});
+ }
+ window.addEventListener("offline",function(){toast("You're offline. Saved notes, practice and your study plan remain on this device; AI tools need a connection.");});
+ window.addEventListener("online",function(){toast("Connection restored.");});
+ const button=$("installApp");if(!button)return;
+ const standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+ if(standalone){button.classList.add("hidden");return;}
+ window.addEventListener("beforeinstallprompt",function(event){
+  event.preventDefault();pendingPwaInstall=event;button.classList.remove("hidden");
+ });
+ button.addEventListener("click",async function(){
+  if(!pendingPwaInstall){toast("Use your browser menu to install or add KaushalPath to your home screen.");return;}
+  const promptEvent=pendingPwaInstall;pendingPwaInstall=null;
+  try{
+   await promptEvent.prompt();
+   const choice=await promptEvent.userChoice;
+   button.classList.add("hidden");
+   toast(choice&&choice.outcome==="accepted"?"KaushalPath installation started.":"You can install KaushalPath later from your browser menu.");
+  }catch(error){button.classList.add("hidden");toast("Use your browser menu to install KaushalPath.");}
+ });
+ window.addEventListener("appinstalled",function(){pendingPwaInstall=null;button.classList.add("hidden");toast("KaushalPath installed.");});
+}
+
 function activateWorkspaceView(view,clicked){
  const valid=["overview","learn","ai-guide","tests","history","resources","library","planner"];
  const target=valid.includes(view)?view:"overview";
@@ -975,6 +1002,7 @@ if(!document.getElementById("saveStudyPdf")){toast("PDF tool could not be initia
 fillSubjects($("subject"),$("classLevel").value,$("subject").value);
 fillSubjects($("chatSubject"),$("chatClass").value,$("chatSubject").value);
 updateHubTopics();updateChatTopics();
+initPWA();
 activateWorkspaceView("overview");
 
 })();

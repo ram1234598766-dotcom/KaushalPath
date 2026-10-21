@@ -15,6 +15,7 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - A searchable Saved Library for useful AI explanations and notes, included in progress backups.
 - Local AI conversation history: recent chats restore after refresh, can be searched or deleted, and are included in backups. Uploaded file contents are not retained in chat history.
 - A local Study Planner with due dates, priority levels, time estimates, task completion tracking, and backup/restore support.
+- An installable progressive web app with a limited offline app shell; API responses and local student progress are never cached by the service worker.
 - Local AI conversation history: recent chats restore after refresh, can be searched or deleted, and are included in backups. Uploaded file contents are not retained in chat history.
 - A retry-after signal on backend rate-limit responses, with provider details kept out of student-facing errors.
 - Public-page research pins each HTTP connection to DNS addresses checked by the SSRF guard, preventing a second DNS lookup from rebinding to private infrastructure.
@@ -50,6 +51,7 @@ npm install
 npm test
 node --check app.js
 node --check api/study-guide.mjs
+node --check service-worker.js
 ```
 
 The smoke tests check the frontend, API route and deployment configuration. The AI endpoint uses the public Kilo Auto Free route; no AI key is stored in source code or sent to the browser.
