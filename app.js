@@ -211,7 +211,7 @@ function chapterTopicsFor(level,subject,chapter){
  if(!value)return topicsFor(level,subject);
  const match=chapterSubtopics.find(function(rule){return rule.level===level&&rule.subject===subject&&rule.match.test(value);});
  if(match)return match.topics;
- const norm=function(t){return String(t||"").toLowerCase().replace(/[^a-z0-9\\s]/g," ").replace(/\\s+/g," ").trim();};
+ const norm=function(t){return String(t||"").toLowerCase().replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();};
  const stop=new Set(["chapter","unit","the","and","for","with","of","in","on","an","a","to","class","introduction","basics"]);
  const words=norm(value).split(" ").filter(function(w){return w.length>2&&!stop.has(w);});
  const scored=topicsFor(level,subject).map(function(t){const candidate=norm(t),score=words.reduce(function(n,w){return n+(candidate.includes(w)?1:0);},0);return {topic:t,score:score};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).map(function(x){return x.topic;});
@@ -349,6 +349,7 @@ $("studyForm").addEventListener("submit",async function(ev){
  ev.preventDefault();
  const topic=$("topic").value.trim(),subject=subjectName(),chapter=$("chapter").value.trim(),level=$("classLevel").value,mode=$("studyMode").value;
  if(!topic||!subject){toast("Choose a subject and a topic first.");return;}
+ if($("studyImage").files&&$("studyImage").files.length&&!studyImageData){toast("Wait for the image compression to finish, then generate again.");return;}
  if(lastStudyController)lastStudyController.abort();
  lastStudyController=new AbortController();
  const controller=lastStudyController,btn=$("askBtn");btn.disabled=true;btn.textContent="Connecting…";
@@ -556,7 +557,7 @@ async function sendChat(raw,regenerate){
   chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();
  }
 }
-$("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
+$("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatImageData){toast("Wait for the image compression to finish, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
 $("chatInput").addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();$("chatForm").requestSubmit();}});
 $("chatMessages").addEventListener("click",async function(ev){
  const copyButton=ev.target.closest("[data-copy-message]");
