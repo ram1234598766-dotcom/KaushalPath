@@ -230,10 +230,10 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     if (req.headers["x-kaushalpath-status"] !== "1") return send(res, { error: "Use POST to ask the study guide a question." }, 405);
     return send(res, {
-      ready: true, model: MODEL, provider: "Kilo Auto Free",
+      ready: true,
       features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true, visionModel: VISION_MODEL, localModel: "browser WebGPU, automatically warmed" },
-      message: "The backend supports bounded public web search, public-page reading, and a dedicated free vision-model route for image questions.",
-      notice: "Avoid submitting personal or confidential information to a third-party free model."
+      message: "The study assistant is ready to help with questions, public sources, and image-based problems.",
+      notice: "Avoid submitting personal or confidential information."
     });
   }
   if (req.method !== "POST") { res.setHeader("Allow", "GET, POST"); return send(res, { error: "Use POST for AI study requests." }, 405); }
@@ -307,18 +307,18 @@ export default async function handler(req, res) {
       let payload = {};
       try { payload = await response.json(); } catch {}
       const detail = String(payload?.error?.message || payload?.message || "").slice(0, 240);
-      const error = new Error("Kilo Gateway returned HTTP " + response.status + (detail ? ": " + detail : ""));
+      const error = new Error("Study service returned HTTP " + response.status + (detail ? ": " + detail : ""));
       error.status = response.status; throw error;
     }
     if (wantsStream && !(response.headers.get("content-type") || "").includes("text/event-stream")) {
       let fallbackPayload = {};
       try { fallbackPayload = await response.json(); } catch {}
       const fallbackText = responseText(fallbackPayload?.choices?.[0]?.message?.content);
-      if (!fallbackText) return send(res, { error: "Kilo did not return a usable response. Please retry.", sources: web.sources }, 502);
-      return send(res, { text: fallbackText, sources: web.sources, model: requestedModel, provider: imageData ? "Kilo Free Vision" : "Kilo Auto Free", liveSources: web.sources.length > 0, mode });
+      if (!fallbackText) return send(res, { error: "The study assistant did not return a usable response. Please retry.", sources: web.sources }, 502);
+      return send(res, { text: fallbackText, sources: web.sources, liveSources: web.sources.length > 0, mode });
     }
     if (wantsStream) {
-      if (!response.body) return send(res, { error: "Kilo did not open a streaming response. Try again.", sources: web.sources }, 502);
+      if (!response.body) return send(res, { error: "The study assistant could not start a response. Please try again.", sources: web.sources }, 502);
       res.status(200);res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
       res.setHeader("Cache-Control", "no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");
       streamStarted = true;
@@ -334,31 +334,31 @@ export default async function handler(req, res) {
     let payload;
     try { payload = await response.json(); } catch { payload = {}; }
     const answer = responseText(payload?.choices?.[0]?.message?.content);
-    if (!answer) return send(res, { error: "Kilo Auto Free returned no text. Try a narrower question.", sources: web.sources }, 502);
-    return send(res, { text: answer, sources: web.sources, model: requestedModel, provider: imageData ? "Kilo Free Vision" : "Kilo Auto Free", liveSources: web.sources.length > 0, mode, requestId: payload?.id || null });
+    if (!answer) return send(res, { error: "The study assistant did not return an answer. Try a more focused question.", sources: web.sources }, 502);
+    return send(res, { text: answer, sources: web.sources, liveSources: web.sources.length > 0, mode, requestId: payload?.id || null });
   } catch (error) {
     const status = Number(error?.status || error?.statusCode || error?.httpStatusCode || 0);
     const message = String(error?.message || "");
-    console.error("KaushalPath Kilo Auto Free request failed:", status || "unknown", message.slice(0, 300));
+    console.error("KaushalPath study request failed:", status || "unknown", message.slice(0, 300));
     if (imageData && (status === 400 || status === 404 || /image_url|vision|multimodal|image input|not support.*image/i.test(message))) {
-      const notice = "The configured free vision model rejected this image request. Try a clearer, smaller image or set KILO_VISION_MODEL in Vercel to a currently available vision-capable Kilo model.";
+      const notice = "The image could not be analyzed right now. Try a clearer, smaller image or try again later.";
       if (streamStarted) { try { res.write("data: " + JSON.stringify({ error: notice }) + "\n\n"); res.end(); } catch {} return; }
       return send(res, { error: notice, sources: web.sources }, 422);
     }
     if (streamStarted) {
       const userMessage = status === 429 || /rate.?limit|too many requests|quota/i.test(message)
-        ? "Kilo Auto Free is temporarily rate-limited. Wait a little and try again."
+        ? "The study assistant is temporarily busy. Please wait a moment and try again."
         : /timeout|deadline|abort/i.test(message)
-          ? "The free AI model took too long to respond. Your question is still available to retry."
+          ? "The study assistant took too long to respond. Your question is still available to retry."
           : "The AI provider stopped the response. Please retry.";
       try { res.write("data: " + JSON.stringify({ error: userMessage }) + "\n\n"); } catch {}
       try { res.end(); } catch {}
       return;
     }
     if (status === 429 || /rate.?limit|too many requests|quota/i.test(message)) return send(res, { error: "Kilo Auto Free is temporarily rate-limited. Wait a little and try again.", sources: web.sources }, 429);
-    if (status === 401 || status === 403) return send(res, { error: "The Kilo Gateway rejected the request. Configure a valid KILO_API_KEY in the Vercel environment or retry the free route later.", sources: web.sources }, 502);
+    if (status === 401 || status === 403) return send(res, { error: "The study service could not authenticate this request. Please try again later.", sources: web.sources }, 502);
     if (/timeout|deadline|abort/i.test(message)) return send(res, { error: "The AI request or source retrieval took too long. Please retry, or choose a shorter task.", sources: web.sources }, 504);
-    return send(res, { error: "The AI Auto Free request could not complete. Check provider availability and try again.", sources: web.sources }, 502);
+    return send(res, { error: "The study assistant could not complete this request. Please try again later.", sources: web.sources }, 502);
   }
 }
 export const config = { maxDuration: 60 };
