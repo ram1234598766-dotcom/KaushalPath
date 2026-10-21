@@ -20,12 +20,21 @@ assert.match(html, /src="\/local-ai\.js" defer/, "the local inference controller
 assert.match(localAI, /Qwen2\.5-1\.5B-Instruct-q4f16_1-MLC/, "local inference should use the compact Qwen 1.5B model");
 assert.match(localAI, /CreateMLCEngine/, "local model execution should use WebLLM's browser engine");
 assert.match(localAI, /isSupported/, "local AI should feature-detect WebGPU support");
+assert.match(localAI, /function autoStart/, "local model download should start automatically when the page opens");
+assert.match(localAI, /Automatic setup started/, "automatic model preparation should report status");
 assert.match(html, /@media print/, "print-ready PDF styles should exist");
 assert.match(app, /streamStudyRequest/, "study requests should support streaming output");
 assert.match(app, /retryCloudWithoutStream/, "an empty stream should retry with a standard completion");
 assert.match(app, /KaushalPathLocalAI/, "study requests should be able to use the local model");
 assert.match(app, /standard completion/, "stream fallback status should be announced");
 assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
+assert.match(app, /chapterTopicsFor/, "chapter-specific topics should update as the chapter is typed");
+assert.match(app, /needsRemoteTools/, "web and image requests should bypass text-only local inference");
+assert.match(app, /resizeImageFile/, "uploaded study images should be compressed before upload");
+assert.match(html, /id="studyImage"/, "the study form should support image questions");
+assert.match(html, /id="chatImage"/, "chat should support image attachments");
+assert.match(html, /id="chatWebSearch"/, "chat should offer an explicit web-search control");
+assert.match(html, /id="chatSources"/, "retrieved source links should be displayed in chat");
 assert.match(app, /activateWorkspaceView/, "workspace sections should change via menu navigation");
 assert.match(app, /chatSpeak/, "AI study tools should include read-aloud");
 assert.match(app, /function markdownToHtml/, "AI answers should render Markdown into readable HTML");
@@ -74,5 +83,13 @@ assert.equal(existsSync(new URL("../netlify/functions/study-guide.mjs", import.m
 assert.match(api, /kilo-auto\/free/, "AI should use Kilo Auto Free");
 assert.match(api, /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "AI should use the documented Kilo Gateway chat endpoint");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
+
+assert.match(api, /async function searchWeb/, "the server backend should search the public web when requested");
+assert.match(api, /async function readPublicPage/, "the server backend should read supported public pages");
+assert.match(api, /assertPublicUrl/, "the page reader should validate public URLs");
+assert.match(api, new RegExp("node:dns/promises"), "public URL reading should check resolved addresses");
+assert.match(api, new RegExp("inclusionai/ling-3\\.0-flash-vl:free"), "image requests should use the configured free vision model");
+assert.match(api, /type: "image_url"/, "image data should be sent as a multimodal message");
+assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
 console.log("KaushalPath Vercel root static assets, Kilo Auto Free API, and cleanup checks passed.");
