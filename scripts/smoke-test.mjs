@@ -62,6 +62,8 @@ assert.ok(vercel.routes.some(r => r.src === "/api/study-guide" && r.dest === "/a
 assert.ok(Array.isArray(vercel.builds), "Vercel should explicitly build static files and the API");
 assert.ok(vercel.builds.some(b => b.src === "index.html" && b.use === "@vercel/static"), "homepage should be published as a static file");
 assert.ok(vercel.builds.some(b => b.src === "app.js" && b.use === "@vercel/static"), "browser script should be published as a static file");
+assert.equal(vercel.builds.some(b => b.src === "local-ai.js"), false, "the model runtime should not be sent to the browser");
+assert.doesNotMatch(JSON.stringify(vercel), /esm\.sh|huggingface\.co|cdn-lfs/, "browser policy should not include unused local-model origins");
 assert.ok(vercel.builds.some(b => b.src === "api/study-guide.mjs" && b.use === "@vercel/node"), "AI endpoint should be deployed as a Node function");
 assert.ok(existsSync(new URL("../api/study-guide.mjs", import.meta.url)), "Vercel AI route exists");
 assert.ok(existsSync(new URL("../index.html", import.meta.url)), "Vercel homepage exists at the root");
@@ -81,7 +83,7 @@ assert.match(api, new RegExp("node:dns/promises"), "public URL reading should ch
 assert.match(api, new RegExp("inclusionai/ling-3\\.0-flash-vl:free"), "image requests should use the configured free vision model");
 assert.match(api, /type: "image_url"/, "image data should be sent as a multimodal message");
 assert.doesNotMatch(api, /provider: "Kilo Auto Free"|provider: imageData|model: requestedModel/, "API responses should not disclose configured model or provider");
-assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|KILO_API_KEY in Vercel/, "user-facing errors should not expose provider configuration");
+assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|Kilo Auto Free is temporarily|KILO_API_KEY in Vercel/, "user-facing errors should not expose provider configuration");
 assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
