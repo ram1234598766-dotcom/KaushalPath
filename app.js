@@ -45,11 +45,11 @@ const questions=[
 {q:"The oxidation number of manganese in KMnO₄ is:",o:["+2","+4","+6","+7"],a:3,e:"K is +1 and four oxygens total −8, so Mn must be +7 for a neutral compound."},
 {q:"The principal role of decomposers in an ecosystem is to:",o:["Fix solar energy","Recycle nutrients from organic matter","Produce all oxygen","Stop food chains"],a:1,e:"Decomposers break down organic matter and return nutrients to ecosystems."}]}
 ];
-let active=null,tick=null,lastAnswerText="",studyImageData=null,chatImageData=null,lastChatImageData=null;
+let active=null,tick=null,lastAnswerText="",studyAttachment=null,chatAttachment=null,lastChatAttachment=null;
 function safe(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function resizeImageFile(file){
  return new Promise(function(resolve,reject){
-  if(!file||!file.type||!file.type.startsWith("image/")){reject(new Error("Choose an image file."));return;}
+  if(!file){reject(new Error("Choose an image file."));return;}
   if(file.size>15*1024*1024){reject(new Error("Choose an image smaller than 15 MB; it will be compressed before upload."));return;}
   const url=URL.createObjectURL(file),image=new Image();
   image.onload=function(){
@@ -64,9 +64,43 @@ function resizeImageFile(file){
     URL.revokeObjectURL(url);resolve(data);
    }catch(error){URL.revokeObjectURL(url);reject(error);}
   };
-  image.onerror=function(){URL.revokeObjectURL(url);reject(new Error("The selected image could not be opened."));};
+  image.onerror=function(){URL.revokeObjectURL(url);reject(new Error("This image format cannot be opened by your browser. Try saving it as PNG or JPG, or export the page as PDF."));};
   image.src=url;
  });
+}
+const ATTACHMENT_TEXT_EXTENSIONS=new Set(["txt","md","csv","tsv","json","xml","html","htm","rtf"]);
+const ATTACHMENT_DOCUMENT_EXTENSIONS=new Set(["pdf","doc","docx","pptx","xlsx","xls","ods","odt"]);
+const ATTACHMENT_IMAGE_EXTENSIONS=new Set(["png","jpg","jpeg","webp","gif","bmp","svg","avif","tif","tiff","heic","heif"]);
+function attachmentExtension(file){const m=String(file&&file.name||"").toLowerCase().match(/\.([a-z0-9]{1,8})$/);return m?m[1]:"";}
+function readFileAsDataUrl(file){return new Promise(function(resolve,reject){const reader=new FileReader();reader.onload=function(){typeof reader.result==="string"?resolve(reader.result):reject(new Error("The selected file could not be read."));};reader.onerror=function(){reject(new Error("The selected file could not be read."));};reader.readAsDataURL(file);});}
+async function prepareAttachmentFile(file){
+ if(!file)return null;
+ const ext=attachmentExtension(file),isImage=String(file.type||"").startsWith("image/")||ATTACHMENT_IMAGE_EXTENSIONS.has(ext);
+ if(isImage){
+  const data=await resizeImageFile(file);
+  return {kind:"image",name:file.name,type:file.type||"image/jpeg",imageData:data};
+ }
+ if(ATTACHMENT_TEXT_EXTENSIONS.has(ext)){
+  if(file.size>150000)throw new Error("Text, CSV and similar files must be 150 KB or smaller.");
+  const text=await file.text();
+  if(!text.trim())throw new Error("The selected text file is empty.");
+  return {kind:"text",name:file.name,type:file.type||"text/plain",fileText:text};
+ }
+ if(!ATTACHMENT_DOCUMENT_EXTENSIONS.has(ext)){
+  throw new Error("Supported files: images, PDF, Word (.doc/.docx), PowerPoint (.pptx), Excel (.xls/.xlsx/.ods), OpenDocument (.odt), and text/CSV/JSON/HTML/RTF.");
+ }
+ if(file.size>2.5*1024*1024)throw new Error("Documents must be 2.5 MB or smaller for upload. Try compressing the file or removing unused pages.");
+ const data=await readFileAsDataUrl(file);
+ if(data.length>3600000)throw new Error("This document is too large after encoding. Choose a smaller file (up to 2.5 MB).");
+ return {kind:"document",name:file.name,type:file.type||"application/octet-stream",fileData:data};
+}
+function attachmentPayload(attachment){
+ if(!attachment)return {};
+ return {imageData:attachment.imageData||"",fileData:attachment.fileData||"",fileText:attachment.fileText||"",fileName:attachment.name||"",fileType:attachment.type||""};
+}
+function attachmentLabel(attachment){
+ if(!attachment)return "";
+ return "[Attached file: "+String(attachment.name||"file").slice(0,120)+"]";
 }
 function renderSourceLinks(root,sources){
  if(!root)return;root.replaceChildren();
@@ -81,7 +115,7 @@ function renderSourceLinks(root,sources){
 function searchIntent(text){return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text||""));}
 function needsRemoteTools(payload){
  if(!payload)return false;
- if(payload.imageData||payload.webSearch||(Array.isArray(payload.urls)&&payload.urls.length))return true;
+ if(payload.imageData||payload.fileData||payload.fileText||payload.webSearch||(Array.isArray(payload.urls)&&payload.urls.length))return true;
  return searchIntent(payload.searchQuery||payload.userPrompt||payload.prompt||"");
 }
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(function(){el.classList.add("hidden");},3200);}
@@ -329,22 +363,22 @@ function makePrompt(level,subject,chapter,mode,topic){
 }
 let lastStudyController=null;
 $("studyImage").addEventListener("change",async function(){
- const file=this.files&&this.files[0],hint=$("studyImageHint");studyImageData=null;if(!file){if(hint)hint.textContent="Upload a question photo, diagram, or screenshot for cloud image analysis.";return;}
- if(hint)hint.textContent="Compressing image…";
- try{studyImageData=await resizeImageFile(file);if(hint)hint.textContent="Image ready for analysis · compressed before upload.";}
- catch(error){this.value="";if(hint)hint.textContent=error.message;toast(error.message);}
+ const file=this.files&&this.files[0],hint=$("studyImageHint");studyAttachment=null;if(!file){if(hint)hint.textContent="Select an image, PDF, Word, Excel, PowerPoint or text file.";return;}
+ if(hint)hint.textContent="Preparing "+file.name+"…";
+ try{studyAttachment=await prepareAttachmentFile(file);if(hint)hint.textContent="Ready to attach: "+file.name+" · "+(studyAttachment.kind==="image"?"image compressed":studyAttachment.kind==="document"?"document will be read securely by the study service":"text will be read securely by the study service")+".";
+ }catch(error){this.value="";studyAttachment=null;if(hint)hint.textContent=error.message;toast(error.message);}
 });
 $("chatImage").addEventListener("change",async function(){
- const file=this.files&&this.files[0],hint=$("chatImageHint");chatImageData=null;if(!file){if(hint)hint.textContent="Question photos and diagrams use the cloud vision route.";return;}
- if(hint)hint.textContent="Compressing image…";
- try{chatImageData=await resizeImageFile(file);if(hint)hint.textContent="Image ready · it will accompany your next question.";}
- catch(error){this.value="";if(hint)hint.textContent=error.message;toast(error.message);}
+ const file=this.files&&this.files[0],hint=$("chatImageHint");chatAttachment=null;if(!file){if(hint)hint.textContent="Attach an image, PDF, office document or text file.";return;}
+ if(hint)hint.textContent="Preparing "+file.name+"…";
+ try{chatAttachment=await prepareAttachmentFile(file);if(hint)hint.textContent="Ready to attach: "+file.name+" · "+(chatAttachment.kind==="image"?"image compressed":chatAttachment.kind==="document"?"document will be read by the study service":"text file ready")+".";
+ }catch(error){this.value="";chatAttachment=null;if(hint)hint.textContent=error.message;toast(error.message);}
 });
 $("studyForm").addEventListener("submit",async function(ev){
  ev.preventDefault();
  const topic=$("topic").value.trim(),subject=subjectName(),chapter=$("chapter").value.trim(),level=$("classLevel").value,mode=$("studyMode").value;
  if(!topic||!subject){toast("Choose a subject and a topic first.");return;}
- if($("studyImage").files&&$("studyImage").files.length&&!studyImageData){toast("Wait for the image compression to finish, then generate again.");return;}
+ if($("studyImage").files&&$("studyImage").files.length&&!studyAttachment){toast("Wait for the selected file to finish preparing, then generate again.");return;}
  if(lastStudyController)lastStudyController.abort();
  lastStudyController=new AbortController();
  const controller=lastStudyController,btn=$("askBtn");btn.disabled=true;btn.textContent="Connecting…";
@@ -354,7 +388,7 @@ $("studyForm").addEventListener("submit",async function(ev){
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
   renderSourceLinks($("sourceList"),[]);
   const prompt=makePrompt(level,subject,chapter,mode,topic);
-  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode,imageData:studyImageData,searchQuery:topic,userPrompt:topic},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){btn.textContent=String(status).includes("alternate response format")?"Retrying…":String(status).includes("Checking")?"Checking sources…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
+  const answer=await streamStudyRequest(Object.assign({prompt:prompt,urls:urls,mode:mode,searchQuery:topic,userPrompt:topic},attachmentPayload(studyAttachment)),function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){btn.textContent=String(status).includes("alternate response format")?"Retrying…":String(status).includes("Checking")?"Checking sources…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
   lastAnswerText=answer;
   const note=document.createElement("p");note.className="tiny";note.textContent="Check important details against your prescribed textbook or official syllabus.";
   $("studyOutput").appendChild(note);
@@ -471,12 +505,12 @@ async function sendChat(raw,regenerate){
  const question=String(raw||"").trim();if(!question||chatBusy)return;
  if(activeChatController)activeChatController.abort();
  if(!regenerate){
-  lastChatImageData=chatImageData;chatImageData=null;
+  lastChatAttachment=chatAttachment;chatAttachment=null;
   if($("chatImage"))$("chatImage").value="";
-  if($("chatImageHint"))$("chatImageHint").textContent=lastChatImageData?"Image attached to this question.":"Attach an image for diagram or question analysis.";
-  chatHistory.push({role:"user",content:question});chatAddMessage("user",question+(lastChatImageData?"\n\n[Image attached for analysis]":""));lastChatPrompt=question;
+  if($("chatImageHint"))$("chatImageHint").textContent=lastChatAttachment?"Attached: "+lastChatAttachment.name:"Attach an image, PDF, office document or text file.";
+  chatHistory.push({role:"user",content:question});chatAddMessage("user",question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):""));lastChatPrompt=question;
  }else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
- const imageForRequest=lastChatImageData,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
+ const attachmentForRequest=lastChatAttachment,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
  chatBusy=true;activeChatController=new AbortController();
  const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop"),messages=$("chatMessages");
  send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent="Connecting to the study assistant…";
@@ -488,7 +522,7 @@ async function sendChat(raw,regenerate){
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
   renderSourceLinks($("chatSources"),[]);
-  answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),imageData:imageForRequest,webSearch:webSearch,searchQuery:question,userPrompt:question},function(delta){
+  answer=await streamStudyRequest(Object.assign({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),webSearch:webSearch,searchQuery:question,userPrompt:question},attachmentPayload(attachmentForRequest)),function(delta){
    const shouldFollow=messages.scrollHeight-messages.scrollTop-messages.clientHeight<120;
    if(waiting){node.innerHTML="";waiting=false;messageBox.classList.remove("is-pending");const copyButton=messageBox.querySelector("[data-copy-message]");if(copyButton)copyButton.disabled=false;}
    answer+=delta;renderMarkdownInto(node,answer);
@@ -500,7 +534,7 @@ async function sendChat(raw,regenerate){
   }
   messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
-  $("chatStatus").textContent=needsRemoteTools({imageData:imageForRequest,webSearch:webSearch,userPrompt:question})?"Answer ready · sources checked":"Answer ready";
+  $("chatStatus").textContent=needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready";
   enableChatTools(Boolean(answer));
  }catch(err){
   messageBox.classList.remove("is-pending");
@@ -512,7 +546,7 @@ async function sendChat(raw,regenerate){
   chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();
  }
 }
-$("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatImageData){toast("Wait for the image compression to finish, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
+$("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatAttachment){toast("Wait for the selected file to finish preparing, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
 $("chatInput").addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();$("chatForm").requestSubmit();}});
 $("chatMessages").addEventListener("click",async function(ev){
  const copyButton=ev.target.closest("[data-copy-message]");
