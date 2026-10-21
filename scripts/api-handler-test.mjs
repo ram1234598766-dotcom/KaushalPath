@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import handler from "../api/study-guide.mjs";
+import { zipSync, strToU8 } from "fflate";
 
 function makeResponse() {
   return {
@@ -84,5 +85,37 @@ const unsupportedFile = await call({
 });
 assert.equal(unsupportedFile.statusCode, 422);
 assert.match(unsupportedFile.payload.error, /Supported files/i);
+
+// A tiny Office ZIP whose central directory claims a 13 MiB entry must be rejected before extraction.
+const zipBomb = Buffer.from(zipSync({ "ppt/slides/slide1.xml": strToU8("<a:t>tiny</a:t>") }));
+const centralDirectorySignature = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
+const centralEntryOffset = zipBomb.indexOf(centralDirectorySignature);
+assert.ok(centralEntryOffset >= 0, "test archive should contain a ZIP central directory entry");
+zipBomb.writeUInt32LE(13 * 1024 * 1024, centralEntryOffset + 24);
+const zipBombResponse = await call({
+  method: "POST",
+  headers: {},
+  body: {
+    prompt: "Please explain this presentation for my exam",
+    fileName: "oversized.pptx",
+    fileType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    fileData: "data:application/zip;base64," + zipBomb.toString("base64")
+  }
+});
+assert.equal(zipBombResponse.statusCode, 422);
+assert.match(zipBombResponse.payload.error, /archive entry that is too large/i);
+
+const malformedOffice = await call({
+  method: "POST",
+  headers: {},
+  body: {
+    prompt: "Please explain this document for my exam",
+    fileName: "broken.docx",
+    fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    fileData: "data:application/zip;base64," + Buffer.from("not a zip archive").toString("base64")
+  }
+});
+assert.equal(malformedOffice.statusCode, 422);
+assert.match(malformedOffice.payload.error, /not a valid ZIP archive/i);
 
 console.log("KaushalPath API handler validation tests passed.");
