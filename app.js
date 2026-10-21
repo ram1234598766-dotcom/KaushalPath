@@ -696,14 +696,14 @@ $("backupFile").addEventListener("change",async function(){
   if(payload.results.some(function(r){return !validResult(r);}))throw new Error("The backup contains a result record with invalid fields.");
   if(payload.focusSessions.some(function(s){return !s||typeof s.date!=="string"||!Number.isFinite(Date.parse(s.date))||!Number.isInteger(Number(s.seconds))||Number(s.seconds)<60||Number(s.seconds)>7200||s.mode!=="focus";}))throw new Error("The backup contains an invalid focus-session record.");
   const importedLibrary=Array.isArray(payload.savedLibrary)?payload.savedLibrary:[];if(importedLibrary.some(function(item){return !validLibraryItem(item);}))throw new Error("The backup contains an invalid saved-study record.");
-  if(!confirm("Replace this browser's "+getHistory().length+" result(s) and "+getFocusSessions().length+" focus session(s) with "+payload.results.length+" result(s) and "+payload.focusSessions.length+" focus session(s) from this backup? Export your current progress first if you need a copy."))return;
+  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), and "+getSavedLibrary().length+" saved answer(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), and "+importedLibrary.length+" saved answer(s) from this backup? Export your current progress first if you need a copy."))return;
   const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
   clearSavedTest();renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Progress backup imported successfully.");
  }catch(error){toast(error&&error.message?error.message:"Could not import that backup.");}
  finally{$("backupFile").value="";}
 });
 $("clearProgress").addEventListener("click",function(){
- if(!confirm("Clear all saved test results, focus sessions, and the unfinished test on this browser? This cannot be undone."))return;
+ if(!confirm("Clear all saved test results, focus sessions, saved study answers, and the unfinished test on this browser? This cannot be undone."))return;
  writeLocalJSON(HISTORY_KEY,[]);writeLocalJSON(FOCUS_KEY,[]);writeLocalJSON(LIBRARY_KEY,[]);clearSavedTest();setFocusPreset("focus",1500);renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Saved progress cleared.");
 });
 function getHistoryForExport(){return getHistory();}
@@ -714,9 +714,9 @@ function getSavedLibrary(){const stored=readLocalJSON(LIBRARY_KEY,[]);return Arr
 function saveLibraryItem(kind,title,text){
  const cleaned=String(text||"").trim();if(!cleaned){toast("There is no answer to save yet.");return;}
  const items=getSavedLibrary();if(items.some(function(item){return item.kind===kind&&item.text===cleaned;})){toast("This answer is already saved in your library.");return;}
- const item={id:Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10),kind:kind,title:String(title||"Study answer").trim().slice(0,160)||"Study answer",createdAt:new Date().toISOString(),text:cleaned.slice(0,12000)};
+ const truncated=cleaned.length>12000;const item={id:Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10),kind:kind,title:String(title||"Study answer").trim().slice(0,160)||"Study answer",createdAt:new Date().toISOString(),text:cleaned.slice(0,12000)};
  items.unshift(item);if(!writeLocalJSON(LIBRARY_KEY,items.slice(0,40))){toast("Browser storage is full or unavailable. Export your progress and try again.");return;}
- renderSavedLibrary();toast("Saved to your study library.");
+ renderSavedLibrary();toast(truncated?"Saved the first 12,000 characters to your study library.":"Saved to your study library.");
 }
 function saveStudyAnswerToLibrary(){
  if(!lastAnswerText)return;
