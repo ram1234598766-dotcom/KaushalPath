@@ -49,6 +49,18 @@ assert.throws(() => createPinnedLookup([{ address: "169.254.169.254", family: 4 
 assert.throws(() => createPinnedLookup([{ address: "93.184.216.34", family: 4 }, { address: "10.0.0.5", family: 4 }]), /validated public IP/i, "one unsafe DNS answer must reject the entire address set");
 assert.throws(() => createPinnedLookup([{ address: "::ffff:127.0.0.1", family: 6 }]), /validated public IP/i, "IPv4-mapped loopback destinations must be rejected");
 
+assert.throws(() => createPinnedLookup([{ address: "192.0.0.1", family: 4 }]), /validated public IP/i, "IETF special-use IPv4 space must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "192.88.99.1", family: 4 }]), /validated public IP/i, "deprecated 6to4 relay IPv4 space must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "198.51.100.42", family: 4 }]), /validated public IP/i, "IPv4 documentation ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0000::1", family: 6 }]), /validated public IP/i, "expanded IETF special-use IPv6 addresses must be normalized and rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0002::1", family: 6 }]), /validated public IP/i, "IPv6 benchmarking ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0010::1", family: 6 }]), /validated public IP/i, "expanded ORCHID ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0020::1", family: 6 }]), /validated public IP/i, "expanded ORCHIDv2 ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2002:0808:0808::1", family: 6 }]), /validated public IP/i, "deprecated IPv6 6to4 addresses must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "3fff::1", family: 6 }]), /validated public IP/i, "IPv6 documentation addresses must be rejected");
+assert.doesNotThrow(() => createPinnedLookup([{ address: "2606:4700:4700::1111", family: 6 }]), "a globally routable IPv6 address should remain usable");
+
+
 const wrongMethod = await call({ method: "GET", headers: {} });
 assert.equal(wrongMethod.statusCode, 405, "status details must not be returned without the status header");
 assert.equal(wrongMethod.headers.allow, undefined, "GET denial should not falsely advertise method support");
