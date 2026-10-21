@@ -1,6 +1,9 @@
 import { lookup } from "node:dns/promises";
 import { randomUUID } from "node:crypto";
 import { isIP } from "node:net";
+import { request as requestHttp } from "node:http";
+import { request as requestHttps } from "node:https";
+import { Readable } from "node:stream";
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
@@ -92,7 +95,7 @@ async function assertPublicUrl(raw) {
   if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
       host.endsWith(".internal") || host === "metadata.google.internal") throw new Error("Private and local network URLs cannot be opened.");
   let addresses;
-  if (isIP(host)) addresses = [{ address: host }];
+  if (isIP(host)) addresses = [{ address: host, family: isIP(host) }];
   else {
     try { addresses = await lookup(host, { all: true, verbatim: true }); }
     catch { throw new Error("That website could not be resolved."); }
@@ -101,7 +104,8 @@ async function assertPublicUrl(raw) {
     throw new Error("Private and non-public network addresses cannot be opened.");
   }
   url.hash = "";
-  return url;
+  // Reuse the exact validated DNS answers when connecting to avoid DNS rebinding.
+  return { url, addresses };
 }
 function normalizeUrls(input) {
   if (input == null) return [];
@@ -122,21 +126,74 @@ function normalizeUrls(input) {
   }
   return result;
 }
+export function createPinnedLookup(addresses) {
+  if (!Array.isArray(addresses) || !addresses.length ||
+      addresses.some((item) => !item || typeof item.address !== "string" || !isPublicAddress(item.address))) {
+    throw new Error("Only validated public IP addresses can be used for research connections.");
+  }
+  const pinned = addresses.map((item) => ({
+    address: item.address,
+    family: Number(item.family) === 4 || Number(item.family) === 6 ? Number(item.family) : isIP(item.address)
+  })).sort((a, b) => (a.family === 4 ? 0 : 1) - (b.family === 4 ? 0 : 1));
+  return function pinnedLookup(_hostname, options, callback) {
+    if (typeof options === "function") { callback = options; options = {}; }
+    const requestedFamily = Number(options && options.family) || 0;
+    const candidates = requestedFamily ? pinned.filter((item) => item.family === requestedFamily) : pinned;
+    if (!candidates.length) {
+      const error = new Error("No validated address is available for this network family.");
+      error.code = "EAI_ADDRFAMILY";
+      callback(error);
+      return;
+    }
+    if (options && options.all) {
+      callback(null, candidates.map((item) => ({ address: item.address, family: item.family })));
+      return;
+    }
+    callback(null, candidates[0].address, candidates[0].family);
+  };
+}
+
+async function requestPublicPage(url, addresses) {
+  return new Promise((resolve, reject) => {
+    const transport = url.protocol === "https:" ? requestHttps : requestHttp;
+    const request = transport(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "KaushalPathStudyResearch/1.0 (+public educational page reader)",
+        "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1"
+      },
+      lookup: createPinnedLookup(addresses),
+      signal: AbortSignal.timeout(8500),
+      maxHeaderSize: 16384
+    }, (incoming) => {
+      const headers = {
+        get(name) {
+          const value = incoming.headers[String(name || "").toLowerCase()];
+          if (Array.isArray(value)) return value.join(", ");
+          return value == null ? null : String(value);
+        }
+      };
+      const status = Number(incoming.statusCode) || 0;
+      resolve({ status, ok: status >= 200 && status < 300, headers, body: Readable.toWeb(incoming) });
+    });
+    request.once("error", reject);
+    request.end();
+  });
+}
+
 async function fetchPublicRaw(rawUrl, maxBytes = 600000) {
   let current = String(rawUrl);
   for (let hop = 0; hop <= 3; hop++) {
-    const url = await assertPublicUrl(current);
+    const { url, addresses } = await assertPublicUrl(current);
     let response;
     try {
-      response = await fetch(url, {
-        redirect: "manual",
-        headers: { "User-Agent": "KaushalPathStudyResearch/1.0 (+public educational page reader)", "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1" },
-        signal: AbortSignal.timeout(8500)
-      });
+      response = await requestPublicPage(url, addresses);
     } catch (error) {
-      throw new Error("The page request failed or timed out.");
+      if (/timeout|abort/i.test(String(error && error.message || ""))) throw new Error("The page request timed out.");
+      throw new Error("The page request failed.");
     }
     if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (response.body && typeof response.body.cancel === "function") await response.body.cancel().catch(() => {});
       const location = response.headers.get("location");
       if (!location || hop === 3) throw new Error("The page redirected too many times.");
       current = new URL(location, url).href;
