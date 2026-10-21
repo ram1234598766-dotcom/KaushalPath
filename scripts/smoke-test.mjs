@@ -10,17 +10,11 @@ const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url
 assert.match(html, /KaushalPath/, "site brand should be present");
 assert.match(html, /studyForm/, "study form should exist");
 assert.match(html, /sourceUrls/, "manual website URL input should exist");
-assert.match(html, /liveSearch/, "live search toggle should exist");
 assert.match(html, /src="\/app\.js" defer/, "JavaScript should be external for CSP");
 assert.doesNotMatch(html, /<script>[\s\S]*?<\/script>/i, "inline scripts should be removed");
 assert.match(app, /\/api\/study-guide/, "frontend must call the Vercel API path");
 assert.match(app, /urls:urls/, "frontend must send supplied URLs");
-assert.match(api, /client\.interactions\.create/, "AI uses the Gemini Interactions API");
-assert.match(api, /google_search/, "AI supports live search");
-assert.match(api, /url_context/, "AI supports public URL reading");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
-assert.match(api, /GEMINI_API_KEY/, "AI credentials are read server-side");
-assert.equal(pkg.dependencies["@google/genai"], "^2.30.0", "SDK version should support URL context");
 assert.equal(vercel.framework, null, "Vercel should use the Other framework preset");
 assert.equal(vercel.cleanUrls, true, "Vercel should expose the serverless endpoint without its .mjs extension");
 assert.ok(vercel.routes.some(r => r.src === "/api/study-guide" && r.dest === "/api/study-guide.mjs"), "AI endpoint must have a clean URL route");
@@ -35,4 +29,8 @@ assert.equal(existsSync(new URL("../public/index.html", import.meta.url)), false
 assert.equal(existsSync(new URL("../public/app.js", import.meta.url)), false, "legacy nested browser script should be removed");
 assert.equal(existsSync(new URL("../netlify.toml", import.meta.url)), false, "Netlify config should be removed");
 assert.equal(existsSync(new URL("../netlify/functions/study-guide.mjs", import.meta.url)), false, "Netlify AI function should be removed");
-console.log("KaushalPath Vercel root static assets, Node AI function, and cleanup checks passed.");
+assert.match(api, /kilo-auto\/free/, "AI should use Kilo Auto Free");
+assert.match(api, /ai-gateway\.kilo\.ai/, "AI should use the Kilo Gateway");
+assert.match(api, /normalizeUrls/, "API validates user URLs");
+assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
+console.log("KaushalPath Vercel root static assets, Kilo Auto Free API, and cleanup checks passed.");
