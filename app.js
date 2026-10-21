@@ -586,25 +586,143 @@ $("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chat
 $("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
 $("saveStudyPdf").disabled=true;
 
-function getHistory(){try{return JSON.parse(localStorage.getItem("kp-results")||"[]");}catch(e){return [];}}
-function saveHistory(item){const list=getHistory();list.unshift(item);localStorage.setItem("kp-results",JSON.stringify(list.slice(0,60)));renderHistory();}
-function renderHistory(){const list=getHistory(),root=$("historyList");root.innerHTML="";if(!list.length){root.innerHTML='<div class="empty">No completed tests yet. Try a practice set above.</div>';return;}list.slice(0,12).forEach(function(r){const row=document.createElement("div");row.className="history-row";row.innerHTML='<div><strong>'+safe(r.title)+'</strong><small>'+safe(r.date)+' · '+r.correct+' correct · '+r.wrong+' wrong</small></div><strong>'+r.score+' / '+r.max+'</strong>';root.appendChild(row);});}
-function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
+const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test";
+function readLocalJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}}
+function writeLocalJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}}
+function validResult(r){return !!r&&typeof r==="object"&&typeof r.title==="string"&&r.title.length<=250&&typeof r.exam==="string"&&typeof r.date==="string"&&r.date.length<=120&&Number.isFinite(Number(r.score))&&Number.isFinite(Number(r.max))&&Number(r.max)>0&&Number.isFinite(Number(r.correct))&&Number.isFinite(Number(r.wrong))&&Number.isFinite(Number(r.blank));}
+function getHistory(){const stored=readLocalJSON(HISTORY_KEY,[]);return Array.isArray(stored)?stored.filter(validResult).slice(0,60):[];}
+function saveHistory(item){const list=getHistory();list.unshift(item);const saved=writeLocalJSON(HISTORY_KEY,list.slice(0,60));renderHistory();if(!saved)toast("Your result is visible, but browser storage is full or unavailable. Export it now.");}
+function getFocusSessions(){const stored=readLocalJSON(FOCUS_KEY,[]);return Array.isArray(stored)?stored.filter(function(s){return s&&typeof s.date==="string"&&Number.isFinite(Date.parse(s.date))&&Number.isFinite(Number(s.seconds))&&Number(s.seconds)>=60&&Number(s.seconds)<=7200&&s.mode==="focus";}).slice(-100):[];}
+function saveFocusSessions(list){return writeLocalJSON(FOCUS_KEY,list.slice(-100));}
+function clearSavedTest(){try{localStorage.removeItem(ACTIVE_TEST_KEY);}catch(e){}}
+function getSavedTest(){
+ const saved=readLocalJSON(ACTIVE_TEST_KEY,null);if(!saved||typeof saved!=="object")return null;
+ const test=questions.find(function(t){return t.id===saved.testId;});
+ if(!test||!Number.isFinite(Number(saved.endAt))){clearSavedTest();return null;}
+ const index=Number(saved.index),answers={};
+ if(!Number.isInteger(index)||index<0||index>=test.qs.length){clearSavedTest();return null;}
+ if(saved.answers&&typeof saved.answers==="object")Object.keys(saved.answers).forEach(function(key){const qi=Number(key),answer=Number(saved.answers[key]);if(Number.isInteger(qi)&&qi>=0&&qi<test.qs.length&&Number.isInteger(answer)&&answer>=0&&answer<test.qs[qi].o.length)answers[qi]=answer;});
+ return {testId:test.id,answers:answers,index:index,endAt:Number(saved.endAt)};
+}
+function saveActiveTest(){if(!active||!active.test)return;const ok=writeLocalJSON(ACTIVE_TEST_KEY,{testId:active.test.id,answers:active.answers,index:active.index,endAt:active.endAt,updatedAt:Date.now()});if(!ok)toast("Autosave is unavailable in this browser. Keep this tab open.");refreshResumeBanner();}
+function refreshResumeBanner(){
+ const banner=$("resumeTestBanner");if(!banner)return;const saved=getSavedTest(),title=$("resumeTestTitle"),detail=$("resumeTestDetail");
+ if(!saved){banner.classList.add("hidden");return;}
+ const test=questions.find(function(t){return t.id===saved.testId;});if(!test){banner.classList.add("hidden");return;}
+ if(title)title.textContent=test.title;
+ const remaining=Math.max(0,Math.ceil((saved.endAt-Date.now())/1000)),answered=Object.keys(saved.answers).length;
+ if(detail)detail.textContent=remaining===0?"Time has expired. Resume to submit your saved answers.":answered+" of "+test.qs.length+" answers saved · Question "+(saved.index+1)+" of "+test.qs.length+" · time remaining "+String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0")+".";
+ banner.classList.remove("hidden");
+}
+function renderHistory(){
+ const list=getHistory(),root=$("historyList");root.replaceChildren();
+ if(!list.length){const empty=document.createElement("div");empty.className="empty";empty.textContent="No completed tests yet. Try a practice set above.";root.appendChild(empty);}
+ else list.slice(0,12).forEach(function(r){const row=document.createElement("div");row.className="history-row";const left=document.createElement("div"),title=document.createElement("strong"),meta=document.createElement("small"),score=document.createElement("strong");title.textContent=r.title;meta.textContent=r.date+" · "+r.correct+" correct · "+r.wrong+" wrong";score.textContent=r.score+" / "+r.max;left.append(title,meta);row.append(left,score);root.appendChild(row);});
+ refreshMomentum();
+}
+function localDayKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function refreshMomentum(){
+ const history=getHistory(),sessions=getFocusSessions(),attempted=history.reduce(function(sum,r){return sum+Math.max(0,Number(r.correct)||0)+Math.max(0,Number(r.wrong)||0);},0),correct=history.reduce(function(sum,r){return sum+Math.max(0,Number(r.correct)||0);},0),minutes=Math.round(sessions.reduce(function(sum,s){return sum+Number(s.seconds||0);},0)/60);
+ const days=new Set();history.forEach(function(r){const d=new Date(r.date);if(Number.isFinite(d.getTime()))days.add(localDayKey(d));});sessions.forEach(function(s){const d=new Date(s.date);if(Number.isFinite(d.getTime()))days.add(localDayKey(d));});
+ let streak=0,cursor=new Date();cursor.setHours(0,0,0,0);if(!days.has(localDayKey(cursor)))cursor.setDate(cursor.getDate()-1);
+ while(days.has(localDayKey(cursor))&&streak<3650){streak++;cursor.setDate(cursor.getDate()-1);}
+ const attempts=$("momentumAttempts"),accuracy=$("momentumAccuracy"),focus=$("momentumFocus"),streakNode=$("momentumStreak");
+ if(attempts)attempts.textContent=String(history.length);
+ if(accuracy)accuracy.textContent=(attempted?Math.round(correct/attempted*100):0)+"%";
+ if(focus)focus.textContent=minutes>=60?Math.floor(minutes/60)+"h "+(minutes%60)+"m":minutes+"m";
+ if(streakNode)streakNode.textContent=String(streak)+" "+(streak===1?"day":"days");
+}
+let focusInterval=null,focusState={mode:"focus",duration:1500,remaining:1500,running:false,endsAt:null};
+function saveFocusState(){writeLocalJSON(FOCUS_STATE_KEY,focusState);}
+function renderFocusTimer(){
+ const clock=$("focusClock"),status=$("focusStatus"),button=$("focusStartPause");if(!clock||!status||!button)return;
+ const remaining=Math.max(0,Math.ceil(focusState.running?(focusState.endsAt-Date.now())/1000:focusState.remaining));
+ clock.textContent=String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");
+ clock.setAttribute("aria-label",(focusState.mode==="focus"?"Focus":"Break")+" time remaining "+clock.textContent);
+ button.textContent=focusState.running?"Pause timer":focusState.mode==="focus"?"Start focus":"Start break";
+ status.textContent=focusState.running?(focusState.mode==="focus"?"Focus session in progress. Keep one task in front of you.":"Break in progress. Step away from the screen if you can."):focusState.remaining===focusState.duration?(focusState.mode==="focus"?"Ready for a "+Math.round(focusState.duration/60)+"-minute focus block.":"Ready for a short break."):("Timer paused. You can resume the remaining "+clock.textContent+".");
+ document.querySelectorAll("[data-focus-preset]").forEach(function(b){const mode=b.dataset.focusMode||"focus",seconds=Number(b.dataset.focusPreset);b.classList.toggle("active",!focusState.running&&mode===focusState.mode&&seconds===focusState.duration);});
+}
+function stopFocusInterval(){if(focusInterval){clearInterval(focusInterval);focusInterval=null;}}
+function setFocusPreset(mode,seconds){stopFocusInterval();focusState={mode:mode,duration:seconds,remaining:seconds,running:false,endsAt:null};saveFocusState();renderFocusTimer();}
+function completeFocusTimer(){
+ const completedMode=focusState.mode,completedDuration=focusState.duration;
+ stopFocusInterval();
+ if(completedMode==="focus"){
+  const sessions=getFocusSessions();sessions.push({date:new Date().toISOString(),seconds:completedDuration,mode:"focus"});const saved=saveFocusSessions(sessions);refreshMomentum();if(!saved)toast("Focus completed, but the session could not be saved in this browser.");
+  focusState={mode:"break",duration:300,remaining:300,running:false,endsAt:null};toast("Focus block complete. Take a 5-minute break.");
+ }else{
+  focusState={mode:"focus",duration:1500,remaining:1500,running:false,endsAt:null};toast("Break complete. Ready for another focus block?");
+ }
+ saveFocusState();renderFocusTimer();
+}
+function focusTick(){if(!focusState.running)return;focusState.remaining=Math.max(0,Math.ceil((focusState.endsAt-Date.now())/1000));if(focusState.remaining<=0){completeFocusTimer();return;}renderFocusTimer();}
+function beginFocusInterval(){stopFocusInterval();focusInterval=setInterval(focusTick,250);}
+function initFocusTimer(){
+ const saved=readLocalJSON(FOCUS_STATE_KEY,null);
+ if(saved&&["focus","break"].includes(saved.mode)&&Number.isFinite(Number(saved.duration))&&Number(saved.duration)>=60&&Number(saved.duration)<=3600&&Number.isFinite(Number(saved.remaining))&&Number(saved.remaining)>=0&&Number(saved.remaining)<=Number(saved.duration)){
+  focusState={mode:saved.mode,duration:Number(saved.duration),remaining:Number(saved.remaining),running:Boolean(saved.running)&&Number.isFinite(Number(saved.endsAt)),endsAt:Number(saved.endsAt)||null};
+  if(focusState.running){focusState.remaining=Math.max(0,Math.ceil((focusState.endsAt-Date.now())/1000));if(focusState.remaining<=0){completeFocusTimer();}else beginFocusInterval();}
+ }
+ renderFocusTimer();refreshMomentum();
+}
+$("focusStartPause").addEventListener("click",function(){
+ if(focusState.running){focusState.remaining=Math.max(0,Math.ceil((focusState.endsAt-Date.now())/1000));focusState.running=false;focusState.endsAt=null;stopFocusInterval();saveFocusState();renderFocusTimer();return;}
+ if(focusState.remaining<=0)focusState.remaining=focusState.duration;
+ focusState.running=true;focusState.endsAt=Date.now()+focusState.remaining*1000;saveFocusState();renderFocusTimer();beginFocusInterval();
+});
+$("focusReset").addEventListener("click",function(){setFocusPreset(focusState.mode,focusState.duration);});
+document.querySelectorAll("[data-focus-preset]").forEach(function(button){button.addEventListener("click",function(){setFocusPreset(button.dataset.focusMode||"focus",Number(button.dataset.focusPreset));});});
+$("resumeSavedTest").addEventListener("click",function(){
+ const saved=getSavedTest();if(!saved){refreshResumeBanner();return;}
+ const test=questions.find(function(t){return t.id===saved.testId;});if(!test)return;
+ clearInterval(tick);active={test:test,answers:saved.answers,index:saved.index,endAt:saved.endAt};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});renderQuestion();
+ if(active.endAt<=Date.now()){finishTest(true);return;}
+ saveActiveTest();tick=setInterval(function(){if(!active)return;updateTimer();},1000);
+});
+$("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
+window.addEventListener("beforeunload",function(){if(active)saveActiveTest();});
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&active)saveActiveTest();});
+function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
+$("exportBackup").addEventListener("click",exportProgressBackup);
+$("importBackup").addEventListener("click",function(){$("backupFile").click();});
+$("backupFile").addEventListener("change",async function(){
+ const file=$("backupFile").files&&$("backupFile").files[0];if(!file)return;
+ try{
+  if(file.size>1000000)throw new Error("Choose a progress backup smaller than 1 MB.");
+  const payload=JSON.parse(await file.text());
+  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100)throw new Error("This is not a supported KaushalPath progress backup.");
+  if(payload.results.some(function(r){return !validResult(r);}))throw new Error("The backup contains a result record with invalid fields.");
+  if(payload.focusSessions.some(function(s){return !s||typeof s.date!=="string"||!Number.isFinite(Date.parse(s.date))||!Number.isInteger(Number(s.seconds))||Number(s.seconds)<60||Number(s.seconds)>7200||s.mode!=="focus";}))throw new Error("The backup contains an invalid focus-session record.");
+  if(!confirm("Replace this browser's "+getHistory().length+" result(s) and "+getFocusSessions().length+" focus session(s) with "+payload.results.length+" result(s) and "+payload.focusSessions.length+" focus session(s) from this backup? Export your current progress first if you need a copy."))return;
+  if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions))throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");
+  clearSavedTest();renderHistory();refreshResumeBanner();toast("Progress backup imported successfully.");
+ }catch(error){toast(error&&error.message?error.message:"Could not import that backup.");}
+ finally{$("backupFile").value="";}
+});
+$("clearProgress").addEventListener("click",function(){
+ if(!confirm("Clear all saved test results, focus sessions, and the unfinished test on this browser? This cannot be undone."))return;
+ writeLocalJSON(HISTORY_KEY,[]);writeLocalJSON(FOCUS_KEY,[]);clearSavedTest();renderHistory();refreshResumeBanner();toast("Saved progress cleared.");
+});
+function getHistoryForExport(){return getHistory();}
+function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
-function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer">--:--</div></div><div class="question">'+safe(q.q)+'</div><div class="options">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
+function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div><div class="question">'+safe(q.q)+'</div><div class="options">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
 $("testGrid").addEventListener("click",function(e){const b=e.target.closest("[data-start]");if(b)startTest(b.dataset.start);});
-$("examWorkspace").addEventListener("click",function(e){if(!active)return;const ans=e.target.closest("[data-answer]"),jump=e.target.closest("[data-jump]");if(ans){active.answers[active.index]=Number(ans.dataset.answer);renderQuestion();return;}if(jump){active.index=Number(jump.dataset.jump);renderQuestion();return;}if(e.target.closest("#prevQ")){active.index=Math.max(0,active.index-1);renderQuestion();return;}if(e.target.closest("#nextQ")){if(active.index===active.test.qs.length-1){toast("Review your answers, then finish the test.");}else{active.index++;renderQuestion();}return;}if(e.target.closest("#finishQ"))finishTest(false);});
-function finishTest(auto){if(!active)return;clearInterval(tick);tick=null;const t=active.test;let correct=0,wrong=0,blank=0;const answers=active.answers;const review=t.qs.map(function(q,i){const chosen=answers[i];if(chosen===undefined)blank++;else if(chosen===q.a)correct++;else wrong++;return {question:q.q,options:q.o,chosen:chosen,correct:q.a,explanation:q.e};});const score=t.qs.reduce(function(total,q,i){const chosen=answers[i],marks=Number.isFinite(q.mark)?q.mark:t.mark,penalty=Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1));return total+(chosen===undefined?0:chosen===q.a?marks:-penalty);},0);const max=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const result={id:t.id,title:t.title,exam:t.exam,level:t.level,date:new Date().toLocaleString(),correct:correct,wrong:wrong,blank:blank,score:score,max:max,percentage:Math.round(Math.max(0,score)/max*100),review:review};saveHistory(result);active=null;renderResult(result,auto);}
+$("examWorkspace").addEventListener("click",function(e){if(!active)return;const ans=e.target.closest("[data-answer]"),jump=e.target.closest("[data-jump]");if(ans){active.answers[active.index]=Number(ans.dataset.answer);saveActiveTest();renderQuestion();return;}if(jump){active.index=Number(jump.dataset.jump);saveActiveTest();renderQuestion();return;}if(e.target.closest("#prevQ")){active.index=Math.max(0,active.index-1);saveActiveTest();renderQuestion();return;}if(e.target.closest("#nextQ")){if(active.index===active.test.qs.length-1){toast("Review your answers, then finish the test.");}else{active.index++;saveActiveTest();renderQuestion();}return;}if(e.target.closest("#finishQ")){const unanswered=active.test.qs.length-Object.keys(active.answers).length;if(unanswered&&!confirm("You still have "+unanswered+" unanswered question(s). Finish this test anyway?"))return;finishTest(false);}});
+function finishTest(auto){if(!active)return;clearInterval(tick);tick=null;const t=active.test;let correct=0,wrong=0,blank=0;const answers=active.answers;const review=t.qs.map(function(q,i){const chosen=answers[i];if(chosen===undefined)blank++;else if(chosen===q.a)correct++;else wrong++;return {question:q.q,options:q.o,chosen:chosen,correct:q.a,explanation:q.e};});const score=t.qs.reduce(function(total,q,i){const chosen=answers[i],marks=Number.isFinite(q.mark)?q.mark:t.mark,penalty=Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1));return total+(chosen===undefined?0:chosen===q.a?marks:-penalty);},0);const max=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const result={id:t.id,title:t.title,exam:t.exam,level:t.level,date:new Date().toLocaleString(),correct:correct,wrong:wrong,blank:blank,score:score,max:max,percentage:Math.round(Math.max(0,score)/max*100),review:review};saveHistory(result);clearSavedTest();active=null;renderResult(result,auto);}
 function renderResult(r,auto){const root=$("resultWorkspace");root.classList.remove("hidden");$("examWorkspace").classList.add("hidden");root.innerHTML='<div class="kicker">Your result</div><h2 style="margin-top:7px">'+safe(r.title)+'</h2><p class="tiny">'+(auto?"Time ended automatically. ":"")+"Completed "+safe(r.date)+'</p><div class="result-score">'+r.score+' <span style="font-size:1.1rem;color:var(--muted);font-weight:700">/ '+r.max+'</span></div><div class="result-grid"><div class="result-metric"><strong>'+r.percentage+'%</strong><span>Percentage (clamped at 0)</span></div><div class="result-metric"><strong>'+r.correct+'</strong><span>Correct</span></div><div class="result-metric"><strong>'+r.wrong+'</strong><span>Incorrect</span></div><div class="result-metric"><strong>'+r.blank+'</strong><span>Unattempted</span></div></div><div class="actions"><button class="btn btn-blue" id="downloadJson">Download result JSON</button><button class="btn btn-light" id="downloadCsv">Download result CSV</button><button class="btn btn-light" id="printResult">Print / save PDF</button><button class="btn btn-light" id="closeResult">Back to tests</button></div><h3 style="margin-top:25px">Answer review and explanations</h3><div id="answerReview"></div>';const review=$("answerReview");r.review.forEach(function(q,i){const div=document.createElement("div");div.className="review-item";const status=q.chosen===undefined?"Not attempted":q.chosen===q.correct?"Correct":"Incorrect";div.innerHTML='<strong>'+(i+1)+". "+safe(q.question)+'</strong><p class="'+(q.chosen===q.correct?"correct":q.chosen===undefined?"":"incorrect")+'">'+status+(q.chosen===undefined?"":" · Your answer: "+String.fromCharCode(65+q.chosen))+' · Correct answer: '+String.fromCharCode(65+q.correct)+" — "+safe(q.options[q.correct])+'</p><p class="tiny">'+safe(q.explanation)+'</p>';review.appendChild(div);});root.scrollIntoView({behavior:"smooth",block:"start"});$("downloadJson").addEventListener("click",function(){download("kaushalpath-result.json",JSON.stringify(r,null,2),"application/json");});$("downloadCsv").addEventListener("click",function(){download("kaushalpath-result.csv",resultCsv(r),"text/csv");});$("printResult").addEventListener("click",function(){window.print();});$("closeResult").addEventListener("click",function(){root.classList.add("hidden");$("tests").scrollIntoView({behavior:"smooth"});});}
 function download(name,content,type){const blob=new Blob([content],{type:type+";charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);}
 function resultCsv(r){return [["Test","Exam","Date","Correct","Incorrect","Unattempted","Score","Maximum","Percent"],[r.title,r.exam,r.date,r.correct,r.wrong,r.blank,r.score,r.max,r.percentage]].map(function(row){return row.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(",");}).join("\r\n");}
 $("exportHistory").addEventListener("click",function(){const history=getHistory();if(!history.length){toast("No history to export yet.");return;}const rows=[["Test","Exam","Date","Correct","Incorrect","Unattempted","Score","Maximum","Percent"]];history.forEach(function(r){rows.push([r.title,r.exam,r.date,r.correct,r.wrong,r.blank,r.score,r.max,r.percentage]);});download("kaushalpath-history.csv",rows.map(function(row){return row.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(",");}).join("\r\n"),"text/csv");});
+$("exportHistory").addEventListener("click",function(){if(!getHistory().length)toast("No history to export yet.");});
+
 async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x-kaushalpath-status":"1"}});const j=await r.json();$("aiStatus").textContent=j.ready?"AI guide ready":"AI guide setup needed";$("aiStatus").style.background=j.ready?"#1c584f":"#654a2d";}catch(e){$("aiStatus").textContent="AI status unavailable";}}
 
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
 document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();checkAI();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();checkAI();
 
 function activateWorkspaceView(view,clicked){
  const valid=["overview","learn","ai-guide","tests","history","resources"];
