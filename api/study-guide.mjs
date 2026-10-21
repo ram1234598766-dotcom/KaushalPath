@@ -667,7 +667,7 @@ export default async function handler(req, res) {
     if (wantsStream) {
       if (!response.body) return send(res, { error: "The study assistant could not start a response. Please try again.", sources: web.sources }, 502);
       res.status(200);res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-      res.setHeader("Cache-Control", "no-store, no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "no-store, no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");res.setHeader("Referrer-Policy", "no-referrer");
       streamStarted = true;
       if (web.sources.length && !res.write("data: " + JSON.stringify({ sources: web.sources, research: true }) + "\n\n")) await waitForResponseDrain(res, clientAbortController.signal);
       const reader = response.body.getReader();
