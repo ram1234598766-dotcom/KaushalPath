@@ -88,6 +88,39 @@ function topicsFor(level,subject){
  if(level==="Class 11"&&subject==="Mathematics")topics=["Sets","Relations and functions","Trigonometric functions","Complex numbers","Linear inequalities","Permutations and combinations","Binomial theorem","Sequences and series","Straight lines","Limits and derivatives","Statistics","Probability"];
  if(level==="Class 12"&&subject==="Mathematics")topics=["Relations and functions","Inverse trigonometric functions","Matrices","Determinants","Continuity and differentiability","Applications of derivatives","Integrals","Applications of integrals","Differential equations","Vectors","3D geometry","Linear programming","Probability"];
  if(level==="Class 10"&&subject==="Science")topics=["Chemical reactions and equations","Acids, bases and salts","Metals and non-metals","Life processes","Control and coordination","Reproduction","Heredity","Light","The human eye","Electricity","Magnetic effects of current","Our environment"];
+ const classTopics={
+  "Class 11":{
+   "Physics":["Units and measurements","Motion in a straight line","Motion in a plane","Laws of motion","Work, energy and power","System of particles and rotation","Gravitation","Mechanical properties","Thermodynamics","Oscillations and waves"],
+   "Chemistry":["Some basic concepts of chemistry","Structure of atom","Periodicity","Chemical bonding","Thermodynamics","Equilibrium","Redox reactions","Organic chemistry basics","Hydrocarbons"],
+   "Biology":["The living world","Biological classification","Plant kingdom","Animal kingdom","Cell structure and function","Biomolecules","Cell cycle and division","Plant physiology","Human physiology"],
+   "English":["Reading comprehension","Class 11 prose and poetry analysis","Writing skills","Grammar and editing","Character and theme analysis","Short-answer practice"],
+   "Computer Science":["Python basics","Data types and operators","Conditional statements","Loops","Strings and lists","Dictionaries and tuples","Functions","Computer systems"],
+   "Informatics Practices":["Python basics","Data handling with Pandas","Series and data frames","Data visualisation","Database concepts","SQL fundamentals","Computer networks"],
+   "Accountancy":["Accounting concepts","Accounting equation","Journal entries","Ledger posting","Trial balance","Bank reconciliation","Depreciation"],
+   "Business Studies":["Nature and purpose of business","Forms of business organisation","Public and private enterprises","Business services","Emerging modes of business","Social responsibility"],
+   "Economics":["Introduction to microeconomics","Consumer behaviour","Demand and elasticity","Production function","Cost concepts","Market equilibrium","Statistics for economics"],
+   "History":["Early societies","Writing and city life","Empires and trade","Nomadic empires","Changing cultural traditions"],
+   "Political Science":["Constitutional design","Rights and citizenship","Legislature and executive","Federalism","Political theory","Justice and equality"],
+   "Geography":["Fundamentals of physical geography","Earth's interior","Landforms","Climate","Oceans","Natural hazards"]
+  },
+  "Class 12":{
+   "Physics":["Electric charges and fields","Electrostatic potential and capacitance","Current electricity","Moving charges and magnetism","Electromagnetic induction","Alternating current","Ray optics","Wave optics","Dual nature of radiation","Semiconductors"],
+   "Chemistry":["Solutions","Electrochemistry","Chemical kinetics","d- and f-block elements","Coordination compounds","Haloalkanes and haloarenes","Alcohols and phenols","Aldehydes and ketones","Amines","Biomolecules"],
+   "Biology":["Reproduction in organisms","Sexual reproduction in flowering plants","Human reproduction","Reproductive health","Mendelian genetics","Molecular basis of inheritance","Evolution","Human health and disease","Biotechnology","Ecosystems"],
+   "English":["Class 12 prose and poetry analysis","Reading comprehension","Formal writing","Article and report writing","Literary themes and characterisation","Board-style answer structure"],
+   "Computer Science":["Python functions","File handling","Stack operations","Searching and sorting","SQL queries","Database connectivity","Computer networks","Cyber safety"],
+   "Informatics Practices":["Data visualisation","Data frames and operations","Data handling with Pandas","SQL queries","Database connectivity","Computer networks","Societal impacts"],
+   "Accountancy":["Partnership fundamentals","Reconstitution of partnership","Dissolution of partnership","Company accounts","Issue of shares","Cash flow statement","Financial statement analysis","Accounting ratios"],
+   "Business Studies":["Principles of management","Business environment","Planning and organising","Staffing and directing","Financial management","Marketing management","Consumer protection"],
+   "Economics":["National income accounting","Money and banking","Determination of income and employment","Government budget","Balance of payments","Indian economic development"],
+   "History":["Harappan civilisation","Kings, farmers and towns","Bhakti and Sufi traditions","Colonialism and rural society","Revolt of 1857","National movement","Constitution making"],
+   "Political Science":["End of bipolarity","Contemporary centres of power","South Asia","International organisations","Globalisation","Challenges of nation-building","Recent developments in Indian politics"],
+   "Geography":["Human geography","Population composition","Human development","Primary activities","Transport and communication","International trade","Geographical planning"]
+  }
+ };
+ if(classTopics[level]&&classTopics[level][subject])topics=classTopics[level][subject];
+ else if(level==="Class 11"&&subject==="Mathematics")topics=["Sets","Relations and functions","Trigonometric functions","Complex numbers","Linear inequalities","Permutations and combinations","Binomial theorem","Sequences and series","Straight lines","Limits and derivatives","Statistics","Probability"];
+ else if(level==="Class 12"&&subject==="Mathematics")topics=["Relations and functions","Inverse trigonometric functions","Matrices","Determinants","Continuity and differentiability","Applications of derivatives","Integrals","Applications of integrals","Differential equations","Vectors","3D geometry","Linear programming","Probability"];
  return topics;
 }
 function fillSubjects(select,level,selected){
@@ -208,9 +241,10 @@ $("studyForm").addEventListener("submit",async function(ev){
 function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function printAsPdf(title,text){
  const mount=$("printMount");if(!mount){toast("PDF print area is unavailable.");return;}
+ const previousTitle=document.title;document.title="KaushalPath - "+title;
  mount.innerHTML='<article class="print-document"><div class="print-kicker">KAUSHALPATH · LEARN WITH DIRECTION</div><h1>'+escapeHtml(title)+'</h1><p class="print-date">Created '+escapeHtml(new Date().toLocaleString())+'</p><pre>'+escapeHtml(text)+'</pre><footer>Use generated study content as a learning aid. Verify important facts with official materials.</footer></article>';
  mount.style.display="block";
- const cleanup=function(){mount.innerHTML="";mount.style.display="none";window.removeEventListener("afterprint",cleanup);};
+ const cleanup=function(){mount.innerHTML="";mount.style.display="none";document.title=previousTitle;window.removeEventListener("afterprint",cleanup);};
  window.addEventListener("afterprint",cleanup,{once:true});
  window.print();
  setTimeout(cleanup,12000);
