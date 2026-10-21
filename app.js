@@ -784,6 +784,80 @@ $("savedViewerDownload").addEventListener("click",function(){const item=getSaved
 $("savedViewerDelete").addEventListener("click",function(){if(selectedSavedLibraryId&&confirm("Delete this saved answer?"))deleteSavedLibraryItem(selectedSavedLibraryId);});
 $("clearLibrary").addEventListener("click",function(){if(!getSavedLibrary().length){toast("Your study library is already empty.");return;}if(!confirm("Delete all saved study answers? This cannot be undone."))return;if(!writeLocalJSON(LIBRARY_KEY,[])){toast("Could not clear the library in browser storage.");return;}selectedSavedLibraryId="";$("savedViewer").classList.add("hidden");renderSavedLibrary();toast("Study library cleared.");});
 
+
+function validChatSession(item){
+ return !!item&&typeof item==="object"&&typeof item.id==="string"&&item.id.length>0&&item.id.length<=120&&typeof item.title==="string"&&item.title.trim().length>0&&item.title.length<=100&&typeof item.createdAt==="string"&&Number.isFinite(Date.parse(item.createdAt))&&typeof item.updatedAt==="string"&&Number.isFinite(Date.parse(item.updatedAt))&&typeof item.lastPrompt==="string"&&item.lastPrompt.length<=3000&&typeof item.level==="string"&&item.level.length<=80&&typeof item.subject==="string"&&item.subject.length<=100&&typeof item.mode==="string"&&item.mode.length<=40&&Array.isArray(item.messages)&&item.messages.length<=24&&item.messages.every(function(message){return message&&["user","assistant"].includes(message.role)&&typeof message.content==="string"&&message.content.length>0&&message.content.length<=8000;});
+}
+function getChatSessions(){const stored=readLocalJSON(CHAT_SESSIONS_KEY,[]);return Array.isArray(stored)?stored.filter(validChatSession).sort(function(a,b){return Date.parse(b.updatedAt)-Date.parse(a.updatedAt);}).slice(0,8):[];}
+function chatSessionTitle(text){const clean=String(text||"Study conversation").split("\n")[0].replace(/\s+/g," ").trim()||"Study conversation";return clean.length>64?clean.slice(0,61)+"…":clean;}
+function recordChatMessage(role,content){
+ const original=String(content||"");if(!original.trim())return;
+ if(!currentChatSessionId)currentChatSessionId="chat-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+ const previous=getChatSessions(),existing=previous.find(function(session){return session.id===currentChatSessionId;}),now=new Date().toISOString(),storedContent=original.slice(0,8000);
+ chatTranscript=chatTranscript.concat([{role:role,content:storedContent}]).slice(-24);
+ if(original.length>8000)toast("Long conversation text was shortened in history. Save important full answers to your Saved Library.");
+ const firstUser=chatTranscript.find(function(message){return message.role==="user";});
+ const session={id:currentChatSessionId,title:existing?existing.title:chatSessionTitle(firstUser&&firstUser.content),createdAt:existing?existing.createdAt:now,updatedAt:now,lastPrompt:String(lastChatPrompt||"").slice(0,3000),level:$("chatClass").value,subject:$("chatSubject").value,mode:$("chatMode").value,messages:chatTranscript};
+ const updated=[session].concat(previous.filter(function(item){return item.id!==currentChatSessionId;})).slice(0,8);
+ if(!writeLocalJSON(CHAT_SESSIONS_KEY,updated)){toast("This conversation is still visible, but browser storage could not save it. Export a progress backup when possible.");return;}
+ renderChatSessions();
+}
+function chatWelcomeMarkup(){return '<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';}
+function resetCurrentChat(){
+ chatHistory=[];chatTranscript=[];currentChatSessionId="";lastChatAnswer="";lastChatPrompt="";chatAttachment=null;lastChatAttachment=null;
+ if($("chatImage"))$("chatImage").value="";
+ if($("chatImageHint"))$("chatImageHint").textContent="Attach an image, PDF, office document or text file.";
+ $("chatMessages").innerHTML=chatWelcomeMarkup();$("chatStatus").textContent="New conversation";
+ renderSourceLinks($("chatSources"),[]);enableChatTools(false);renderChatSessions();
+}
+function setKnownSelectValue(id,value){const select=$(id);if(!select||typeof value!=="string")return;const option=Array.from(select.options).find(function(item){return item.value===value||item.textContent===value;});if(option)select.value=option.value;}
+function restoreChatSession(id,silent){
+ if(chatBusy){toast("Stop the current response before switching conversations.");return;}
+ const session=getChatSessions().find(function(item){return item.id===id;});if(!session)return;
+ currentChatSessionId=session.id;chatTranscript=session.messages.map(function(message){return {role:message.role,content:message.content};});
+ chatHistory=chatTranscript.slice(-10).map(function(message){return {role:message.role,content:message.content};});
+ lastChatPrompt=session.lastPrompt||((chatTranscript.slice().reverse().find(function(message){return message.role==="user";})||{}).content||"");
+ lastChatAnswer=(chatTranscript.slice().reverse().find(function(message){return message.role==="assistant";})||{}).content||"";
+ setKnownSelectValue("chatClass",session.level);setKnownSelectValue("chatSubject",session.subject);setKnownSelectValue("chatMode",session.mode);
+ chatAttachment=null;lastChatAttachment=null;if($("chatImage"))$("chatImage").value="";if($("chatImageHint"))$("chatImageHint").textContent="Attach an image, PDF, office document or text file.";
+ const root=$("chatMessages");root.replaceChildren();
+ if(!chatTranscript.length)root.innerHTML=chatWelcomeMarkup();
+ else chatTranscript.forEach(function(message){const node=chatAddMessage(message.role,message.content);if(message.role==="assistant"){renderMarkdownInto(node,message.content);const box=node.closest(".chat-message");if(box)box.dataset.rawAnswer=message.content;}});
+ root.scrollTop=root.scrollHeight;renderSourceLinks($("chatSources"),[]);enableChatTools(Boolean(lastChatAnswer));
+ $("chatStatus").textContent="Saved conversation restored · "+chatTranscript.length+" messages. File attachments are not stored; reattach any files you need.";
+ renderChatSessions();if(!silent)root.scrollIntoView({behavior:"smooth",block:"end"});
+}
+function restoreLatestChatSession(){const sessions=getChatSessions();if(sessions.length)restoreChatSession(sessions[0].id,true);else renderChatSessions();}
+function renderChatSessions(){
+ const root=$("chatSessionList");if(!root)return;root.replaceChildren();
+ const query=String($("chatSessionSearch")&&$("chatSessionSearch").value||"").trim().toLowerCase();
+ const sessions=getChatSessions().filter(function(session){return !query||(session.title+" "+session.messages.map(function(message){return message.content;}).join(" ")).toLowerCase().includes(query);});
+ if(!sessions.length){const empty=document.createElement("p");empty.className="tiny chat-session-empty";empty.textContent=query?"No saved conversations match your search.":"Your recent conversations will appear here automatically.";root.appendChild(empty);return;}
+ sessions.forEach(function(session){
+  const row=document.createElement("div");row.className="chat-session-row"+(session.id===currentChatSessionId?" is-current":"");
+  const open=document.createElement("button");open.type="button";open.className="chat-session-open";open.dataset.openChatSession=session.id;open.disabled=chatBusy;open.setAttribute("aria-label","Open conversation: "+session.title);
+  const title=document.createElement("strong");title.textContent=session.title;
+  const meta=document.createElement("span");meta.textContent=session.messages.length+" messages · "+new Date(session.updatedAt).toLocaleDateString();
+  open.append(title,meta);if(session.id===currentChatSessionId){const current=document.createElement("span");current.className="chat-session-current";current.textContent="Current";open.appendChild(current);}
+  const remove=document.createElement("button");remove.type="button";remove.className="chat-session-delete";remove.dataset.deleteChatSession=session.id;remove.textContent="×";remove.title="Delete saved conversation";remove.setAttribute("aria-label","Delete conversation: "+session.title);remove.disabled=chatBusy;
+  row.append(open,remove);root.appendChild(row);
+ });
+}
+$("chatSessionSearch").addEventListener("input",renderChatSessions);
+$("chatSessionList").addEventListener("click",function(event){
+ if(chatBusy){toast("Stop the current response before switching or deleting conversations.");return;}
+ const remove=event.target.closest("[data-delete-chat-session]");
+ if(remove){
+  const id=remove.dataset.deleteChatSession,session=getChatSessions().find(function(item){return item.id===id;});if(!session)return;
+  if(!confirm("Delete this saved conversation? This cannot be undone."))return;
+  const next=getChatSessions().filter(function(item){return item.id!==id;});
+  if(!writeLocalJSON(CHAT_SESSIONS_KEY,next)){toast("Could not delete the conversation from browser storage.");return;}
+  if(currentChatSessionId===id)resetCurrentChat();else renderChatSessions();
+  toast("Saved conversation deleted.");return;
+ }
+ const open=event.target.closest("[data-open-chat-session]");if(open)restoreChatSession(open.dataset.openChatSession,false);
+});
+
 function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
 function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div><div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
