@@ -118,10 +118,27 @@ function updateChatTopics(){
   $("chatInput").focus();
  },true);
 }
+function mapSubjectToClass(subject,level){
+ const target=subjectSets[level]||subjectSets["Class 10"];
+ let mapped=subject;
+ if(level==="Class 10"){
+  if(["Physics","Chemistry","Biology"].includes(subject))mapped="Science";
+  else if(["Computer Science","Informatics Practices"].includes(subject))mapped="Computer Applications";
+  else if(subject==="Applied Mathematics")mapped="Mathematics";
+  else if(["Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology"].includes(subject))mapped="other";
+ }else{
+  if(subject==="Science")mapped="Physics";
+  else if(subject==="Computer Applications")mapped="Computer Science";
+  else if(subject==="Social Science")mapped="History";
+ }
+ if(!target.some(function(s){return (s==="Other subject / language…"?"other":s)===mapped;}))mapped=target[0];
+ return mapped;
+}
 function syncClass(source){
  const level=source.value;
  if(source===$("classLevel"))$("chatClass").value=level;else $("classLevel").value=level;
- const previousHub=$("subject")?.value,previousChat=$("chatSubject")?.value;
+ const previousHub=mapSubjectToClass($("subject")?.value||"Mathematics",level);
+ const previousChat=mapSubjectToClass($("chatSubject")?.value||"Mathematics",level);
  fillSubjects($("subject"),level,previousHub);
  fillSubjects($("chatSubject"),level,previousChat);
  $("otherSubjectWrap").hidden=$("subject").value!=="other";
@@ -226,7 +243,7 @@ async function sendChat(raw,regenerate){
  try{
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
-  answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-8)},function(delta){
+  answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6)},function(delta){
    if(waiting){node.textContent="";waiting=false;}
    node.textContent+=delta;answer+=delta;$("chatMessages").scrollTop=$("chatMessages").scrollHeight;
    $("chatStatus").textContent="Answering · "+answer.length+" characters";
