@@ -4,8 +4,7 @@
   "private": true,
   "description": "CBSE Classes 10–12 study hub, AI study guide, JEE Main and NEET UG practice, configured for Vercel.",
   "scripts": {
-    "test": "node scripts/smoke-test.mjs",
-    "build": "npm test && node scripts/build.mjs"
+    "test": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.30.0"
