@@ -81,7 +81,7 @@ assert.match(api, /assertPublicUrl/, "the page reader should validate public URL
 assert.match(api, new RegExp("node:dns/promises"), "public URL reading should check resolved addresses");
 assert.match(api, new RegExp("inclusionai/ling-3\\.0-flash-vl:free"), "image requests should use the configured free vision model");
 assert.match(api, /type: "image_url"/, "image data should be sent as a multimodal message");
-assert.doesNotMatch(api, /provider: "Kilo Auto Free"|provider: imageData|model: requestedModel/, "API responses should not disclose configured model or provider");
+assert.doesNotMatch(api, /provider: "Kilo Auto Free"|provider: imageData|sources: web\.sources, model: requestedModel/, "API responses should not disclose configured model or provider");
 assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|Kilo Auto Free is temporarily|KILO_API_KEY in Vercel/, "user-facing errors should not expose provider configuration");
 assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
