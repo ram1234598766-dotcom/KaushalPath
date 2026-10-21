@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import handler, { createPinnedLookup } from "../api/study-guide.mjs";
 import { zipSync, strToU8 } from "fflate";
 import sharp from "sharp";
+import XLSX from "xlsx";
 
 function makeResponse({ blockFirstWrite = false, disconnectOnFirstWrite = false } = {}) {
   const events = new EventEmitter();
@@ -223,6 +224,58 @@ globalThis.fetch = async (url, options = {}) => {
     headers: { "content-type": "application/json; charset=utf-8" }
   });
 };
+
+function makeTextPdf(text) {
+  const escaped = String(text).replace(/([\\()])/g, "\\$1");
+  const stream = "BT /F1 14 Tf 72 720 Td (" + escaped + ") Tj ET";
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    "5 0 obj\n<< /Length " + Buffer.byteLength(stream, "latin1") + " >>\nstream\n" + stream + "\nendstream\nendobj\n"
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(pdf, "latin1"));
+    pdf += object;
+  }
+  const xrefOffset = Buffer.byteLength(pdf, "latin1");
+  pdf += "xref\n0 6\n0000000000 65535 f \n";
+  for (const offset of offsets.slice(1)) pdf += String(offset).padStart(10, "0") + " 00000 n \n";
+  pdf += "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n" + xrefOffset + "\n%%EOF\n";
+  return Buffer.from(pdf, "latin1");
+}
+function toDataUrl(mime, buffer) {
+  return "data:" + mime + ";base64," + Buffer.from(buffer).toString("base64");
+}
+const pdfFixture = makeTextPdf("PDF extraction verification token");
+const docxFixture = zipSync({
+  "[Content_Types].xml": strToU8('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'),
+  "_rels/.rels": strToU8('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'),
+  "word/document.xml": strToU8('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>DOCX extraction verification token</w:t></w:r></w:p><w:sectPr/></w:body></w:document>'),
+  "word/_rels/document.xml.rels": strToU8('<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>')
+}, { level: 0 });
+const pptxFixture = zipSync({
+  "ppt/slides/slide1.xml": strToU8('<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree><a:p><a:r><a:t>PPTX extraction verification token</a:t></a:r></a:p></p:spTree></p:cSld></p:sld>')
+}, { level: 0 });
+const workbook = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Topic", "Key idea"], ["Mitochondria", "Energy release"], ["XLSX extraction verification token", "Expected output"]]), "Revision");
+const xlsxFixture = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+const odtFixture = zipSync({
+  "content.xml": strToU8('<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text><text:p>ODT extraction verification token</text:p></office:text></office:body></office:document-content>')
+}, { level: 0 });
+async function assertFileExtracted(fileName, mime, buffer, expected, label) {
+  const result = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Summarize the attached study material", mode: "explain", fileName, fileType: mime, fileData: toDataUrl(mime, buffer) }
+  });
+  assert.equal(result.statusCode, 200, label + " should be readable");
+  assert.ok(mockedRequests.at(-1).messages.at(-1).content.includes(expected), label + " extracted content should reach the model input");
+  assert.ok(mockedRequests.at(-1).messages.at(-1).content.includes("Uploaded file: " + fileName), label + " filename metadata should be retained");
+}
+
 try {
   const textRoundtrip = await call({
     method: "POST",
@@ -287,6 +340,12 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.equal(invalidImage.statusCode, 422, "corrupt images should get a clear client error");
   assert.match(invalidImage.payload.error, /could not be decoded safely/i);
   assert.equal(mockedRequests.length, countBeforeInvalidImage, "invalid image bytes must never be forwarded to the AI gateway");
+
+  await assertFileExtracted("lesson.pdf", "application/pdf", pdfFixture, "PDF extraction verification token", "PDF");
+  await assertFileExtracted("lesson.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxFixture, "DOCX extraction verification token", "DOCX");
+  await assertFileExtracted("lesson.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", pptxFixture, "PPTX extraction verification token", "PPTX");
+  await assertFileExtracted("lesson.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsxFixture, "XLSX extraction verification token", "XLSX");
+  await assertFileExtracted("lesson.odt", "application/vnd.oasis.opendocument.text", odtFixture, "ODT extraction verification token", "ODT");
 
   const rateLimitedResponse = await call({
     method: "POST",
