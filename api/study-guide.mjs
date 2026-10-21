@@ -205,3 +205,5 @@ export default async function handler(req, res) {
     return send(res, { error: "The AI request could not complete. Check the Gemini API key, model access and usage limits." }, 502);
   }
 }
+
+export const config = { maxDuration: 60 };

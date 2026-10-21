@@ -1,7 +1,5 @@
 {
-  "version": 2,
-  "buildCommand": "npm run test",
-  "outputDirectory": "public",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "headers": [
     {
       "source": "/(.*)",
@@ -33,10 +31,26 @@
       ]
     }
   ],
-  "functions": {
-    "api/study-guide.mjs": {
-      "maxDuration": 60
+  "framework": null,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "app.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/study-guide.mjs",
+      "use": "@vercel/node"
     }
-  },
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  ],
+  "cleanUrls": true,
+  "routes": [
+    {
+      "src": "/api/study-guide",
+      "dest": "/api/study-guide.mjs"
+    }
+  ]
 }

@@ -13,22 +13,18 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - Official CBSE, NCERT and NTA resource links.
 - Mobile-friendly layout and accessible controls.
 
-## Deploy on Vercel (recommended)
+## Deploy on Vercel
 
-The repository now includes `vercel.json` and `api/study-guide.mjs`. The frontend remains in `public/`; the Vercel serverless function handles the AI request at the same `/api/study-guide` path the browser already uses.
+The app is configured for Vercel with root-level static frontend files `index.html` and `app.js` and a serverless AI endpoint at `api/study-guide.mjs`. The browser uses the same-origin `/api/study-guide` route.
 
 1. Open [Vercel New Project](https://vercel.com/new) and import `ram1234598766-dotcom/KaushalPath` from GitHub.
-2. Keep the project root at the repository root. Vercel uses `vercel.json` to run the smoke tests and publish the `public` directory while deploying the `api/` function.
-3. In **Project Settings → Environment Variables**, add `GEMINI_API_KEY` with a key created in [Google AI Studio](https://aistudio.google.com/app/apikey). Add it to the Production environment (and Preview if needed). The key stays server-side; never put it in `public/` or commit it to GitHub.
-4. Deploy the project. Open the Vercel production URL and visit the AI Study Guide section.
-5. To check whether the server has the key configured, send a GET request to `/api/study-guide` with header `x-kaushalpath-status: 1`. This only checks configuration; submit an actual prompt in the site to verify Gemini can answer.
-6. The default model is `gemini-3.8-flash`. You may override it by adding `KAUSHALPATH_AI_MODEL` as an environment variable if you choose another model available to your Google AI Studio key.
+2. Keep the project root at the repository root and select **Other** as the framework preset. The Vercel configuration explicitly packages `index.html` and `app.js` as static files and `api/study-guide.mjs` as a Node serverless function.
+3. In **Project Settings → Environment Variables**, add `GEMINI_API_KEY` with a key created in [Google AI Studio](https://aistudio.google.com/app/apikey). Enable it for Production and Preview as needed. Keep the key server-side; never put it in browser-side files or commit it to GitHub.
+4. Deploy the project, then open your production URL and visit the AI Study Guide.
+5. To check if the API key is configured, send a GET request to `/api/study-guide` with header `x-kaushalpath-status: 1`. This only checks setup; submit a real prompt to verify model access.
+6. The default model is `gemini-3.8-flash`. You may override it with `KAUSHALPATH_AI_MODEL` if you use another supported Gemini model.
 
-Vercel Hobby is free for personal/non-commercial projects and has usage limits. Gemini's free-tier eligibility, quota and model availability depend on Google's current policies and your project; hosting being free does not mean every AI request is unlimited.
-
-## Keep Netlify as an alternative
-
-The existing `netlify.toml` and `netlify/functions/study-guide.mjs` are retained for backward compatibility. Netlify deployment instructions and gateway access are separate from Vercel. The Vercel function uses a Gemini API key from environment variables instead of depending on Netlify AI Gateway credits.
+Vercel Hobby is free within its usage limits for personal/non-commercial projects. Gemini model access, free-tier quota and usage limits depend on Google's current policies and your API project. Free hosting does not mean unlimited AI usage.
 
 ## Local checks
 
@@ -37,13 +33,15 @@ Use Node.js 22+:
 ```sh
 npm install
 npm test
+node --check app.js
+node --check api/study-guide.mjs
 ```
 
-The tests check required UI fields, the Vercel and Netlify AI routes, security headers and deployment configuration. Local AI requests need a valid `GEMINI_API_KEY`; set it in your shell rather than committing it.
+The smoke tests check the frontend, API route and deployment configuration. Local AI requests need a valid `GEMINI_API_KEY`; set it in your shell rather than committing it.
 
 ## Accuracy, sources and limits
 
-The AI tutor can make mistakes. Verify important formulas, syllabus changes and examination rules against official sources. Search and URL context work only when Gemini's API and the selected model support those tools for your key. It cannot bypass sign-in walls, paywalls or blocked websites; URL context is not a full website crawler.
+The AI tutor can make mistakes. Verify important formulas, syllabus changes and examination rules against official sources. Search and URL context work only when Gemini's API and selected model support these tools for your key. URL context cannot bypass sign-in walls, paywalls or blocked websites and is not a full website crawler.
 
 Built-in questions are original practice samples, not a verified archive of authentic previous-year questions. Compact practice sets are not full official-length mock examinations. Test history is stored in local browser storage and does not sync between devices.
 

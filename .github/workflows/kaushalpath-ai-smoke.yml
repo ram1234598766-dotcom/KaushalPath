@@ -1,12 +1,22 @@
-name: KaushalPath quality and live AI smoke test
+name: KaushalPath Vercel quality checks
 
 on:
   push:
     branches: [main]
     paths:
-      - "public/**"
-      - "netlify/**"
-      - "netlify.toml"
+      - "index.html"
+      - "app.js"
+      - "api/**"
+      - "vercel.json"
+      - "package.json"
+      - "scripts/**"
+      - ".github/workflows/kaushalpath-ai-smoke.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "api/**"
+      - "vercel.json"
       - "package.json"
       - "scripts/**"
       - ".github/workflows/kaushalpath-ai-smoke.yml"
@@ -16,7 +26,7 @@ permissions:
   contents: read
 
 jobs:
-  quality-and-live-ai:
+  quality:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -31,43 +41,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Run smoke tests
+      - name: Run application checks
         run: |
           npm test
-          node --check public/app.js
-          node --check netlify/functions/study-guide.mjs
-
-      - name: Wait for the new production AI endpoint
-        env:
-          SITE_URL: https://kaushalpath.netlify.app
-        run: |
-          set -euo pipefail
-          ready=0
-          for attempt in $(seq 1 60); do
-            if curl -fsS --max-time 10 -H 'x-kaushalpath-status: 1' "$SITE_URL/api/study-guide" -o /tmp/kp-health.json; then
-              if grep -q '"ready":true' /tmp/kp-health.json && grep -q '"readPublicUrls":true' /tmp/kp-health.json; then
-                echo "AI Gateway runtime reports ready:"
-                cat /tmp/kp-health.json
-                ready=1
-                break
-              fi
-            fi
-            sleep 5
-          done
-          if [ "$ready" != "1" ]; then
-            echo "AI Gateway is not ready after waiting for deployment. Last health response:"
-            cat /tmp/kp-health.json 2>/dev/null || true
-            exit 1
-          fi
-
-      - name: Send a real low-cost AI inference smoke test
-        env:
-          SITE_URL: https://kaushalpath.netlify.app
-        run: |
-          set -euo pipefail
-          curl -fsS --max-time 55 \
-            -H 'Content-Type: application/json' \
-            -X POST "$SITE_URL/api/study-guide" \
-            -d '{"prompt":"In one or two sentences, explain why the derivative of x squared is 2x. Keep the explanation appropriate for a Class 11 student.","mode":"explain","webSearch":false,"urls":[]}' \
-            -o /tmp/kp-ai-result.json
-          node --input-type=module -e 'import {readFileSync} from "node:fs"; const r=JSON.parse(readFileSync("/tmp/kp-ai-result.json","utf8")); if (!r.text || r.text.trim().length < 20) { console.error(r); process.exit(1); } console.log("Live AI inference succeeded with model:", r.model); console.log("Response characters:", r.text.length);'
+          node --check app.js
+          node --check api/study-guide.mjs
