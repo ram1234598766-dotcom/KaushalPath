@@ -119,7 +119,7 @@ assert.match(app, /Official sample-paper questions/, "question cards should dist
 assert.match(html, /id="official-papers"/, "the UI should expose an official paper catalogue");
 assert.match(html, /sqp_classx_2026-27\.html/, "the official catalogue should link CBSE Class X current papers");
 assert.match(html, /SQP_CLASSXII_2026-27\.html/, "the official catalogue should link CBSE Class XII current papers");
-assert.match(html, /document\/ib-2026/, "the official catalogue should link the JEE Main 2026 NTA archive");
+assert.match(html, /jeemain\.nta\.nic\.in\/2026\//, "the official catalogue should link the JEE Main 2026 question-paper archive");
 assert.match(html, /neet\.nta\.nic\.in\/2026/, "the official catalogue should link the NEET UG 2026 NTA portal");
 assert.match(html, /180 compulsory MCQs in 180 minutes, for 720 total marks/, "NEET card should reflect the current official pattern");
 assert.match(html, /75 questions, 300 marks/, "JEE Main card should reflect the current Paper 1 pattern");
