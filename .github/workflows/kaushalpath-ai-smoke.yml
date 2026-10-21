@@ -42,7 +42,6 @@ jobs:
 
       - name: Run application checks
         run: |
-          npm run build
+          npm test
           node --check public/app.js
           node --check api/study-guide.mjs
-          node --check scripts/build.mjs
