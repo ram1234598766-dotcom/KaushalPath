@@ -141,7 +141,7 @@ function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
 function renderTests(){const grid=$("testGrid");grid.innerHTML="";questions.forEach(function(t){const card=document.createElement("article");card.className="test-card";card.dataset.exam=t.exam;const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";const kind=t.official?"Official sample-paper question":"Original practice set";const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";const sourceLinks=t.official?'<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>':"";card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+t.id+'">Start test ↗</button>';grid.appendChild(card);});}
-function renderStudyText(answer){const out=$("studyOutput");out.innerHTML=markdownToHtml(answer);lastAnswerText=answer;$("copyAnswer").disabled=!answer;if($("saveStudyPdf"))$("saveStudyPdf").disabled=!answer;}
+function renderStudyText(answer){const out=$("studyOutput");out.innerHTML=markdownToHtml(answer);lastAnswerText=answer;$("copyAnswer").disabled=!answer;if($("saveStudyPdf"))$("saveStudyPdf").disabled=!answer;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=!answer;}
 $("copyAnswer").addEventListener("click",async function(){if(!lastAnswerText)return;try{await navigator.clipboard.writeText(lastAnswerText);toast("Study text copied.");}catch(e){toast("Copy was blocked by this browser.");}});
 const subjectSets={
  "Class 10":["Mathematics","Science","English","Social Science","Hindi","Computer Applications","Physical Education","Other subject / language…"],
@@ -402,12 +402,12 @@ $("studyForm").addEventListener("submit",async function(ev){
  lastStudyController=new AbortController();
  const controller=lastStudyController,btn=$("askBtn");btn.disabled=true;btn.textContent="Connecting…";
  $("sourceList").innerHTML="";$("studyOutput").textContent="Preparing your study help…";lastAnswerText="";
- $("copyAnswer").disabled=true;if($("saveStudyPdf"))$("saveStudyPdf").disabled=true;
+ $("copyAnswer").disabled=true;if($("saveStudyPdf"))$("saveStudyPdf").disabled=true;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=true;
  try{
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
   renderSourceLinks($("sourceList"),[]);
   const prompt=makePrompt(level,subject,chapter,mode,topic);
-  const answer=await streamStudyRequest(Object.assign({prompt:prompt,urls:urls,mode:mode,searchQuery:topic,userPrompt:topic},attachmentPayload(studyAttachment)),function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){btn.textContent=String(status).includes("alternate response format")?"Retrying…":String(status).includes("Checking")?"Checking sources…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
+  const answer=await streamStudyRequest(Object.assign({prompt:prompt,urls:urls,mode:mode,searchQuery:topic,userPrompt:topic},attachmentPayload(studyAttachment)),function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=false;},controller.signal,function(status){btn.textContent=String(status).includes("alternate response format")?"Retrying…":String(status).includes("Checking")?"Checking sources…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
   lastAnswerText=answer;
   const note=document.createElement("p");note.className="tiny";note.textContent="Check important details against your prescribed textbook or official syllabus.";
   $("studyOutput").appendChild(note);
@@ -426,7 +426,7 @@ $("studyForm").addEventListener("submit",async function(ev){
    if(partial){
     renderMarkdownInto(output,lastAnswerText);
     const note=document.createElement("p");note.className="study-output-notice";note.textContent="The response was interrupted before it finished. The partial answer is preserved; retry to complete it.";output.appendChild(note);
-    $("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;
+    $("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=false;
    }else{
     const error=document.createElement("div");error.className="study-error-message";error.setAttribute("role","alert");
     const title=document.createElement("strong");title.textContent="Couldn't finish this study request";
@@ -518,7 +518,7 @@ function chatAddMessage(role,text){
  return content;
 }
 function enableChatTools(enabled){
- ["chatCopy","chatPdf","chatText","chatSpeak","chatRegenerate"].forEach(function(id){$(id).disabled=!enabled;});
+ ["chatCopy","chatPdf","chatText","chatSpeak","chatRegenerate","chatSave"].forEach(function(id){$(id).disabled=!enabled;});
 }
 async function sendChat(raw,regenerate){
  const question=String(raw||"").trim();if(!question||chatBusy)return;
@@ -579,6 +579,7 @@ $("chatMessages").addEventListener("click",async function(ev){
 });
 $("chatStop").addEventListener("click",function(){if(activeChatController)activeChatController.abort();});
 $("chatCopy").addEventListener("click",async function(){if(!lastChatAnswer)return;try{await navigator.clipboard.writeText(lastChatAnswer);toast("Answer copied.");}catch(e){toast("Clipboard permission was blocked.");}});
+$("chatSave").addEventListener("click",saveChatAnswerToLibrary);
 $("chatPdf").addEventListener("click",function(){if(lastChatAnswer)printAsPdf("AI study answer",lastChatAnswer);});
 $("chatText").addEventListener("click",function(){if(lastChatAnswer)download("kaushalpath-ai-answer.txt",lastChatAnswer,"text/plain");});
 $("chatSpeak").addEventListener("click",function(){if(!lastChatAnswer)return;if(!("speechSynthesis" in window)){toast("Read aloud is not supported in this browser.");return;}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(lastChatAnswer);utterance.lang="en-IN";window.speechSynthesis.speak(utterance);});
@@ -586,7 +587,7 @@ $("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chat
 $("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
 $("saveStudyPdf").disabled=true;
 
-const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test";
+const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library";
 function readLocalJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}}
 function writeLocalJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}}
 function validResult(r){return !!r&&typeof r==="object"&&typeof r.title==="string"&&r.title.length<=250&&typeof r.exam==="string"&&typeof r.date==="string"&&r.date.length<=120&&Number.isFinite(Number(r.score))&&Number.isFinite(Number(r.max))&&Number(r.max)>0&&Number.isFinite(Number(r.correct))&&Number.isFinite(Number(r.wrong))&&Number.isFinite(Number(r.blank));}
@@ -683,7 +684,7 @@ $("resumeSavedTest").addEventListener("click",function(){
 $("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
 window.addEventListener("beforeunload",function(){if(active)saveActiveTest();});
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&active)saveActiveTest();});
-function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
+function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
 $("exportBackup").addEventListener("click",exportProgressBackup);
 $("importBackup").addEventListener("click",function(){$("backupFile").click();});
 $("backupFile").addEventListener("change",async function(){
@@ -691,20 +692,91 @@ $("backupFile").addEventListener("change",async function(){
  try{
   if(file.size>1000000)throw new Error("Choose a progress backup smaller than 1 MB.");
   const payload=JSON.parse(await file.text());
-  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100)throw new Error("This is not a supported KaushalPath progress backup.");
+  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40))throw new Error("This is not a supported KaushalPath progress backup.");
   if(payload.results.some(function(r){return !validResult(r);}))throw new Error("The backup contains a result record with invalid fields.");
   if(payload.focusSessions.some(function(s){return !s||typeof s.date!=="string"||!Number.isFinite(Date.parse(s.date))||!Number.isInteger(Number(s.seconds))||Number(s.seconds)<60||Number(s.seconds)>7200||s.mode!=="focus";}))throw new Error("The backup contains an invalid focus-session record.");
-  if(!confirm("Replace this browser's "+getHistory().length+" result(s) and "+getFocusSessions().length+" focus session(s) with "+payload.results.length+" result(s) and "+payload.focusSessions.length+" focus session(s) from this backup? Export your current progress first if you need a copy."))return;
-  const previousResults=getHistory(),previousSessions=getFocusSessions();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
-  clearSavedTest();renderHistory();refreshResumeBanner();toast("Progress backup imported successfully.");
+  const importedLibrary=Array.isArray(payload.savedLibrary)?payload.savedLibrary:[];if(importedLibrary.some(function(item){return !validLibraryItem(item);}))throw new Error("The backup contains an invalid saved-study record.");
+  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), and "+getSavedLibrary().length+" saved answer(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), and "+importedLibrary.length+" saved answer(s) from this backup? Export your current progress first if you need a copy."))return;
+  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
+  clearSavedTest();renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Progress backup imported successfully.");
  }catch(error){toast(error&&error.message?error.message:"Could not import that backup.");}
  finally{$("backupFile").value="";}
 });
 $("clearProgress").addEventListener("click",function(){
- if(!confirm("Clear all saved test results, focus sessions, and the unfinished test on this browser? This cannot be undone."))return;
- writeLocalJSON(HISTORY_KEY,[]);writeLocalJSON(FOCUS_KEY,[]);clearSavedTest();setFocusPreset("focus",1500);renderHistory();refreshResumeBanner();toast("Saved progress cleared.");
+ if(!confirm("Clear all saved test results, focus sessions, saved study answers, and the unfinished test on this browser? This cannot be undone."))return;
+ writeLocalJSON(HISTORY_KEY,[]);writeLocalJSON(FOCUS_KEY,[]);writeLocalJSON(LIBRARY_KEY,[]);clearSavedTest();setFocusPreset("focus",1500);renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Saved progress cleared.");
 });
 function getHistoryForExport(){return getHistory();}
+
+let selectedSavedLibraryId="";
+function validLibraryItem(item){return !!item&&typeof item==="object"&&typeof item.id==="string"&&item.id.length>0&&item.id.length<=120&&typeof item.title==="string"&&item.title.trim().length>0&&item.title.length<=160&&["study","chat"].includes(item.kind)&&typeof item.createdAt==="string"&&Number.isFinite(Date.parse(item.createdAt))&&typeof item.text==="string"&&item.text.trim().length>0&&item.text.length<=12000;}
+function getSavedLibrary(){const stored=readLocalJSON(LIBRARY_KEY,[]);return Array.isArray(stored)?stored.filter(validLibraryItem).slice(0,40):[];}
+function saveLibraryItem(kind,title,text){
+ const cleaned=String(text||"").trim();if(!cleaned){toast("There is no answer to save yet.");return;}
+ const items=getSavedLibrary();if(items.some(function(item){return item.kind===kind&&item.text===cleaned;})){toast("This answer is already saved in your library.");return;}
+ const truncated=cleaned.length>12000;const item={id:Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10),kind:kind,title:String(title||"Study answer").trim().slice(0,160)||"Study answer",createdAt:new Date().toISOString(),text:cleaned.slice(0,12000)};
+ items.unshift(item);if(!writeLocalJSON(LIBRARY_KEY,items.slice(0,40))){toast("Browser storage is full or unavailable. Export your progress and try again.");return;}
+ renderSavedLibrary();toast(truncated?"Saved the first 12,000 characters to your study library.":"Saved to your study library.");
+}
+function saveStudyAnswerToLibrary(){
+ if(!lastAnswerText)return;
+ const level=$("classLevel").value,subject=subjectName()||"Study",chapter=$("chapter").value.trim(),topic=$("topic").value.trim(),detail=chapter||topic||$("studyMode").value;
+ saveLibraryItem("study",level+" · "+subject+" · "+detail,lastAnswerText);
+}
+function saveChatAnswerToLibrary(){
+ if(!lastChatAnswer)return;
+ const level=$("chatClass").value,subject=$("chatSubject").value,prompt=String(lastChatPrompt||"Study answer").trim();
+ saveLibraryItem("chat",level+" · "+subject+" · "+prompt,lastChatAnswer);
+}
+function libraryFilename(title){return String(title||"study-note").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,55)||"study-note";}
+function renderSavedLibrary(){
+ const root=$("savedLibraryList");if(!root)return;root.replaceChildren();
+ const query=String($("librarySearch")&&$("librarySearch").value||"").trim().toLowerCase();
+ const all=getSavedLibrary(),items=all.filter(function(item){return !query||(item.title+" "+item.text+" "+item.kind).toLowerCase().includes(query);});
+ const count=$("savedLibraryCount");if(count)count.textContent=all.length+" saved "+(all.length===1?"answer":"answers");
+ if(!items.length){const empty=document.createElement("div");empty.className="empty library-empty";empty.textContent=query?"No saved answers match your search.":"Your library is empty. Save a useful answer from Study Hub or AI Study Guide to keep it here.";root.appendChild(empty);return;}
+ items.forEach(function(item){
+  const card=document.createElement("article");card.className="library-card";
+  const header=document.createElement("div");header.className="library-card-head";
+  const title=document.createElement("h3");title.textContent=item.title;
+  const type=document.createElement("span");type.className="library-kind";type.textContent=item.kind==="study"?"Study Hub":"AI Study Guide";
+  header.append(title,type);
+  const meta=document.createElement("p");meta.className="library-date";meta.textContent=new Date(item.createdAt).toLocaleString();
+  const preview=document.createElement("p");preview.className="library-preview";preview.textContent=item.text.replace(/[#*_>|-]/g," ").replace(/\s+/g," ").trim().slice(0,240)+(item.text.length>240?"…":"");
+  const actions=document.createElement("div");actions.className="library-card-actions";
+  [["open","Open"],["download","Download"],["delete","Delete"]].forEach(function(pair){const button=document.createElement("button");button.type="button";button.className="btn "+(pair[0]==="open"?"btn-purple":"btn-light");button.textContent=pair[1];button.dataset.libraryAction=pair[0];button.dataset.libraryId=item.id;actions.appendChild(button);});
+  card.append(header,meta,preview,actions);root.appendChild(card);
+ });
+}
+function openSavedLibraryItem(id){
+ const item=getSavedLibrary().find(function(entry){return entry.id===id;});if(!item)return;
+ selectedSavedLibraryId=item.id;
+ const viewer=$("savedViewer");viewer.dataset.itemId=item.id;viewer.classList.remove("hidden");
+ $("savedViewerTitle").textContent=item.title;$("savedViewerMeta").textContent=(item.kind==="study"?"Study Hub":"AI Study Guide")+" · Saved "+new Date(item.createdAt).toLocaleString();
+ renderMarkdownInto($("savedViewerContent"),item.text);viewer.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function deleteSavedLibraryItem(id){
+ const previous=getSavedLibrary(),next=previous.filter(function(item){return item.id!==id;});
+ if(next.length===previous.length)return;
+ if(!writeLocalJSON(LIBRARY_KEY,next)){toast("Could not update the study library in browser storage.");return;}
+ if(selectedSavedLibraryId===id){selectedSavedLibraryId="";$("savedViewer").classList.add("hidden");}
+ renderSavedLibrary();toast("Saved answer deleted.");
+}
+$("saveStudyLibrary").addEventListener("click",saveStudyAnswerToLibrary);
+$("librarySearch").addEventListener("input",renderSavedLibrary);
+$("savedLibraryList").addEventListener("click",function(event){
+ const button=event.target.closest("[data-library-action]");if(!button)return;
+ const id=button.dataset.libraryId,item=getSavedLibrary().find(function(entry){return entry.id===id;});if(!item)return;
+ if(button.dataset.libraryAction==="open")openSavedLibraryItem(id);
+ else if(button.dataset.libraryAction==="download")download(libraryFilename(item.title)+".md","# "+item.title+"\n\n"+item.text+"\n","text/markdown");
+ else if(button.dataset.libraryAction==="delete"&&confirm("Delete this saved answer?"))deleteSavedLibraryItem(id);
+});
+$("savedViewerClose").addEventListener("click",function(){$("savedViewer").classList.add("hidden");selectedSavedLibraryId="";});
+$("savedViewerCopy").addEventListener("click",async function(){const item=getSavedLibrary().find(function(entry){return entry.id===selectedSavedLibraryId;});if(!item)return;try{await navigator.clipboard.writeText(item.text);toast("Saved answer copied.");}catch(e){toast("Clipboard permission was blocked.");}});
+$("savedViewerDownload").addEventListener("click",function(){const item=getSavedLibrary().find(function(entry){return entry.id===selectedSavedLibraryId;});if(item)download(libraryFilename(item.title)+".md","# "+item.title+"\n\n"+item.text+"\n","text/markdown");});
+$("savedViewerDelete").addEventListener("click",function(){if(selectedSavedLibraryId&&confirm("Delete this saved answer?"))deleteSavedLibraryItem(selectedSavedLibraryId);});
+$("clearLibrary").addEventListener("click",function(){if(!getSavedLibrary().length){toast("Your study library is already empty.");return;}if(!confirm("Delete all saved study answers? This cannot be undone."))return;if(!writeLocalJSON(LIBRARY_KEY,[])){toast("Could not clear the library in browser storage.");return;}selectedSavedLibraryId="";$("savedViewer").classList.add("hidden");renderSavedLibrary();toast("Study library cleared.");});
+
 function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
 function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div><div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
@@ -719,18 +791,18 @@ $("exportHistory").addEventListener("click",function(){const history=getHistory(
 async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x-kaushalpath-status":"1"}});const j=await r.json();$("aiStatus").textContent=j.ready?"AI guide ready":"AI guide setup needed";$("aiStatus").style.background=j.ready?"#1c584f":"#654a2d";}catch(e){$("aiStatus").textContent="AI status unavailable";}}
 
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
-document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
+document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();refreshResumeBanner();initFocusTimer();checkAI();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();
 
 function activateWorkspaceView(view,clicked){
- const valid=["overview","learn","ai-guide","tests","history","resources"];
+ const valid=["overview","learn","ai-guide","tests","history","resources","library"] ;
  const target=valid.includes(view)?view:"overview";
  const overviewNodes=[document.getElementById("overview"),document.querySelector("main > .hero"),document.querySelector("main > .quickstats"),document.getElementById("learningPath")];
  overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
- ["learn","ai-guide","tests","resources","history"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
+ ["learn","ai-guide","tests","resources","history","library"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
- const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources"};
+ const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
   document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",exam!=="all"&&card.dataset.exam!==exam);});

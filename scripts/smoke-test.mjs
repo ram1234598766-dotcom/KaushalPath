@@ -13,6 +13,12 @@ assert.match(html, /sourceUrls/, "manual website URL input should exist");
 assert.match(html, /id="ai-guide"/, "AI guide should have a dedicated workspace");
 assert.match(html, /id="chatMessages"/, "horizontal AI conversation should exist");
 assert.match(html, /id="chatPdf"/, "AI answers should have a PDF print/export tool");
+assert.match(html, /id="chatSave"/, "AI answers should be saveable to a personal study library");
+assert.match(html, /id="librarySearch"/, "saved answers should be searchable");
+assert.match(html, /id="savedViewerContent"/, "saved answers should have a readable preview");
+assert.match(app, /function saveLibraryItem\(kind,title,text\)/, "answers should persist to a local saved library");
+assert.match(app, /function renderSavedLibrary\(\)/, "the saved library should render and filter stored answers");
+assert.match(app, /savedLibrary:getSavedLibrary\(\)/, "full progress backups should include the saved library");
 assert.match(html, /id="topicSuggestions"/, "class-aware study topics should be available");
 assert.doesNotMatch(html, /On-device AI|Qwen 1\.5B|localAiEnable|localAiDisable|Kilo Auto Free/, "the website should not expose model or provider details");
 assert.doesNotMatch(app, /KaushalPathLocalAI|Qwen|Kilo Auto Free|localAiStatus/, "frontend logic should not expose provider or local-model status");
@@ -34,6 +40,7 @@ assert.match(api, /hasVisualInput/, "scanned PDF page images should use the visi
 assert.match(api, /error\.status = 400/, "malformed upload payloads should return a client error");
 assert.match(api, /error\.status = 413/, "oversized file payloads should return a payload-too-large error");
 assert.match(api, /randomUUID/, "API requests should receive server-generated trace IDs");
+assert.match(api, /Retry-After/, "rate-limited requests should tell clients when to retry");
 assert.match(api, /X-Request-Id/, "trace IDs should be returned as a response header");
 assert.match(api, /study request failed:", requestId/, "backend failure logs should include the trace ID");
 assert.match(api, /function assertSafeZipArchive\(buffer\)/, "Office archive uploads should be checked before decompression");
@@ -143,6 +150,7 @@ assert.match(html, /id="resumeSavedTest"/, "students should be able to resume an
 assert.match(app, /function saveActiveTest\(\)/, "test answers and remaining deadline should autosave locally");
 assert.match(app, /function getSavedTest\(\)/, "saved test recovery should validate stored quiz state");
 assert.match(app, /function initFocusTimer\(\)/, "focus timer should restore its state after a refresh");
+assert.match(app, /function validLibraryItem\(item\)/, "saved library records should be validated before use");
 assert.match(html, /id="focusStartPause"/, "students should have a controllable focus timer");
 assert.match(app, /function refreshMomentum\(\)/, "progress cards should calculate test accuracy and study streaks");
 assert.match(html, /id="momentumAccuracy"/, "learning momentum should show calculated answer accuracy");

@@ -552,6 +552,8 @@ export default async function handler(req, res) {
   } catch (error) {
     const status = Number(error?.status || error?.statusCode || error?.httpStatusCode || 0);
     const message = String(error?.message || "");
+    const rateLimited = status === 429 || /rate.?limit|too many requests|quota/i.test(message);
+    if (rateLimited) res.setHeader("Retry-After", "15");
     console.error("KaushalPath study request failed:", requestId, status || "unknown", message.slice(0, 300));
     if (hasVisualInput && (status === 400 || status === 404 || /image_url|vision|multimodal|image input|not support.*image/i.test(message))) {
       const notice = "The image could not be analyzed right now. Try a clearer, smaller image or try again later.";
@@ -559,7 +561,7 @@ export default async function handler(req, res) {
       return send(res, { error: notice, sources: web.sources, requestId }, 422);
     }
     if (streamStarted) {
-      const userMessage = status === 429 || /rate.?limit|too many requests|quota/i.test(message)
+      const userMessage = rateLimited
         ? "The study assistant is temporarily busy. Please wait a moment and try again."
         : /timeout|deadline|abort/i.test(message)
           ? "The study assistant took too long to respond. Your question is still available to retry."
@@ -568,7 +570,7 @@ export default async function handler(req, res) {
       try { res.end(); } catch {}
       return;
     }
-    if (status === 429 || /rate.?limit|too many requests|quota/i.test(message)) return send(res, { error: "The study assistant is temporarily busy. Please wait a moment and try again.", sources: web.sources, requestId }, 429);
+    if (rateLimited) return send(res, { error: "The study assistant is temporarily busy. Please wait a moment and try again.", sources: web.sources, requestId }, 429);
     if (status === 401 || status === 403) return send(res, { error: "The study service could not authenticate this request. Please try again later.", sources: web.sources, requestId }, 502);
     if (/timeout|deadline|abort/i.test(message)) return send(res, { error: "The AI request or source retrieval took too long. Please retry, or choose a shorter task.", sources: web.sources, requestId }, 504);
     return send(res, { error: "The study assistant could not complete this request. Please try again later.", sources: web.sources, requestId }, 502);
