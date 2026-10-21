@@ -93,6 +93,11 @@ assert.match(api, /kilo-auto\/free/, "AI should use Kilo Auto Free");
 assert.match(api, /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "AI should use the documented Kilo Gateway chat endpoint");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
 
+assert.match(api, /features: \{ liveSearch: true, readPublicUrls: true, imageAnalysis: true \}/, "health metadata should expose capabilities without model identifiers");
+assert.doesNotMatch(api.slice(api.indexOf('if (req.method === "GET")'), api.indexOf('if (req.method !== "POST")')), /visionModel|localModel|Qwen|kilo-auto\/free|inclusionai/i, "health response must not expose model or provider details");
+assert.match(api, /Promise\.all\(\[\s*Promise\.all\(urls\.map/, "selected public pages should be fetched concurrently");
+assert.match(api, /shouldSearch\s*\?\s*searchWeb\(query\)/, "web search should run concurrently with selected page retrieval");
+assert.match(api, /AbortSignal\.timeout\(38000\)/, "upstream timeout should leave room for research and function cleanup");
 assert.match(api, /async function searchWeb/, "the server backend should search the public web when requested");
 assert.match(api, /async function readPublicPage/, "the server backend should read supported public pages");
 assert.match(api, /assertPublicUrl/, "the page reader should validate public URLs");

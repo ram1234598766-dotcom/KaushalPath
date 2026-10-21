@@ -324,15 +324,21 @@ function searchIntent(text) {
   return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text || ""));
 }
 async function research(urls, shouldSearch, query) {
-  const tasks = await Promise.all(urls.map(async (url) => {
-    try { return await readPublicPage(url); }
-    catch (error) { return { source: { url, title: "Could not read page", snippet: String(error.message || "Retrieval failed.").slice(0, 240) }, context: "" }; }
-  }));
-  let searched = { sources: [], context: "" }, searchError = "";
-  if (shouldSearch) {
-    try { searched = await searchWeb(query); }
-    catch (error) { searchError = String(error.message || "Search failed.").slice(0, 220); }
-  }
+  // Fetch selected pages and search concurrently to reduce latency.
+  const [tasks, searchResult] = await Promise.all([
+    Promise.all(urls.map(async (url) => {
+      try { return await readPublicPage(url); }
+      catch (error) { return { source: { url, title: "Could not read page", snippet: String(error.message || "Retrieval failed.").slice(0, 240) }, context: "" }; }
+    })),
+    shouldSearch
+      ? searchWeb(query).then((data) => ({ data, error: "" })).catch((error) => ({
+          data: { sources: [], context: "" },
+          error: String(error.message || "Search failed.").slice(0, 220)
+        }))
+      : Promise.resolve({ data: { sources: [], context: "" }, error: "" })
+  ]);
+  const searched = searchResult.data;
+  const searchError = searchResult.error;
   const pages = tasks.filter((item) => item.context);
   const allSources = [...pages.map((item) => item.source), ...searched.sources];
   const seen = new Set(), sources = allSources.filter((item) => { if (seen.has(item.url)) return false; seen.add(item.url); return true; }).slice(0, 8);
@@ -347,7 +353,7 @@ export default async function handler(req, res) {
     if (req.headers["x-kaushalpath-status"] !== "1") return send(res, { error: "Use POST to ask the study guide a question." }, 405);
     return send(res, {
       ready: true,
-      features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true, visionModel: VISION_MODEL, localModel: "browser WebGPU, automatically warmed" },
+      features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true },
       message: "The study assistant is ready to help with questions, public sources, and image-based problems.",
       notice: "Avoid submitting personal or confidential information."
     });
@@ -443,7 +449,7 @@ export default async function handler(req, res) {
     const response = await fetch(GATEWAY_URL, {
       method: "POST", headers,
       body: JSON.stringify({ model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream }),
-      signal: AbortSignal.timeout(42000)
+      signal: AbortSignal.timeout(38000)
     });
     if (!response.ok) {
       let payload = {};
