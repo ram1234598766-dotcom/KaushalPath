@@ -236,9 +236,22 @@ function cleanAttachmentName(value) {
   return name || "attachment";
 }
 function readDataUrl(data, maxChars) {
-  if (typeof data !== "string" || data.length > maxChars) throw new Error("The attached file is too large. Choose a smaller file.");
+  if (typeof data !== "string") {
+    const error = new Error("This file could not be uploaded in a supported format.");
+    error.status = 400;
+    throw error;
+  }
+  if (data.length > maxChars) {
+    const error = new Error("The attached file is too large. Choose a smaller file.");
+    error.status = 413;
+    throw error;
+  }
   const match = data.match(/^data:([a-z0-9.+-]+\/[a-z0-9.+-]+);base64,([a-z0-9+/=\r\n]+)$/i);
-  if (!match) throw new Error("This file could not be uploaded in a supported format.");
+  if (!match) {
+    const error = new Error("This file could not be uploaded in a supported format.");
+    error.status = 400;
+    throw error;
+  }
   return { mime: match[1].toLowerCase(), buffer: Buffer.from(match[2].replace(/\s/g, ""), "base64") };
 }
 function assertSafeZipArchive(buffer) {
@@ -425,7 +438,7 @@ export default async function handler(req, res) {
   if (imageData) {
     let parsedImage;
     try { parsedImage = readDataUrl(imageData, MAX_IMAGE_CHARS); }
-    catch (error) { return send(res, { error: error.message || "The image could not be uploaded." }, 413); }
+    catch (error) { return send(res, { error: error.message || "The image could not be uploaded." }, Number(error?.status) || 400); }
     if (!parsedImage.mime.startsWith("image/")) return send(res, { error: "The selected file is not a supported image." }, 400);
     if (!["image/jpeg", "image/png", "image/webp"].includes(parsedImage.mime)) {
       try {
@@ -451,7 +464,8 @@ export default async function handler(req, res) {
   try {
     if (fileData || fileText) attachment = await extractAttachmentText(fileData, fileName, fileType, fileText);
   } catch (error) {
-    return send(res, { error: String(error.message || "The attached file could not be read.").slice(0, 420) }, 422);
+    const status = Number(error?.status);
+    return send(res, { error: String(error.message || "The attached file could not be read.").slice(0, 420) }, [400, 413].includes(status) ? status : 422);
   }
   const fileImages = Array.isArray(attachment.images) ? attachment.images.slice(0, 3) : [];
   const hasVisualInput = Boolean(imageData || fileImages.length);
