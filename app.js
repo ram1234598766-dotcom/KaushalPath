@@ -72,13 +72,28 @@ const ATTACHMENT_TEXT_EXTENSIONS=new Set(["txt","md","csv","tsv","json","xml","h
 const ATTACHMENT_DOCUMENT_EXTENSIONS=new Set(["pdf","doc","docx","pptx","xlsx","xls","ods","odt"]);
 const ATTACHMENT_IMAGE_EXTENSIONS=new Set(["png","jpg","jpeg","webp","gif","bmp","svg","avif","tif","tiff","heic","heif"]);
 function attachmentExtension(file){const m=String(file&&file.name||"").toLowerCase().match(/\.([a-z0-9]{1,8})$/);return m?m[1]:"";}
-function readFileAsDataUrl(file){return new Promise(function(resolve,reject){const reader=new FileReader();reader.onload=function(){typeof reader.result==="string"?resolve(reader.result):reject(new Error("The selected file could not be read."));};reader.onerror=function(){reject(new Error("The selected file could not be read."));};reader.readAsDataURL(file);});}
+function readFileAsDataUrl(file,overrideMime){return new Promise(function(resolve,reject){const reader=new FileReader();reader.onload=function(){if(typeof reader.result!=="string"){reject(new Error("The selected file could not be read."));return;}const data=String(reader.result);resolve(overrideMime?data.replace(/^data:[^;,]+/,"data:"+overrideMime):data);};reader.onerror=function(){reject(new Error("The selected file could not be read."));};reader.readAsDataURL(file);});}
+function imageMimeForFile(file){
+ const ext=attachmentExtension(file),byExt={png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif",bmp:"image/bmp",svg:"image/svg+xml",avif:"image/avif",tif:"image/tiff",tiff:"image/tiff",heic:"image/heic",heif:"image/heif"};
+ return String(file.type||"").startsWith("image/")?file.type:(byExt[ext]||"");
+}
 async function prepareAttachmentFile(file){
  if(!file)return null;
  const ext=attachmentExtension(file),isImage=String(file.type||"").startsWith("image/")||ATTACHMENT_IMAGE_EXTENSIONS.has(ext);
  if(isImage){
-  const data=await resizeImageFile(file);
-  return {kind:"image",name:file.name,type:file.type||"image/jpeg",imageData:data};
+  try{
+   const data=await resizeImageFile(file);
+   return {kind:"image",name:file.name,type:"image/jpeg",imageData:data};
+  }catch(error){
+   if(file.size<=2.5*1024*1024){
+    const mime=imageMimeForFile(file);
+    if(mime){
+     const raw=await readFileAsDataUrl(file,mime);
+     if(raw.length<=3500000)return {kind:"image",name:file.name,type:mime,imageData:raw,needsServerConversion:true};
+    }
+   }
+   throw new Error((error&&error.message?error.message+" ":"")+"Try saving the image as PNG or JPG, or use a file under 2.5 MB.");
+  }
  }
  if(ATTACHMENT_TEXT_EXTENSIONS.has(ext)){
   if(file.size>150000)throw new Error("Text, CSV and similar files must be 150 KB or smaller.");
@@ -365,13 +380,13 @@ let lastStudyController=null;
 $("studyImage").addEventListener("change",async function(){
  const file=this.files&&this.files[0],hint=$("studyImageHint");studyAttachment=null;if(!file){if(hint)hint.textContent="Select an image, PDF, Word, Excel, PowerPoint or text file.";return;}
  if(hint)hint.textContent="Preparing "+file.name+"…";
- try{studyAttachment=await prepareAttachmentFile(file);if(hint)hint.textContent="Ready to attach: "+file.name+" · "+(studyAttachment.kind==="image"?"image compressed":studyAttachment.kind==="document"?"document will be read securely by the study service":"text will be read securely by the study service")+".";
+ try{studyAttachment=await prepareAttachmentFile(file);if(hint)hint.textContent="Ready to attach: "+file.name+" · "+(studyAttachment.kind==="image"?(studyAttachment.needsServerConversion?"image will be converted for analysis":"image compressed"):(studyAttachment.kind==="document"?"document text will be extracted":"text file ready"))+".";
  }catch(error){this.value="";studyAttachment=null;if(hint)hint.textContent=error.message;toast(error.message);}
 });
 $("chatImage").addEventListener("change",async function(){
  const file=this.files&&this.files[0],hint=$("chatImageHint");chatAttachment=null;if(!file){if(hint)hint.textContent="Attach an image, PDF, office document or text file.";return;}
  if(hint)hint.textContent="Preparing "+file.name+"…";
- try{chatAttachment=await prepareAttachmentFile(file);if(hint)hint.textContent="Ready to attach: "+file.name+" · "+(chatAttachment.kind==="image"?"image compressed":chatAttachment.kind==="document"?"document will be read by the study service":"text file ready")+".";
+ try{chatAttachment=await prepareAttachmentFile(file);if(hint)hint.textContent="Ready to attach: "+file.name+" · "+(chatAttachment.kind==="image"?(chatAttachment.needsServerConversion?"image will be converted for analysis":"image compressed"):(chatAttachment.kind==="document"?"document text will be extracted":"text file ready"))+".";
  }catch(error){this.value="";chatAttachment=null;if(hint)hint.textContent=error.message;toast(error.message);}
 });
 $("studyForm").addEventListener("submit",async function(ev){
