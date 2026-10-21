@@ -15,6 +15,16 @@ assert.match(html, /id="chatMessages"/, "horizontal AI conversation should exist
 assert.match(html, /id="chatPdf"/, "AI answers should have a PDF print/export tool");
 assert.match(html, /id="chatSave"/, "AI answers should be saveable to a personal study library");
 assert.match(html, /id="chatSessionSearch"/, "AI study conversations should be searchable");
+assert.match(html, /id="plannerTaskForm"/, "the Study Planner should let students create tasks");
+assert.match(html, /id="plannerTaskList"/, "the Study Planner should list and track saved tasks");
+assert.match(html, /data-planner-filter="upcoming"/, "the plan should filter upcoming work");
+assert.match(app, /function validPlannerTask\(item\)/, "study-plan backup entries should be schema-validated");
+assert.match(app, /function renderPlanner\(\)/, "the planner should calculate task status and completion progress");
+assert.match(app, /plannerTasks:getPlannerTasks\(\)/, "full progress backups should include study-plan tasks");
+assert.match(app, /function initPlanner\(\)/, "task creation, completion and delete actions should be initialized");
+assert.match(app, /initPlanner\(\);/, "the Study Planner should initialize with the workspace");
+assert.match(app, /writeLocalJSON\(PLANNER_KEY,\[\]\)/, "the clear-progress action should also clear saved study tasks");
+
 assert.match(html, /id="chatSessionList"/, "the AI Study Guide should expose recent saved conversations");
 assert.match(app, /function getChatSessions\(\)/, "AI conversations should persist locally");
 assert.match(app, /function validChatSession\(item\)/, "imported chat sessions should be validated");
