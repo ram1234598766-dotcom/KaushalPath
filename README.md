@@ -2,19 +2,18 @@
 
 **Seva First Challenge · Shikshit & Kaushal Bharat**
 
-KaushalPath India is designed to combine CBSE learning support for Classes 10–12 with practical skill discovery. The AI guide can help generate original notes, explanations, revision sheets, and practice questions when configured.
+KaushalPath India is designed to combine CBSE learning support for Classes 10–12 with practical skill discovery. When configured, its AI guide can generate original notes, explanations, revision sheets, and practice questions, with links back to official CBSE/NCERT sources.
 
-## Repository contents
+## Files currently added to this repository
 
-- [Human-centered concept note](KaushalPath_India_AI_Edition/Concept_Note.md)
-- [Project setup and AI guide instructions](KaushalPath_India_AI_Edition/README.md) — add the full project README and application files from the project package before treating this repository as runnable.
+- [Human-centered concept note (Markdown)](KaushalPath_India_AI_Edition/Concept_Note.md)
 - [Requirements](KaushalPath_India_AI_Edition/requirements.txt)
 - [Optional AI configuration example](KaushalPath_India_AI_Edition/.env.example)
 - [Project structure index](KaushalPath_India_AI_Edition/PROJECT_STRUCTURE.txt)
 
-## Important upload note
+## Still needed
 
-The full project ZIP and standalone PDF have **not** been uploaded as binary files in this repository. The connected GitHub write action available in this session supports UTF-8 text files but does not expose a binary file upload operation, so the project application source and PDFs are not yet available here as complete downloadable files. The concept note is available above in Markdown form.
+The complete application source files, project ZIP, and standalone concept-note PDF have **not** been uploaded here as complete downloadable files. The available GitHub write connector in this session supports text-file operations but does not provide a binary upload operation for ZIP/PDF attachments. The concept note is available above in Markdown form; to make this repository runnable and include the exact deliverables, upload the ZIP and PDF from the attached files in Chat using GitHub's web interface.
 
 ## Official curriculum references
 
