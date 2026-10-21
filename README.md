@@ -68,3 +68,5 @@ Built-in questions are original practice samples, not a verified archive of auth
 - [JEE Main documents](https://jeemain.nta.nic.in/documents/)
 - [NEET UG official website](https://neet.nta.nic.in/)
 - [NTA downloads](https://nta.ac.in/Downloads)
+
+- Images are decoded, pixel-limited, orientation-corrected and re-encoded server-side; PNG/WebP are preserved where possible, vector/other formats are normalized, and damaged image bytes are rejected.

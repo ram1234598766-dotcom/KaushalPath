@@ -85,6 +85,12 @@ assert.match(api, /error\.status = 413/, "oversized file payloads should return 
 assert.match(api, /randomUUID/, "API requests should receive server-generated trace IDs");
 assert.match(api, /Retry-After/, "rate-limited requests should tell clients when to retry");
 assert.match(api, /function createPinnedLookup\(addresses\)/, "research should pin validated DNS answers to prevent DNS-rebinding SSRF");
+assert.match(api, /const metadata = await sharp\(parsedImage\.buffer, imageOptions\)\.metadata\(\)/, "every uploaded image should be decoded before reaching the gateway");
+assert.match(api, /limitInputPixels: 40000000/, "image decoding should cap pixel expansion");
+assert.match(api, /normalizedMime = "image\/png"/, "PNG diagrams should retain a lossless output format");
+assert.match(api, /normalizedMime = "image\/webp"/, "WebP image uploads should remain supported");
+assert.match(api, /This image could not be decoded safely/, "corrupt image uploads should receive a clear 422 response");
+
 assert.match(api, /function ipv6ToBigInt\(address\)/, "IPv6 reserved-range checks should normalize expanded notation");
 assert.match(api, /2001:10::/, "the SSRF guard should reject non-global ORCHID ranges");
 assert.match(api, /3fff::/, "the SSRF guard should reject the IPv6 documentation range");

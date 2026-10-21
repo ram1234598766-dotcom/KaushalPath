@@ -576,20 +576,42 @@ export default async function handler(req, res) {
     try { parsedImage = readDataUrl(imageData, MAX_IMAGE_CHARS); }
     catch (error) { return send(res, { error: error.message || "The image could not be uploaded." }, Number(error?.status) || 400); }
     if (!parsedImage.mime.startsWith("image/")) return send(res, { error: "The selected file is not a supported image." }, 400);
-    if (!["image/jpeg", "image/png", "image/webp"].includes(parsedImage.mime)) {
-      try {
-        const converted = await sharp(parsedImage.buffer, { limitInputPixels: 40000000, animated: false })
+    try {
+      // Decode every supported image rather than trusting the extension or MIME
+      // type. Re-encoding also strips EXIF/GPS metadata and normalizes orientation.
+      const imageOptions = { limitInputPixels: 40000000, animated: false, failOn: "warning" };
+      const metadata = await sharp(parsedImage.buffer, imageOptions).metadata();
+      if (!metadata.width || !metadata.height || !metadata.format) throw new Error("Unreadable image.");
+      const createImage = () => sharp(parsedImage.buffer, imageOptions)
+        .rotate()
+        .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true });
+      let converted, normalizedMime;
+      if (metadata.format === "png") {
+        converted = await createImage().png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
+        normalizedMime = "image/png";
+      } else if (metadata.format === "webp") {
+        converted = await createImage().webp({ quality: 88, effort: 4 }).toBuffer();
+        normalizedMime = "image/webp";
+      } else {
+        converted = await createImage().flatten({ background: "#ffffff" }).jpeg({ quality: 84, mozjpeg: true }).toBuffer();
+        normalizedMime = "image/jpeg";
+      }
+      imageData = "data:" + normalizedMime + ";base64," + converted.toString("base64");
+      // Some detailed PNGs compress better as a high-quality JPEG. Fall back
+      // only when the lossless version would exceed the gateway request budget.
+      if (imageData.length > MAX_IMAGE_CHARS && normalizedMime !== "image/jpeg") {
+        const jpeg = await sharp(parsedImage.buffer, imageOptions)
           .rotate()
           .flatten({ background: "#ffffff" })
           .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
-          .jpeg({ quality: 84 })
+          .jpeg({ quality: 82, mozjpeg: true })
           .toBuffer();
-        imageData = "data:image/jpeg;base64," + converted.toString("base64");
-      } catch (error) {
-        return send(res, { error: "This image format could not be converted. Try saving it as PNG or JPG." }, 422);
+        imageData = "data:image/jpeg;base64," + jpeg.toString("base64");
       }
-      if (imageData.length > MAX_IMAGE_CHARS) return send(res, { error: "The converted image is too large. Choose a smaller image." }, 413);
+    } catch (error) {
+      return send(res, { error: "This image could not be decoded safely. Try exporting it as PNG, JPG, or WebP." }, 422);
     }
+    if (imageData.length > MAX_IMAGE_CHARS) return send(res, { error: "The normalized image is too large. Choose a smaller image." }, 413);
   }
   const fileData = body.fileData == null ? "" : String(body.fileData);
   const fileText = body.fileText == null ? "" : String(body.fileText);
