@@ -115,7 +115,8 @@ assert.match(app, /negativeMark:1/, "JEE and NEET practice sets should explicitl
 assert.match(app, /const score=t\.qs\.reduce/, "scoring should honor per-question marks and configured penalties");
 assert.match(app, /const maxMarks=t\.qs\.reduce/, "test cards should display their real maximum marks");
 assert.ok(app.includes("Scoring: '+marking"), "test cards should display correct, wrong and blank scoring explicitly");
-assert.match(app, /Official sample-paper questions/, "question cards should distinguish official paper questions from original practice");
+assert.match(app, /Official sample-paper question/, "question cards should label authentic official-paper questions");
+assert.match(app, /Original practice set/, "question cards should distinguish original practice from official questions");
 assert.match(html, /id="official-papers"/, "the UI should expose an official paper catalogue");
 assert.match(html, /sqp_classx_2026-27\.html/, "the official catalogue should link CBSE Class X current papers");
 assert.match(html, /SQP_CLASSXII_2026-27\.html/, "the official catalogue should link CBSE Class XII current papers");
