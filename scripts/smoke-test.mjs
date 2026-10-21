@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
+const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
 
@@ -14,8 +15,16 @@ assert.match(html, /id="ai-guide"/, "AI guide should have a dedicated workspace"
 assert.match(html, /id="chatMessages"/, "horizontal AI conversation should exist");
 assert.match(html, /id="chatPdf"/, "AI answers should have a PDF print/export tool");
 assert.match(html, /id="topicSuggestions"/, "class-aware study topics should be available");
+assert.match(html, /id="localAiEnable"/, "the Study Hub should expose an on-device AI setup action");
+assert.match(html, /src="\/local-ai\.js" defer/, "the local inference controller should load before the app");
+assert.match(localAI, /Qwen2\.5-1\.5B-Instruct-q4f16_1-MLC/, "local inference should use the compact Qwen 1.5B model");
+assert.match(localAI, /CreateMLCEngine/, "local model execution should use WebLLM's browser engine");
+assert.match(localAI, /isSupported/, "local AI should feature-detect WebGPU support");
 assert.match(html, /@media print/, "print-ready PDF styles should exist");
 assert.match(app, /streamStudyRequest/, "study requests should support streaming output");
+assert.match(app, /retryCloudWithoutStream/, "an empty stream should retry with a standard completion");
+assert.match(app, /KaushalPathLocalAI/, "study requests should be able to use the local model");
+assert.match(app, /standard completion/, "stream fallback status should be announced");
 assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
 assert.match(app, /activateWorkspaceView/, "workspace sections should change via menu navigation");
 assert.match(app, /chatSpeak/, "AI study tools should include read-aloud");
@@ -52,6 +61,8 @@ assert.ok(vercel.routes.some(r => r.src === "/api/study-guide" && r.dest === "/a
 assert.ok(Array.isArray(vercel.builds), "Vercel should explicitly build static files and the API");
 assert.ok(vercel.builds.some(b => b.src === "index.html" && b.use === "@vercel/static"), "homepage should be published as a static file");
 assert.ok(vercel.builds.some(b => b.src === "app.js" && b.use === "@vercel/static"), "browser script should be published as a static file");
+assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "local inference controller should be published as a static file");
+assert.match(vercel.headers.find(h => h.source === "/(.*)").headers.find(h => h.key === "Content-Security-Policy").value, /https:\/\/esm\.sh/, "CSP should allow the WebLLM module when local AI is requested");
 assert.ok(vercel.builds.some(b => b.src === "api/study-guide.mjs" && b.use === "@vercel/node"), "AI endpoint should be deployed as a Node function");
 assert.ok(existsSync(new URL("../api/study-guide.mjs", import.meta.url)), "Vercel AI route exists");
 assert.ok(existsSync(new URL("../index.html", import.meta.url)), "Vercel homepage exists at the root");
