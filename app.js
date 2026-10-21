@@ -499,7 +499,7 @@ function printAsPdf(title,text){
  setTimeout(cleanup,12000);
 }
 $("saveStudyPdf").addEventListener("click",function(){if(lastAnswerText)printAsPdf("Study notes",lastAnswerText);});
-let chatHistory=[],activeChatController=null,lastChatAnswer="",lastChatPrompt="",chatBusy=false;
+let chatHistory=[],chatTranscript=[],currentChatSessionId="",activeChatController=null,lastChatAnswer="",lastChatPrompt="",chatBusy=false;
 function chatAddMessage(role,text){
  const root=$("chatMessages");
  const welcome=root.querySelector(".chat-welcome");if(welcome)welcome.remove();
@@ -527,7 +527,7 @@ async function sendChat(raw,regenerate){
   lastChatAttachment=chatAttachment;chatAttachment=null;
   if($("chatImage"))$("chatImage").value="";
   if($("chatImageHint"))$("chatImageHint").textContent=lastChatAttachment?"Attached: "+lastChatAttachment.name:"Attach an image, PDF, office document or text file.";
-  chatHistory.push({role:"user",content:question});chatAddMessage("user",question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):""));lastChatPrompt=question;
+  chatHistory.push({role:"user",content:question});lastChatPrompt=question;const displayedQuestion=question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):"");chatAddMessage("user",displayedQuestion);recordChatMessage("user",displayedQuestion);
  }else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
  const attachmentForRequest=lastChatAttachment,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
  chatBusy=true;activeChatController=new AbortController();
@@ -552,7 +552,7 @@ async function sendChat(raw,regenerate){
    waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
   }
   messageBox.dataset.rawAnswer=answer;
-  lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
+  lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);recordChatMessage("assistant",answer);
   $("chatStatus").textContent=needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready";
   enableChatTools(Boolean(answer));
  }catch(err){
@@ -562,7 +562,7 @@ async function sendChat(raw,regenerate){
   enableChatTools(Boolean(lastChatAnswer));
  }finally{
   if(activeChatController===controller)activeChatController=null;
-  chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();
+  chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();renderChatSessions();
  }
 }
 $("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatAttachment){toast("Wait for the selected file to finish preparing, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
@@ -584,10 +584,10 @@ $("chatPdf").addEventListener("click",function(){if(lastChatAnswer)printAsPdf("A
 $("chatText").addEventListener("click",function(){if(lastChatAnswer)download("kaushalpath-ai-answer.txt",lastChatAnswer,"text/plain");});
 $("chatSpeak").addEventListener("click",function(){if(!lastChatAnswer)return;if(!("speechSynthesis" in window)){toast("Read aloud is not supported in this browser.");return;}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(lastChatAnswer);utterance.lang="en-IN";window.speechSynthesis.speak(utterance);});
 $("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chatBusy)sendChat(lastChatPrompt,true);});
-$("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
+$("chatClear").addEventListener("click",function(){if(chatBusy){toast("Stop the current response before starting a new conversation.");return;}resetCurrentChat();});
 $("saveStudyPdf").disabled=true;
 
-const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library";
+const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library",CHAT_SESSIONS_KEY="kp-chat-sessions";
 function readLocalJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}}
 function writeLocalJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}}
 function validResult(r){return !!r&&typeof r==="object"&&typeof r.title==="string"&&r.title.length<=250&&typeof r.exam==="string"&&typeof r.date==="string"&&r.date.length<=120&&Number.isFinite(Number(r.score))&&Number.isFinite(Number(r.max))&&Number(r.max)>0&&Number.isFinite(Number(r.correct))&&Number.isFinite(Number(r.wrong))&&Number.isFinite(Number(r.blank));}
@@ -689,21 +689,23 @@ $("resumeSavedTest").addEventListener("click",function(){
 $("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
 window.addEventListener("beforeunload",function(){if(active)saveActiveTest();});
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&active)saveActiveTest();});
-function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
+function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary(),chatSessions:getChatSessions()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
 $("exportBackup").addEventListener("click",exportProgressBackup);
 $("importBackup").addEventListener("click",function(){$("backupFile").click();});
 $("backupFile").addEventListener("change",async function(){
  const file=$("backupFile").files&&$("backupFile").files[0];if(!file)return;
  try{
-  if(file.size>1000000)throw new Error("Choose a progress backup smaller than 1 MB.");
+  if(file.size>3*1024*1024)throw new Error("Choose a progress backup smaller than 3 MB.");
   const payload=JSON.parse(await file.text());
-  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40))throw new Error("This is not a supported KaushalPath progress backup.");
+  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40)||(payload.chatSessions!=null&&!Array.isArray(payload.chatSessions))||(Array.isArray(payload.chatSessions)&&payload.chatSessions.length>8))throw new Error("This is not a supported KaushalPath progress backup.");
   if(payload.results.some(function(r){return !validResult(r);}))throw new Error("The backup contains a result record with invalid fields.");
   if(payload.focusSessions.some(function(s){return !s||typeof s.date!=="string"||!Number.isFinite(Date.parse(s.date))||!Number.isInteger(Number(s.seconds))||Number(s.seconds)<60||Number(s.seconds)>7200||s.mode!=="focus";}))throw new Error("The backup contains an invalid focus-session record.");
   const importedLibrary=Array.isArray(payload.savedLibrary)?payload.savedLibrary:[];if(importedLibrary.some(function(item){return !validLibraryItem(item);}))throw new Error("The backup contains an invalid saved-study record.");
-  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), and "+getSavedLibrary().length+" saved answer(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), and "+importedLibrary.length+" saved answer(s) from this backup? Export your current progress first if you need a copy."))return;
-  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
-  clearSavedTest();renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Progress backup imported successfully.");
+  const importedChats=Array.isArray(payload.chatSessions)?payload.chatSessions:[];if(importedChats.some(function(item){return !validChatSession(item);}))throw new Error("The backup contains an invalid saved-chat record.");
+  if(chatBusy)throw new Error("Stop the current AI response before importing a progress backup.");
+  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), "+getSavedLibrary().length+" saved answer(s), and "+getChatSessions().length+" conversation(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), "+importedLibrary.length+" saved answer(s), and "+importedChats.length+" conversation(s) from this backup? Export your current progress first if you need a copy."))return;
+  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary(),previousChats=getChatSessions();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)||!writeLocalJSON(CHAT_SESSIONS_KEY,importedChats)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);writeLocalJSON(CHAT_SESSIONS_KEY,previousChats);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
+  clearSavedTest();renderHistory();renderSavedLibrary();resetCurrentChat();renderChatSessions();refreshResumeBanner();toast("Progress backup imported successfully.");
  }catch(error){toast(error&&error.message?error.message:"Could not import that backup.");}
  finally{$("backupFile").value="";}
 });
@@ -798,7 +800,7 @@ async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
 document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();
 
 function activateWorkspaceView(view,clicked){
  const valid=["overview","learn","ai-guide","tests","history","resources","library"] ;
