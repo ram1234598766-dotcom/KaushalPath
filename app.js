@@ -871,7 +871,7 @@ function plannerTaskDate(date){return new Date(date+"T00:00:00").toLocaleDateStr
 function savePlannerTasks(tasks){return writeLocalJSON(PLANNER_KEY,tasks.slice(0,120));}
 function renderPlanner(){
  const root=$("plannerTaskList");if(!root)return;
- const tasks=getPlannerTasks(),today=localDayKey(new Date()),open=tasks.filter(function(task){return !task.completed;}),due=open.filter(function(task){return task.dueDate<=today;}),upcoming=open.filter(function(task){return task.dueDate>today;}),done=tasks.filter(function(task){return task.completed;});
+ const tasks=getPlannerTasks(),today=localDayKey(new Date()),open=tasks.filter(function(task){return !task.completed;}),due=open.filter(function(task){return task.dueDate<=today;}),upcoming=open.filter(function(task){return task.dueDate>today;}),done=tasks.filter(function(task){return task.completed;});const todayLabel=$("plannerTodayLabel");if(todayLabel)todayLabel.textContent=new Date().toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
  const counts={open:$("plannerOpenCount"),due:$("plannerDueCount"),minutes:$("plannerPlannedMinutes"),done:$("plannerCompletedCount")};
  if(counts.open)counts.open.textContent=String(open.length);
  if(counts.due)counts.due.textContent=String(due.length);
@@ -926,7 +926,7 @@ function initPlanner(){
  });
  document.querySelectorAll("[data-planner-filter]").forEach(function(button){button.addEventListener("click",function(){plannerFilter=button.dataset.plannerFilter;renderPlanner();});});
  $("plannerClearTasks").addEventListener("click",function(){if(!getPlannerTasks().length){toast("Your study plan is already empty.");return;}if(!confirm("Delete all study-planner tasks? This cannot be undone."))return;if(!savePlannerTasks([])){toast("Could not clear the plan.");return;}renderPlanner();toast("Study plan cleared.");});
- $("plannerStartFocus").addEventListener("click",function(){setFocusPreset("focus",1500);const history=$("history");if(history)history.scrollIntoView({behavior:"smooth",block:"start"});toast("25-minute focus timer ready.");});
+ $("plannerStartFocus").addEventListener("click",function(){if(focusState.running&&!confirm("Restart the timer and replace the current focus session?"))return;setFocusPreset("focus",1500);focusState.running=true;focusState.endsAt=Date.now()+focusState.remaining*1000;saveFocusState();renderFocusTimer();beginFocusInterval();const history=$("history");if(history)history.scrollIntoView({behavior:"smooth",block:"start"});toast("25-minute focus session started.");});
  renderPlanner();
 }
 
@@ -944,18 +944,18 @@ $("exportHistory").addEventListener("click",function(){const history=getHistory(
 async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x-kaushalpath-status":"1"}});const j=await r.json();$("aiStatus").textContent=j.ready?"AI guide ready":"AI guide setup needed";$("aiStatus").style.background=j.ready?"#1c584f":"#654a2d";}catch(e){$("aiStatus").textContent="AI status unavailable";}}
 
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
-document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
+document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library","#planner":"Study Planner"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
 renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();
 
 function activateWorkspaceView(view,clicked){
- const valid=["overview","learn","ai-guide","tests","history","resources","library"] ;
+ const valid=["overview","learn","ai-guide","tests","history","resources","library","planner"];
  const target=valid.includes(view)?view:"overview";
  const overviewNodes=[document.getElementById("overview"),document.querySelector("main > .hero"),document.querySelector("main > .quickstats"),document.getElementById("learningPath")];
  overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
- ["learn","ai-guide","tests","resources","history","library"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
+ ["learn","ai-guide","tests","resources","history","library","planner"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
- const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library"};
+ const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library",planner:"Study Planner"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
   document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",exam!=="all"&&card.dataset.exam!==exam);});
