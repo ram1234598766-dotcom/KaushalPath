@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import handler, { createPinnedLookup } from "../api/study-guide.mjs";
 import { zipSync, strToU8 } from "fflate";
+import sharp from "sharp";
 
 function makeResponse({ blockFirstWrite = false, disconnectOnFirstWrite = false } = {}) {
   const events = new EventEmitter();
@@ -184,6 +185,11 @@ const malformedOffice = await call({
 assert.equal(malformedOffice.statusCode, 422);
 assert.match(malformedOffice.payload.error, /not a valid ZIP archive/i);
 
+const testSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="6" height="4" viewBox="0 0 6 4"><rect width="6" height="4" fill="#fff"/><rect x="1" y="1" width="4" height="2" fill="#4f46e5"/></svg>');
+const validPngDataUrl = "data:image/png;base64," + (await sharp(testSvg).png().toBuffer()).toString("base64");
+const validWebpDataUrl = "data:image/webp;base64," + (await sharp(testSvg).webp().toBuffer()).toString("base64");
+const validSvgDataUrl = "data:image/svg+xml;base64," + testSvg.toString("base64");
+
 // Exercise valid text and image request paths with a mocked provider response.
 const originalFetch = globalThis.fetch;
 const mockedRequests = [];
@@ -243,7 +249,7 @@ assert.equal(textRoundtrip.payload.requestId, textRoundtrip.headers["x-request-i
     body: {
       prompt: "Explain this figure and identify its important exam labels",
       mode: "solve",
-      imageData: "data:image/png;base64,YWJj"
+      imageData: validPngDataUrl
     }
   });
   assert.equal(imageRoundtrip.statusCode, 200);
@@ -252,7 +258,36 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   const imageParts = mockedRequests[1].messages.at(-1).content;
   assert.ok(Array.isArray(imageParts), "image questions should use multimodal input");
   assert.ok(imageParts.some((part) => part.type === "image_url"), "the uploaded image should reach the multimodal model input");
+  const normalizedPng = imageParts.find((part) => part.type === "image_url").image_url.url;
+  assert.match(normalizedPng, /^data:image\/png;base64,/, "a real PNG should remain PNG after validation and normalization");
+  assert.notEqual(normalizedPng, validPngDataUrl, "uploaded images should be re-encoded to discard original metadata and orientation");
+
   assert.doesNotMatch(JSON.stringify(imageRoundtrip.payload), /kilo-auto\/free|inclusionai|model|provider/i, "image response payload should hide provider metadata");
+  const webpRoundtrip = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Explain the attached WebP diagram", mode: "solve", imageData: validWebpDataUrl }
+  });
+  assert.equal(webpRoundtrip.statusCode, 200, "valid WebP uploads should be accepted");
+  const webpParts = mockedRequests[2].messages.at(-1).content;
+  assert.match(webpParts.find((part) => part.type === "image_url").image_url.url, /^data:image\/webp;base64,/, "WebP images should remain supported after normalization");
+
+  const svgRoundtrip = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Read the labels in this vector diagram", mode: "solve", imageData: validSvgDataUrl }
+  });
+  assert.equal(svgRoundtrip.statusCode, 200, "valid SVG image uploads should be rasterized before model submission");
+  const svgParts = mockedRequests[3].messages.at(-1).content;
+  assert.match(svgParts.find((part) => part.type === "image_url").image_url.url, /^data:image\/jpeg;base64,/, "vector formats should be rasterized to a provider-supported image type");
+
+  const countBeforeInvalidImage = mockedRequests.length;
+  const invalidImage = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Read this broken diagram", mode: "solve", imageData: "data:image/png;base64,YWJj" }
+  });
+  assert.equal(invalidImage.statusCode, 422, "corrupt images should get a clear client error");
+  assert.match(invalidImage.payload.error, /could not be decoded safely/i);
+  assert.equal(mockedRequests.length, countBeforeInvalidImage, "invalid image bytes must never be forwarded to the AI gateway");
+
   const rateLimitedResponse = await call({
     method: "POST",
     headers: {},
