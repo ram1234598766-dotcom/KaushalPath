@@ -4,6 +4,9 @@
 
 KaushalPath deploys to Netlify from the `main` branch. The site is in `public/`; the server-side AI tutor is a Netlify Function at `netlify/functions/study-guide.mjs`.
 
+## Workspace design
+The dashboard uses a purple workspace shell inspired by the requested Firebase-era layout: persistent left navigation (Overview, CBSE, JEE Main, NEET UG, Test Series, AI Study Guide, My Results and Official Resources), an overview banner, learning-path cards, responsive mobile navigation, and exam-specific filtering. The app hides the optional injected Netlify badge through the deployed content security policy and badge CSS selectors.
+
 ## What's included
 - Responsive study hub for Classes 10, 11 and 12.
 - Free-text subject support for languages, electives and vocational subjects.
