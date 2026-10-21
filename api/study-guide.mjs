@@ -355,7 +355,7 @@ export default async function handler(req, res) {
       try { res.end(); } catch {}
       return;
     }
-    if (status === 429 || /rate.?limit|too many requests|quota/i.test(message)) return send(res, { error: "Kilo Auto Free is temporarily rate-limited. Wait a little and try again.", sources: web.sources }, 429);
+    if (status === 429 || /rate.?limit|too many requests|quota/i.test(message)) return send(res, { error: "The study assistant is temporarily busy. Please wait a moment and try again.", sources: web.sources }, 429);
     if (status === 401 || status === 403) return send(res, { error: "The study service could not authenticate this request. Please try again later.", sources: web.sources }, 502);
     if (/timeout|deadline|abort/i.test(message)) return send(res, { error: "The AI request or source retrieval took too long. Please retry, or choose a shorter task.", sources: web.sources }, 504);
     return send(res, { error: "The study assistant could not complete this request. Please try again later.", sources: web.sources }, 502);
