@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "public/**"
+      - "index.html"
+      - "app.js"
       - "api/**"
       - "vercel.json"
       - "package.json"
@@ -43,5 +44,5 @@ jobs:
       - name: Run application checks
         run: |
           npm test
-          node --check public/app.js
+          node --check app.js
           node --check api/study-guide.mjs
