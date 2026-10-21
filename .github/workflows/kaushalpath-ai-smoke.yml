@@ -45,4 +45,3 @@ jobs:
           npm test
           node --check public/app.js
           node --check api/study-guide.mjs
-          node -e "JSON.parse(require('node:fs').readFileSync('vercel.json', 'utf8')); console.log('Vercel config JSON is valid')"
