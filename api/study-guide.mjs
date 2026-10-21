@@ -61,6 +61,37 @@ function stripMarkup(value) {
     .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, " ").replace(/<[^>]+>/g, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")).replace(/[\t\r ]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
 }
+function ipv6ToBigInt(address) {
+  let value = String(address || "").toLowerCase().split("%")[0];
+  const dotted = value.match(/(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted) {
+    const octets = dotted[1].split(".").map(Number);
+    if (octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+    const high = ((octets[0] << 8) | octets[1]).toString(16);
+    const low = ((octets[2] << 8) | octets[3]).toString(16);
+    value = value.slice(0, dotted.index) + high + ":" + low;
+  }
+  const sides = value.split("::");
+  if (sides.length > 2) return null;
+  const left = sides[0] ? sides[0].split(":") : [];
+  const right = sides.length === 2 && sides[1] ? sides[1].split(":") : [];
+  const omitted = 8 - left.length - right.length;
+  if ((sides.length === 1 && omitted !== 0) || (sides.length === 2 && omitted < 1)) return null;
+  const groups = sides.length === 2 ? left.concat(Array(omitted).fill("0"), right) : left;
+  if (groups.length !== 8 || groups.some((group) => !/^[0-9a-f]{1,4}$/i.test(group))) return null;
+  try {
+    return groups.reduce((value, group) => (value << 16n) + BigInt("0x" + group), 0n);
+  } catch {
+    return null;
+  }
+}
+function ipv6InPrefix(addressValue, prefix, bits) {
+  const prefixValue = ipv6ToBigInt(prefix);
+  if (addressValue == null || prefixValue == null || !Number.isInteger(bits) || bits < 0 || bits > 128) return false;
+  const shift = BigInt(128 - bits);
+  return (addressValue >> shift) === (prefixValue >> shift);
+}
+
 function isPublicAddress(address) {
   const kind = isIP(address);
   if (kind === 4) {
@@ -71,17 +102,29 @@ function isPublicAddress(address) {
     if (a === 192 && b === 168) return false;
     if (a === 100 && b >= 64 && b <= 127) return false;
     if (a === 192 && b === 0 && (c === 0 || c === 2)) return false;
+    if (a === 192 && b === 88 && c === 99) return false; // deprecated 6to4 relay anycast
     if (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) return false;
     if (a === 203 && b === 0 && c === 113) return false;
     return true;
   }
   if (kind === 6) {
-    const ip = address.toLowerCase();
+    const ip = address.toLowerCase().split("%")[0];
     if (ip === "::" || ip === "::1" || ip.startsWith("::ffff:") ||
         ip.startsWith("fc") || ip.startsWith("fd") || ip.startsWith("fe8") ||
         ip.startsWith("fe9") || ip.startsWith("fea") || ip.startsWith("feb") ||
-        ip.startsWith("ff") || ip.startsWith("2001:db8:")) return false;
-    return /^[23]/i.test(ip);
+        ip.startsWith("ff") || !/^[23]/i.test(ip)) return false;
+    const parsed = ipv6ToBigInt(ip);
+    if (parsed == null) return false;
+    const deniedRanges = [
+      ["2001:0::", 23],       // IETF protocol assignments
+      ["2001:2::", 48],       // benchmarking
+      ["2001:10::", 28],      // ORCHID
+      ["2001:20::", 28],      // ORCHIDv2
+      ["2001:db8::", 32],     // documentation
+      ["2002::", 16],         // deprecated 6to4 relay mechanism
+      ["3fff::", 20]          // IPv6 documentation range
+    ];
+    return !deniedRanges.some(([prefix, bits]) => ipv6InPrefix(parsed, prefix, bits));
   }
   return false;
 }
@@ -624,7 +667,7 @@ export default async function handler(req, res) {
     if (wantsStream) {
       if (!response.body) return send(res, { error: "The study assistant could not start a response. Please try again.", sources: web.sources }, 502);
       res.status(200);res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-      res.setHeader("Cache-Control", "no-store, no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "no-store, no-cache, no-transform");res.setHeader("X-Accel-Buffering", "no");res.setHeader("X-Content-Type-Options", "nosniff");res.setHeader("Referrer-Policy", "no-referrer");
       streamStarted = true;
       if (web.sources.length && !res.write("data: " + JSON.stringify({ sources: web.sources, research: true }) + "\n\n")) await waitForResponseDrain(res, clientAbortController.signal);
       const reader = response.body.getReader();

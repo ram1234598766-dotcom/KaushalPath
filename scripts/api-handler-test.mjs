@@ -49,6 +49,18 @@ assert.throws(() => createPinnedLookup([{ address: "169.254.169.254", family: 4 
 assert.throws(() => createPinnedLookup([{ address: "93.184.216.34", family: 4 }, { address: "10.0.0.5", family: 4 }]), /validated public IP/i, "one unsafe DNS answer must reject the entire address set");
 assert.throws(() => createPinnedLookup([{ address: "::ffff:127.0.0.1", family: 6 }]), /validated public IP/i, "IPv4-mapped loopback destinations must be rejected");
 
+assert.throws(() => createPinnedLookup([{ address: "192.0.0.1", family: 4 }]), /validated public IP/i, "IETF special-use IPv4 space must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "192.88.99.1", family: 4 }]), /validated public IP/i, "deprecated 6to4 relay IPv4 space must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "198.51.100.42", family: 4 }]), /validated public IP/i, "IPv4 documentation ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0000::1", family: 6 }]), /validated public IP/i, "expanded IETF special-use IPv6 addresses must be normalized and rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0002::1", family: 6 }]), /validated public IP/i, "IPv6 benchmarking ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0010::1", family: 6 }]), /validated public IP/i, "expanded ORCHID ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2001:0020::1", family: 6 }]), /validated public IP/i, "expanded ORCHIDv2 ranges must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "2002:0808:0808::1", family: 6 }]), /validated public IP/i, "deprecated IPv6 6to4 addresses must be rejected");
+assert.throws(() => createPinnedLookup([{ address: "3fff::1", family: 6 }]), /validated public IP/i, "IPv6 documentation addresses must be rejected");
+assert.doesNotThrow(() => createPinnedLookup([{ address: "2606:4700:4700::1111", family: 6 }]), "a globally routable IPv6 address should remain usable");
+
+
 const wrongMethod = await call({ method: "GET", headers: {} });
 assert.equal(wrongMethod.statusCode, 405, "status details must not be returned without the status header");
 assert.equal(wrongMethod.headers.allow, undefined, "GET denial should not falsely advertise method support");
@@ -56,6 +68,9 @@ assert.equal(wrongMethod.headers.allow, undefined, "GET denial should not falsel
 const health = await call({ method: "GET", headers: { "x-kaushalpath-status": "1" } });
 assert.equal(health.statusCode, 200, "the status endpoint should remain usable for health probes");
 assert.equal(health.payload.ready, true);
+assert.equal(health.headers["cache-control"], "no-store, max-age=0", "health data should never be cached");
+assert.equal(health.headers["x-content-type-options"], "nosniff", "JSON API responses should disable MIME sniffing");
+assert.equal(health.headers["referrer-policy"], "no-referrer", "JSON API responses should not leak referrers");
 assert.match(health.headers["x-request-id"], /^[0-9a-f-]{36}$/i, "every API response should have a server-generated request ID");
 assert.deepEqual(health.payload.features, { liveSearch: true, readPublicUrls: true, imageAnalysis: true });
 assert.doesNotMatch(JSON.stringify(health.payload), /model|provider|qwen|kilo|inclusionai|webgpu/i, "health output must not reveal model/provider/runtime metadata");
@@ -256,6 +271,7 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.equal(streamedResponse.statusCode, 200, "streaming study requests should open an event stream");
   assert.match(streamedResponse.headers["content-type"], /text\/event-stream/i);
   assert.match(streamedResponse.headers["cache-control"], /no-store/i, "private streamed answers must not be cached");
+  assert.equal(streamedResponse.headers["referrer-policy"], "no-referrer", "streamed answers should also set a restrictive referrer policy");
   assert.match(streamedResponse.writes, /streamed study chunk/, "upstream streamed content should reach the client");
   assert.equal(streamedResponse.ended, true, "the stream should close after the upstream completion event");
   assert.equal(streamedResponse._hasWritten, true, "the stream test should exercise response backpressure");

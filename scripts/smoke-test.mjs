@@ -67,6 +67,9 @@ assert.match(api, /error\.status = 413/, "oversized file payloads should return 
 assert.match(api, /randomUUID/, "API requests should receive server-generated trace IDs");
 assert.match(api, /Retry-After/, "rate-limited requests should tell clients when to retry");
 assert.match(api, /function createPinnedLookup\(addresses\)/, "research should pin validated DNS answers to prevent DNS-rebinding SSRF");
+assert.match(api, /function ipv6ToBigInt\(address\)/, "IPv6 reserved-range checks should normalize expanded notation");
+assert.match(api, /2001:10::/, "the SSRF guard should reject non-global ORCHID ranges");
+assert.match(api, /3fff::/, "the SSRF guard should reject the IPv6 documentation range");
 assert.match(api, /lookup: createPinnedLookup\(addresses\)/, "page fetches should use only the prevalidated DNS addresses");
 assert.match(api, /requestPublicPage\(url, addresses, signal\)/, "research HTTP requests should use the pinned transport and honor cancellation");
 assert.match(api, /function waitForResponseDrain\(res, signal\)/, "streaming should respect response backpressure");
