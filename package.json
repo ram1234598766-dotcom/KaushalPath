@@ -2,7 +2,7 @@
   "name": "kaushalpath",
   "version": "2.1.0",
   "private": true,
-  "description": "CBSE Classes 10–12 study hub, grounded AI learning guide, JEE Main and NEET UG practice tests for Netlify.",
+  "description": "CBSE Classes 10–12 study hub, AI study guide, JEE Main and NEET UG practice for Vercel and Netlify.",
   "scripts": {
     "test": "node scripts/smoke-test.mjs"
   },
