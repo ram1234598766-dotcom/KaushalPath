@@ -24,6 +24,13 @@ assert.match(app, /md-table-wrap/, "Markdown tables should be rendered as respon
 assert.match(app, /mathToHtml/, "Inline and block equations should get readable math formatting");
 assert.match(app, /renderMarkdownInto\(node,answer\)/, "streamed chat output should re-render formatted Markdown");
 assert.match(html, /\.md-table/, "readable chat Markdown styles should exist");
+assert.match(html, /AI Study Guide/, "the chat workspace should have a clear, professional title");
+assert.match(html, /aria-label="Study preferences"/, "chat study settings should be grouped accessibly");
+assert.match(html, /id="chatComposerHint"/, "the composer keyboard instructions should be connected to the input");
+assert.match(html, /\.chat-message-avatar/, "chat messages should have distinct author avatars");
+assert.match(html, /\.chat-inline-action/, "individual assistant answers should expose a copy action");
+assert.match(html, /\.chat-typing/, "streaming responses should have a visible typing state");
+assert.match(html, /prefers-reduced-motion:reduce/, "chat animations should respect reduced-motion preferences");
 
 assert.match(api, /stream: wantsStream/, "API should request streamed provider output when asked");
 assert.match(api, /body.messages/, "AI requests should preserve short chat context");
