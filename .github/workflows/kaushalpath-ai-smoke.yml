@@ -14,7 +14,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "public/**"
+      - "index.html"
       - "api/**"
       - "vercel.json"
       - "package.json"
