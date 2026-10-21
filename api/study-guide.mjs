@@ -1,5 +1,5 @@
 const MODEL = "kilo-auto/free";
-const GATEWAY_URL = "https://ai-gateway.kilo.ai/api/v1/chat/completions";
+const GATEWAY_URL = "https://api.kilo.ai/api/gateway/chat/completions";
 const MAX_PROMPT_CHARS = 12000;
 const MAX_URLS = 5;
 const SYSTEM_INSTRUCTIONS = [
@@ -122,8 +122,8 @@ export default async function handler(req, res) {
 
   const mode = ["notes", "explain", "revision", "questions", "solve"].includes(body.mode)
     ? body.mode : "explain";
-  // Keep Auto Free responses intentionally concise: shorter completions usually feel much faster.
-  const budget = ({ explain: 650, revision: 800, solve: 1050, questions: 1350, notes: 1650 })[mode];
+  // Keep free-tier generations focused to reduce latency without losing essential teaching steps.
+  const budget = ({ explain: 520, revision: 700, solve: 900, questions: 1050, notes: 1250 })[mode];
   const history = Array.isArray(body.messages)
     ? body.messages.slice(-6).filter((item) =>
         item && (item.role === "user" || item.role === "assistant") &&
@@ -133,6 +133,7 @@ export default async function handler(req, res) {
   const input = [
     "Study request type: " + mode + ".",
     "Answer directly, do not repeat the question, and keep the response focused.",
+    "Aim for a complete, useful answer; do not pad to fill the token limit. Prioritize correctness and essential reasoning over long introductions.",
     "Target response limit: " + budget + " tokens.",
     "No live web search is available in this endpoint. Do not claim current information was freshly verified.",
     urls.length
@@ -156,6 +157,7 @@ export default async function handler(req, res) {
         model: MODEL,
         messages,
         max_tokens: budget,
+        temperature: 0.2,
         stream: wantsStream
       }),
       signal: AbortSignal.timeout(42000)
@@ -230,7 +232,7 @@ export default async function handler(req, res) {
       const userMessage = status === 429 || /rate.?limit|too many requests|quota/i.test(message)
         ? "Kilo Auto Free is temporarily rate-limited. Wait a little and try again."
         : /timeout|deadline|abort/i.test(message)
-          ? "The response timed out. Try a shorter question."
+          ? "The free AI model took too long to respond. Your question is still available to retry, or you can choose a shorter study task."
           : "The AI provider stopped the response. Please retry.";
       try { res.write("data: " + JSON.stringify({ error: userMessage }) + "\n\n"); } catch {}
       try { res.end(); } catch {}
@@ -247,7 +249,7 @@ export default async function handler(req, res) {
       }, 502);
     }
     if (/timeout|deadline|abort/i.test(message)) {
-      return send(res, { error: "The AI request took too long. Try a shorter question." }, 504);
+      return send(res, { error: "The free AI model took too long to respond. Please retry, or choose a shorter study task." }, 504);
     }
     return send(res, { error: "The Kilo Auto Free request could not complete. Check the provider status and try again." }, 502);
   }
