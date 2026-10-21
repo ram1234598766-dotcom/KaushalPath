@@ -53,8 +53,259 @@ $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$
 function renderTests(){const grid=$("testGrid");grid.innerHTML="";questions.forEach(function(t){const card=document.createElement("article");card.className="test-card";card.dataset.exam=t.exam;const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>Practice set</span></div><button class="btn btn-blue" type="button" data-start="'+t.id+'">Start test ↗</button>';grid.appendChild(card);});}
 function renderStudyText(answer){const out=$("studyOutput");out.textContent=answer;lastAnswerText=answer;$("copyAnswer").disabled=!answer;}
 $("copyAnswer").addEventListener("click",async function(){if(!lastAnswerText)return;try{await navigator.clipboard.writeText(lastAnswerText);toast("Study text copied.");}catch(e){toast("Copy was blocked by this browser.");}});
-$("studyForm").addEventListener("submit",async function(ev){ev.preventDefault();const topic=$("topic").value.trim(),subject=subjectName(),chapter=$("chapter").value.trim(),level=$("classLevel").value,mode=$("studyMode").value;if(!topic||!subject){toast("Enter a topic and choose a subject.");return;}const prompt="You are a careful Indian school study guide. The learner is in "+level+". Subject: "+subject+". Chapter: "+(chapter||"not specified")+". Task: "+({"notes":"Create thorough but original chapter notes with learning objectives, clear concept explanations, definitions, formulas or key facts where relevant, worked examples, common mistakes, and a short recap.","explain":"Explain the specified topic in simple steps, define terms, use an example, and end with a short self-check.","revision":"Create a compact revision sheet with key terms, formulas or facts, and 5 quick-recall prompts.","questions":"Create 8 original practice questions of varied difficulty, provide an answer key and explanations after the questions.","solve":"Solve the learner's question step by step. State assumptions, show calculations and check the result."})[mode]+"\nLearner request:\n"+topic+"\nAccuracy rules: Distinguish syllabus facts from assumptions. Do not invent citations, question-paper claims, chapter numbers, or official syllabus updates. If uncertain, say so. Prefer official CBSE/NCERT alignment, but never claim live verification unless you actually have it.";
-const btn=$("askBtn");btn.disabled=true;btn.textContent="Preparing study help…";$("sourceList").innerHTML="";renderStudyText("Preparing your study response. Please wait…");try{const startedAt=performance.now();const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);const liveSearch=false;const res=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt:prompt,urls:urls,webSearch:liveSearch,mode:mode})});const data=await res.json();if(!res.ok)throw new Error(data.error||"The AI guide is currently unavailable.");const elapsed=((performance.now()-startedAt)/1000).toFixed(1);renderStudyText((data.text||"No study response was returned.")+"\n\n— "+(data.model||"AI study guide")+" · "+elapsed+"s"+(data.notice?"\n\nNote: "+data.notice:""));if(Array.isArray(data.sources)&&data.sources.length){data.sources.forEach(function(src){const a=document.createElement("a");a.href=src.uri;a.target="_blank";a.rel="noopener";a.textContent=src.title||src.uri;$("sourceList").appendChild(a);});}}catch(err){renderStudyText("The AI guide could not answer this request right now.\n\n"+err.message+"\n\nYou can still use the official CBSE and NCERT links below and practise the built-in tests. If the issue continues, Kilo Auto Free may be rate-limited or temporarily unavailable.");}finally{btn.disabled=false;btn.textContent="Generate study help ↗";}});
+const subjectSets={
+ "Class 10":["Mathematics","Science","English","Social Science","Hindi","Computer Applications","Physical Education","Other subject / language…"],
+ "Class 11":["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education","Hindi","Applied Mathematics","Other subject / language…"],
+ "Class 12":["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education","Hindi","Applied Mathematics","Other subject / language…"]
+};
+const topicCatalog={
+ "Mathematics":["Real numbers and proofs","Polynomials and zeroes","Linear equations","Quadratic equations","Arithmetic progressions","Triangles and similarity","Coordinate geometry","Trigonometry","Statistics and probability","Sets and functions","Complex numbers","Permutations and combinations","Limits and derivatives","Matrices and determinants","Integrals and applications","Differential equations","Vectors and 3D geometry","Probability distributions"],
+ "Science":["Chemical reactions and equations","Acids, bases and salts","Metals and non-metals","Life processes","Control and coordination","Light and refraction","Electricity and circuits","Magnetic effects of current","Our environment"],
+ "Physics":["Motion and graphs","Newton's laws of motion","Work, energy and power","System of particles and rotation","Gravitation","Thermodynamics","Oscillations and waves","Electric charges and fields","Current electricity","Magnetic effects","Electromagnetic induction","Ray optics","Wave optics","Dual nature of radiation","Semiconductors"],
+ "Chemistry":["Atomic structure","Periodic classification","Chemical bonding","States of matter","Thermodynamics","Equilibrium","Redox reactions","Organic chemistry basics","Hydrocarbons","Solutions","Electrochemistry","Chemical kinetics","Coordination compounds","Aldehydes and ketones","Biomolecules"],
+ "Biology":["Cell structure and function","Biomolecules","Cell cycle and division","Plant physiology","Human physiology","Genetics and inheritance","Molecular basis of inheritance","Evolution","Human reproduction","Reproductive health","Biotechnology","Ecology and ecosystems"],
+ "English":["Reading comprehension","Writing skills","Grammar and editing","Poetry analysis","Prose and themes","Character and setting","Argumentative writing","Literature revision"],
+ "Social Science":["Nationalism and history","Resources and development","Power sharing","Federalism","Agriculture","Money and credit","Globalisation","Sustainable development","Map skills"],
+ "Computer Applications":["Python fundamentals","Conditional statements","Loops","Functions","Strings and lists","Cyber safety","HTML and web basics","Networks and internet"],
+ "Computer Science":["Python functions","Lists and dictionaries","Stacks and queues","SQL queries","Database concepts","Computer networks","Boolean logic","Cyber security"],
+ "Informatics Practices":["Pandas series","Data frames","Data visualisation","SQL queries","Database concepts","Computer networks","Societal impacts"],
+ "Accountancy":["Accounting equation","Journal and ledger","Trial balance","Depreciation","Bank reconciliation","Financial statements","Cash flow statement","Ratio analysis"],
+ "Business Studies":["Nature of management","Principles of management","Business environment","Planning and organising","Staffing and directing","Marketing management","Financial management"],
+ "Economics":["Consumer equilibrium","Demand and elasticity","Production and costs","Market forms","National income","Money and banking","Government budget","Balance of payments"],
+ "Political Science":["Constitution and rights","Federalism","Legislature and executive","Political theory","Globalisation","Contemporary world politics"],
+ "History":["Early societies","Empires and trade","Colonialism","National movement","World wars","Modern India"],
+ "Geography":["Resources and development","Landforms and processes","Climate","Population","Agriculture","Human settlements","Transport and communication"],
+ "Psychology":["Learning and memory","Human development","Motivation and emotion","Personality","Psychological disorders","Stress and coping"],
+ "Sociology":["Social institutions","Culture and identity","Social stratification","Social change","Indian society"],
+ "Physical Education":["Fitness and wellness","Training methods","Sports psychology","Nutrition","Yoga and lifestyle"],
+ "Hindi":["अपठित गद्यांश","व्याकरण और लेखन","काव्य की व्याख्या","गद्य साहित्य","अभिव्यक्ति और माध्यम"],
+ "Applied Mathematics":["Financial mathematics","Matrices","Probability distributions","Descriptive statistics","Linear programming","Calculus applications"],
+ "Other subject / language…":["Reading and comprehension","Grammar practice","Writing practice","Key concepts and vocabulary"]
+};
+function topicsFor(level,subject){
+ let topics=(topicCatalog[subject]||["Key definitions and concepts","Important examples","Core formulas or facts","Common exam questions","Application-based questions","Quick revision"]);
+ if(level==="Class 10"&&subject==="Mathematics")topics=["Real numbers","Polynomials","Pair of linear equations","Quadratic equations","Arithmetic progressions","Triangles","Coordinate geometry","Trigonometry","Circles","Statistics and probability"];
+ if(level==="Class 11"&&subject==="Mathematics")topics=["Sets","Relations and functions","Trigonometric functions","Complex numbers","Linear inequalities","Permutations and combinations","Binomial theorem","Sequences and series","Straight lines","Limits and derivatives","Statistics","Probability"];
+ if(level==="Class 12"&&subject==="Mathematics")topics=["Relations and functions","Inverse trigonometric functions","Matrices","Determinants","Continuity and differentiability","Applications of derivatives","Integrals","Applications of integrals","Differential equations","Vectors","3D geometry","Linear programming","Probability"];
+ if(level==="Class 10"&&subject==="Science")topics=["Chemical reactions and equations","Acids, bases and salts","Metals and non-metals","Life processes","Control and coordination","Reproduction","Heredity","Light","The human eye","Electricity","Magnetic effects of current","Our environment"];
+ const classTopics={
+  "Class 11":{
+   "Physics":["Units and measurements","Motion in a straight line","Motion in a plane","Laws of motion","Work, energy and power","System of particles and rotation","Gravitation","Mechanical properties","Thermodynamics","Oscillations and waves"],
+   "Chemistry":["Some basic concepts of chemistry","Structure of atom","Periodicity","Chemical bonding","Thermodynamics","Equilibrium","Redox reactions","Organic chemistry basics","Hydrocarbons"],
+   "Biology":["The living world","Biological classification","Plant kingdom","Animal kingdom","Cell structure and function","Biomolecules","Cell cycle and division","Plant physiology","Human physiology"],
+   "English":["Reading comprehension","Class 11 prose and poetry analysis","Writing skills","Grammar and editing","Character and theme analysis","Short-answer practice"],
+   "Computer Science":["Python basics","Data types and operators","Conditional statements","Loops","Strings and lists","Dictionaries and tuples","Functions","Computer systems"],
+   "Informatics Practices":["Python basics","Data handling with Pandas","Series and data frames","Data visualisation","Database concepts","SQL fundamentals","Computer networks"],
+   "Accountancy":["Accounting concepts","Accounting equation","Journal entries","Ledger posting","Trial balance","Bank reconciliation","Depreciation"],
+   "Business Studies":["Nature and purpose of business","Forms of business organisation","Public and private enterprises","Business services","Emerging modes of business","Social responsibility"],
+   "Economics":["Introduction to microeconomics","Consumer behaviour","Demand and elasticity","Production function","Cost concepts","Market equilibrium","Statistics for economics"],
+   "History":["Early societies","Writing and city life","Empires and trade","Nomadic empires","Changing cultural traditions"],
+   "Political Science":["Constitutional design","Rights and citizenship","Legislature and executive","Federalism","Political theory","Justice and equality"],
+   "Geography":["Fundamentals of physical geography","Earth's interior","Landforms","Climate","Oceans","Natural hazards"]
+  },
+  "Class 12":{
+   "Physics":["Electric charges and fields","Electrostatic potential and capacitance","Current electricity","Moving charges and magnetism","Electromagnetic induction","Alternating current","Ray optics","Wave optics","Dual nature of radiation","Semiconductors"],
+   "Chemistry":["Solutions","Electrochemistry","Chemical kinetics","d- and f-block elements","Coordination compounds","Haloalkanes and haloarenes","Alcohols and phenols","Aldehydes and ketones","Amines","Biomolecules"],
+   "Biology":["Reproduction in organisms","Sexual reproduction in flowering plants","Human reproduction","Reproductive health","Mendelian genetics","Molecular basis of inheritance","Evolution","Human health and disease","Biotechnology","Ecosystems"],
+   "English":["Class 12 prose and poetry analysis","Reading comprehension","Formal writing","Article and report writing","Literary themes and characterisation","Board-style answer structure"],
+   "Computer Science":["Python functions","File handling","Stack operations","Searching and sorting","SQL queries","Database connectivity","Computer networks","Cyber safety"],
+   "Informatics Practices":["Data visualisation","Data frames and operations","Data handling with Pandas","SQL queries","Database connectivity","Computer networks","Societal impacts"],
+   "Accountancy":["Partnership fundamentals","Reconstitution of partnership","Dissolution of partnership","Company accounts","Issue of shares","Cash flow statement","Financial statement analysis","Accounting ratios"],
+   "Business Studies":["Principles of management","Business environment","Planning and organising","Staffing and directing","Financial management","Marketing management","Consumer protection"],
+   "Economics":["National income accounting","Money and banking","Determination of income and employment","Government budget","Balance of payments","Indian economic development"],
+   "History":["Harappan civilisation","Kings, farmers and towns","Bhakti and Sufi traditions","Colonialism and rural society","Revolt of 1857","National movement","Constitution making"],
+   "Political Science":["End of bipolarity","Contemporary centres of power","South Asia","International organisations","Globalisation","Challenges of nation-building","Recent developments in Indian politics"],
+   "Geography":["Human geography","Population composition","Human development","Primary activities","Transport and communication","International trade","Geographical planning"]
+  }
+ };
+ if(classTopics[level]&&classTopics[level][subject])topics=classTopics[level][subject];
+ else if(level==="Class 11"&&subject==="Mathematics")topics=["Sets","Relations and functions","Trigonometric functions","Complex numbers","Linear inequalities","Permutations and combinations","Binomial theorem","Sequences and series","Straight lines","Limits and derivatives","Statistics","Probability"];
+ else if(level==="Class 12"&&subject==="Mathematics")topics=["Relations and functions","Inverse trigonometric functions","Matrices","Determinants","Continuity and differentiability","Applications of derivatives","Integrals","Applications of integrals","Differential equations","Vectors","3D geometry","Linear programming","Probability"];
+ return topics;
+}
+function fillSubjects(select,level,selected){
+ if(!select)return;
+ const values=subjectSets[level]||subjectSets["Class 10"];
+ select.innerHTML="";
+ values.forEach(function(value){const option=document.createElement("option");option.value=value==="Other subject / language…"?"other":value;option.textContent=value;select.appendChild(option);});
+ if(selected&&values.some(function(v){return(v==="Other subject / language…"?"other":v)===selected;}))select.value=selected;
+}
+function addTopicChips(root,level,subject,onChoose,compact){
+ if(!root)return;
+ root.innerHTML="";
+ topicsFor(level,subject).slice(0,compact?7:9).forEach(function(topic){
+  const button=document.createElement("button");button.type="button";button.className=compact?"chat-topic-button":"topic-chip";button.textContent=topic;
+  button.addEventListener("click",function(){onChoose(topic);});root.appendChild(button);
+ });
+}
+function updateHubTopics(){
+ const level=$("classLevel").value;
+ const subject=subjectName()||$("subject").value;
+ addTopicChips($("topicSuggestions"),level,subject,function(topic){$("topic").value=topic;$("topic").focus();},false);
+ $("chapter").placeholder=level==="Class 10"?"e.g. Light – Reflection and Refraction":level==="Class 11"?"e.g. Motion in a Straight Line":"e.g. Integrals";
+}
+function updateChatTopics(){
+ const level=$("chatClass").value,subject=$("chatSubject").value;
+ addTopicChips($("chatTopicSuggestions"),level,subject,function(topic){
+  $("chatInput").value="Help me understand "+topic+". Explain it clearly for "+level+", use an example, and end with one quick self-check.";
+  $("chatInput").focus();
+ },true);
+}
+function mapSubjectToClass(subject,level){
+ const target=subjectSets[level]||subjectSets["Class 10"];
+ let mapped=subject;
+ if(level==="Class 10"){
+  if(["Physics","Chemistry","Biology"].includes(subject))mapped="Science";
+  else if(["Computer Science","Informatics Practices"].includes(subject))mapped="Computer Applications";
+  else if(subject==="Applied Mathematics")mapped="Mathematics";
+  else if(["Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology"].includes(subject))mapped="other";
+ }else{
+  if(subject==="Science")mapped="Physics";
+  else if(subject==="Computer Applications")mapped="Computer Science";
+  else if(subject==="Social Science")mapped="History";
+ }
+ if(!target.some(function(s){return (s==="Other subject / language…"?"other":s)===mapped;}))mapped=target[0];
+ return mapped;
+}
+function syncClass(source){
+ const level=source.value;
+ if(source===$("classLevel"))$("chatClass").value=level;else $("classLevel").value=level;
+ const previousHub=mapSubjectToClass($("subject")?.value||"Mathematics",level);
+ const previousChat=mapSubjectToClass($("chatSubject")?.value||"Mathematics",level);
+ fillSubjects($("subject"),level,previousHub);
+ fillSubjects($("chatSubject"),level,previousChat);
+ $("otherSubjectWrap").hidden=$("subject").value!=="other";
+ updateHubTopics();updateChatTopics();
+}
+$("classLevel").addEventListener("change",function(){syncClass(this);});
+$("chatClass").addEventListener("change",function(){syncClass(this);});
+$("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";updateHubTopics();});
+$("chatSubject").addEventListener("change",updateChatTopics);
+$("topic").addEventListener("input",function(){});
+async function streamStudyRequest(payload,onText,signal){
+ const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"text/event-stream, application/json"},body:JSON.stringify(Object.assign({},payload,{stream:true})),signal:signal});
+ const contentType=response.headers.get("content-type")||"";
+ if(!response.ok){const errorData=await response.json().catch(function(){return{};});throw new Error(errorData.error||"The AI guide is currently unavailable (HTTP "+response.status+").");}
+ if(!response.body||!contentType.includes("text/event-stream")){
+  const data=await response.json();if(data.error)throw new Error(data.error);const text=String(data.text||"");if(text)onText(text);return text;
+ }
+ const reader=response.body.getReader(),decoder=new TextDecoder();
+ let pending="",answer="",streamError=null;
+ function consume(line){
+  if(!line.startsWith("data:"))return;
+  const raw=line.slice(5).trim();if(!raw||raw==="[DONE]")return;
+  let event;try{event=JSON.parse(raw);}catch(e){return;}
+  if(event.error){streamError=new Error(typeof event.error==="string"?event.error:(event.error.message||"The AI provider stopped the response."));return;}
+  const choice=event.choices&&event.choices[0];
+  const piece=choice&&choice.delta&&choice.delta.content;
+  const text=typeof piece==="string"?piece:(typeof event.text==="string"?event.text:"");
+  if(text){answer+=text;onText(text);}
+ }
+ while(true){
+  const result=await reader.read();pending+=decoder.decode(result.value||new Uint8Array(),{stream:!result.done});
+  const lines=pending.split(/\r?\n/);pending=lines.pop()||"";
+  lines.forEach(consume);
+  if(streamError)throw streamError;
+  if(result.done)break;
+ }
+ if(pending)consume(pending);
+ if(streamError)throw streamError;
+ if(!answer)throw new Error("The AI returned an empty response. Try a shorter question.");
+ return answer;
+}
+function makePrompt(level,subject,chapter,mode,topic){
+ const task=({"notes":"Create useful but compact chapter notes with headings, key ideas, definitions or formulas, one worked example, common mistakes and a recap.","explain":"Explain the concept in plain language, step by step, with one worked or everyday example and a short self-check.","revision":"Create a compact revision sheet with high-yield points, formulas or facts, common mistakes and five recall prompts.","questions":"Create five original practice questions, then provide their answers with short explanations.","solve":"Solve the learner's question step by step, show calculations and units, state assumptions, and check the result."})[mode]||"Explain this clearly with a short example.";
+ return "Act as a careful CBSE study tutor. Student level: "+level+". Subject: "+subject+". Chapter: "+(chapter||"not specified")+". Task: "+task+"\nLearner request:\n"+topic+"\nBe accurate and age-appropriate. Keep the answer focused. Do not invent official citations or claim live syllabus verification.";
+}
+let lastStudyController=null;
+$("studyForm").addEventListener("submit",async function(ev){
+ ev.preventDefault();
+ const topic=$("topic").value.trim(),subject=subjectName(),chapter=$("chapter").value.trim(),level=$("classLevel").value,mode=$("studyMode").value;
+ if(!topic||!subject){toast("Choose a subject and a topic first.");return;}
+ if(lastStudyController)lastStudyController.abort();
+ lastStudyController=new AbortController();
+ const controller=lastStudyController,btn=$("askBtn");btn.disabled=true;btn.textContent="Connecting…";
+ $("sourceList").innerHTML="";$("studyOutput").textContent="Connecting to Kilo Auto Free…";lastAnswerText="";
+ $("copyAnswer").disabled=true;if($("saveStudyPdf"))$("saveStudyPdf").disabled=true;
+ try{
+  const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
+  const prompt=makePrompt(level,subject,chapter,mode,topic);
+  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if($("studyOutput").textContent==="Connecting to Kilo Auto Free…")$("studyOutput").textContent="";$("studyOutput").textContent+="" + delta;lastAnswerText+="" + delta;$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal);
+  lastAnswerText=answer;
+  const note=document.createElement("p");note.className="tiny";note.textContent="Generated with Kilo Auto Free. Check important details against your textbook."; $("studyOutput").appendChild(note);
+ }catch(err){
+  if(err.name==="AbortError"){$("studyOutput").textContent="Response stopped.";}
+  else{$("studyOutput").textContent="The AI could not complete this request.\n\n"+err.message+"\n\nTry a single focused question, or use the topic suggestions to narrow it down.";}
+ }finally{if(lastStudyController===controller)lastStudyController=null;btn.disabled=false;btn.textContent="Generate study help ↗";}
+});
+function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function printAsPdf(title,text){
+ const mount=$("printMount");if(!mount){toast("PDF print area is unavailable.");return;}
+ const previousTitle=document.title;document.title="KaushalPath - "+title;
+ mount.innerHTML='<article class="print-document"><div class="print-kicker">KAUSHALPATH · LEARN WITH DIRECTION</div><h1>'+escapeHtml(title)+'</h1><p class="print-date">Created '+escapeHtml(new Date().toLocaleString())+'</p><pre>'+escapeHtml(text)+'</pre><footer>Use generated study content as a learning aid. Verify important facts with official materials.</footer></article>';
+ mount.style.display="block";
+ const cleanup=function(){mount.innerHTML="";mount.style.display="none";document.title=previousTitle;window.removeEventListener("afterprint",cleanup);};
+ window.addEventListener("afterprint",cleanup,{once:true});
+ window.print();
+ setTimeout(cleanup,12000);
+}
+$("saveStudyPdf").addEventListener("click",function(){if(lastAnswerText)printAsPdf("Study notes",lastAnswerText);});
+let chatHistory=[],activeChatController=null,lastChatAnswer="",lastChatPrompt="",chatBusy=false;
+function chatAddMessage(role,text){
+ const welcome=$("chatMessages").querySelector(".chat-welcome");if(welcome)welcome.remove();
+ const box=document.createElement("div");box.className="chat-message "+(role==="user"?"user":"assistant");
+ const label=document.createElement("div");label.className="chat-message-label";label.textContent=role==="user"?"YOU":"KAUSHALPATH AI";
+ const content=document.createElement("div");content.className="chat-message-content";content.textContent=text||"";
+ box.appendChild(label);box.appendChild(content);$("chatMessages").appendChild(box);
+ $("chatMessages").scrollTop=$("chatMessages").scrollHeight;
+ return content;
+}
+function enableChatTools(enabled){
+ ["chatCopy","chatPdf","chatText","chatSpeak","chatRegenerate"].forEach(function(id){$(id).disabled=!enabled;});
+}
+async function sendChat(raw,regenerate){
+ const question=String(raw||"").trim();if(!question||chatBusy)return;
+ if(activeChatController)activeChatController.abort();
+ if(!regenerate){chatHistory.push({role:"user",content:question});chatAddMessage("user",question);lastChatPrompt=question;}
+ else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
+ chatBusy=true;activeChatController=new AbortController();
+ const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop");
+ send.disabled=true;input.disabled=true;stop.disabled=false;$("chatStatus").textContent="Connecting to Kilo Auto Free…";
+ enableChatTools(Boolean(lastChatAnswer));
+ const node=chatAddMessage("assistant","Connecting…");
+ let waiting=true,answer="";
+ try{
+  const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
+  const prompt=makePrompt(level,subject,"",mode,question);
+  answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6)},function(delta){
+   if(waiting){node.textContent="";waiting=false;}
+   node.textContent+=delta;answer+=delta;$("chatMessages").scrollTop=$("chatMessages").scrollHeight;
+   $("chatStatus").textContent="Answering · "+answer.length+" characters";
+  },controller.signal);
+  lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
+  $("chatStatus").textContent="Answer complete · Kilo Auto Free";
+  enableChatTools(Boolean(answer));
+ }catch(err){
+  if(err.name==="AbortError"){$("chatStatus").textContent="Response stopped";if(waiting)node.textContent="Response stopped.";}
+  else{$("chatStatus").textContent="Unable to complete";node.textContent="The AI request could not finish.\n\n"+err.message+"\n\nTry a shorter question. Auto Free availability can vary, so you can retry without losing your earlier messages.";}
+  enableChatTools(Boolean(lastChatAnswer));
+ }finally{
+  if(activeChatController===controller)activeChatController=null;
+  chatBusy=false;send.disabled=false;input.disabled=false;stop.disabled=true;input.focus();
+ }
+}
+$("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
+$("chatInput").addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();$("chatForm").requestSubmit();}});
+$("chatMessages").addEventListener("click",function(ev){const btn=ev.target.closest("[data-chat-prompt]");if(btn){$("chatInput").value=btn.dataset.chatPrompt;$("chatInput").focus();}});
+$("chatStop").addEventListener("click",function(){if(activeChatController)activeChatController.abort();});
+$("chatCopy").addEventListener("click",async function(){if(!lastChatAnswer)return;try{await navigator.clipboard.writeText(lastChatAnswer);toast("Answer copied.");}catch(e){toast("Clipboard permission was blocked.");}});
+$("chatPdf").addEventListener("click",function(){if(lastChatAnswer)printAsPdf("AI study answer",lastChatAnswer);});
+$("chatText").addEventListener("click",function(){if(lastChatAnswer)download("kaushalpath-ai-answer.txt",lastChatAnswer,"text/plain");});
+$("chatSpeak").addEventListener("click",function(){if(!lastChatAnswer)return;if(!("speechSynthesis" in window)){toast("Read aloud is not supported in this browser.");return;}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(lastChatAnswer);utterance.lang="en-IN";window.speechSynthesis.speak(utterance);});
+$("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chatBusy)sendChat(lastChatPrompt,true);});
+$("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What shall we work on?</h3><p>Ask for an explanation, a worked example, revision notes, or a short quiz. You can ask follow-up questions in the same chat.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
+$("saveStudyPdf").disabled=true;
+
 function getHistory(){try{return JSON.parse(localStorage.getItem("kp-results")||"[]");}catch(e){return [];}}
 function saveHistory(item){const list=getHistory();list.unshift(item);localStorage.setItem("kp-results",JSON.stringify(list.slice(0,60)));renderHistory();}
 function renderHistory(){const list=getHistory(),root=$("historyList");root.innerHTML="";if(!list.length){root.innerHTML='<div class="empty">No completed tests yet. Try a practice set above.</div>';return;}list.slice(0,12).forEach(function(r){const row=document.createElement("div");row.className="history-row";row.innerHTML='<div><strong>'+safe(r.title)+'</strong><small>'+safe(r.date)+' · '+r.correct+' correct · '+r.wrong+' wrong</small></div><strong>'+r.score+' / '+r.max+'</strong>';root.appendChild(row);});}
@@ -74,4 +325,34 @@ document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEve
 document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
 renderTests();renderHistory();checkAI();
+
+function activateWorkspaceView(view,clicked){
+ const valid=["overview","learn","ai-guide","tests","history","resources"];
+ const target=valid.includes(view)?view:"overview";
+ const overviewNodes=[document.getElementById("overview"),document.querySelector("main > .hero"),document.querySelector("main > .quickstats"),document.getElementById("learningPath")];
+ overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
+ ["learn","ai-guide","tests","resources","history"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
+ const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
+ const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources"};
+ if(target==="tests"&&clicked&&clicked.dataset.showExam){
+  const exam=clicked.dataset.showExam;
+  document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",exam!=="all"&&card.dataset.exam!==exam);});
+  labels.tests=exam==="all"?"Test Series":exam==="JEE Main"?"JEE Main Prep":"NEET UG Prep";
+ }else if(target==="tests"){document.querySelectorAll(".test-card").forEach(function(card){card.classList.remove("hidden");});}
+ $("breadcrumbPage").textContent=labels[target]||"Workspace";
+ if(location.hash!=="#"+target)history.replaceState(null,"","#"+target);
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+document.querySelectorAll("[data-view]").forEach(function(link){
+ link.addEventListener("click",function(ev){
+  const view=link.dataset.view;if(!view)return;ev.preventDefault();activateWorkspaceView(view,link);
+ });
+});
+const printMount=document.createElement("div");printMount.id="printMount";printMount.style.display="none";document.body.appendChild(printMount);
+if(!document.getElementById("saveStudyPdf")){toast("PDF tool could not be initialised.");}
+fillSubjects($("subject"),$("classLevel").value,$("subject").value);
+fillSubjects($("chatSubject"),$("chatClass").value,$("chatSubject").value);
+updateHubTopics();updateChatTopics();
+activateWorkspaceView("overview");
+
 })();
