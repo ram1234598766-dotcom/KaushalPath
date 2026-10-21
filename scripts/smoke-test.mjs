@@ -104,6 +104,11 @@ assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|Kilo Aut
 assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
 assert.match(app, /id:"cbse12cs26"/, "the question bank should include an official CBSE Class XII CS SQP sampler");
+assert.match(app, /One exact 1-mark MCQ/, "the official paper excerpt should state that it is only a sampler");
+assert.match(app, /id:"cbse12cs26"[\s\S]*?qs:\[\s*\{q:"Which of the following data types in Python is mutable\?"[\s\S]*?\}\s*\]\s*\}/, "official sampler should use a short, source-attributed actual CBSE sample-paper question");
+assert.match(html, /href="https:\/\/jeemain\.nta\.nic\.in\/2026\//, "JEE card should link to current official shift-wise papers");
+assert.match(html, /neet\.nta\.nic\.in\/archive\//, "NEET card should link to the official question-paper archive");
+
 assert.match(app, /ComputerScience-SQP\.pdf/, "the official sampler should link to its question paper");
 assert.match(app, /ComputerScience-MS\.pdf/, "the official sampler should link to the corresponding marking scheme");
 assert.match(app, /negativeMark:1/, "JEE and NEET practice sets should explicitly configure negative marking");
