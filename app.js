@@ -295,12 +295,20 @@ function printAsPdf(title,text){
 $("saveStudyPdf").addEventListener("click",function(){if(lastAnswerText)printAsPdf("Study notes",lastAnswerText);});
 let chatHistory=[],activeChatController=null,lastChatAnswer="",lastChatPrompt="",chatBusy=false;
 function chatAddMessage(role,text){
- const welcome=$("chatMessages").querySelector(".chat-welcome");if(welcome)welcome.remove();
- const box=document.createElement("div");box.className="chat-message "+(role==="user"?"user":"assistant");
- const label=document.createElement("div");label.className="chat-message-label";label.textContent=role==="user"?"YOU":"KAUSHALPATH AI";
+ const root=$("chatMessages");
+ const welcome=root.querySelector(".chat-welcome");if(welcome)welcome.remove();
+ const isUser=role==="user";
+ const box=document.createElement("div");box.className="chat-message "+(isUser?"user":"assistant");box.dataset.role=isUser?"user":"assistant";
+ const avatar=document.createElement("div");avatar.className="chat-message-avatar";avatar.setAttribute("aria-hidden","true");avatar.textContent=isUser?"Y":"✦";
+ const main=document.createElement("div");main.className="chat-message-main";
+ const meta=document.createElement("div");meta.className="chat-message-meta";
+ const label=document.createElement("div");label.className="chat-message-label";label.textContent=isUser?"You":"KaushalPath AI";meta.appendChild(label);
+ if(!isUser){
+  const copy=document.createElement("button");copy.type="button";copy.className="chat-inline-action";copy.dataset.copyMessage="true";copy.setAttribute("aria-label","Copy this AI response");copy.title="Copy this response";copy.textContent="Copy";copy.disabled=!String(text||"").trim();meta.appendChild(copy);
+ }
  const content=document.createElement("div");content.className="chat-message-content";content.textContent=text||"";
- box.appendChild(label);box.appendChild(content);$("chatMessages").appendChild(box);
- $("chatMessages").scrollTop=$("chatMessages").scrollHeight;
+ main.appendChild(meta);main.appendChild(content);box.appendChild(avatar);box.appendChild(main);root.appendChild(box);
+ root.scrollTop=root.scrollHeight;
  return content;
 }
 function enableChatTools(enabled){
@@ -312,41 +320,58 @@ async function sendChat(raw,regenerate){
  if(!regenerate){chatHistory.push({role:"user",content:question});chatAddMessage("user",question);lastChatPrompt=question;}
  else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
  chatBusy=true;activeChatController=new AbortController();
- const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop");
- send.disabled=true;input.disabled=true;stop.disabled=false;$("chatStatus").textContent="Connecting to Kilo Auto Free…";
+ const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop"),messages=$("chatMessages");
+ send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent="Connecting to the study assistant…";
  enableChatTools(Boolean(lastChatAnswer));
- const node=chatAddMessage("assistant","Connecting…");
+ const node=chatAddMessage("assistant",""),messageBox=node.closest(".chat-message");
+ node.innerHTML='<span class="chat-typing" role="status"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span class="chat-typing-copy">Preparing your answer…</span></span>';messageBox.classList.add("is-pending");
  let waiting=true,answer="";
  try{
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
   answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6)},function(delta){
-   if(waiting){node.innerHTML="";waiting=false;}
-   answer+=delta;renderMarkdownInto(node,answer);$("chatMessages").scrollTop=$("chatMessages").scrollHeight;
-   $("chatStatus").textContent="Answering · "+answer.length+" characters";
+   const shouldFollow=messages.scrollHeight-messages.scrollTop-messages.clientHeight<120;
+   if(waiting){node.innerHTML="";waiting=false;messageBox.classList.remove("is-pending");const copyButton=messageBox.querySelector("[data-copy-message]");if(copyButton)copyButton.disabled=false;}
+   answer+=delta;renderMarkdownInto(node,answer);
+   if(shouldFollow)messages.scrollTop=messages.scrollHeight;
+   $("chatStatus").textContent="Writing your answer · "+answer.length+" characters";
   },controller.signal);
+  if(!String(answer||"").trim()){
+   waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
+  }
+  messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
-  $("chatStatus").textContent="Answer complete · Kilo Auto Free";
+  $("chatStatus").textContent="Answer ready · Kilo Auto Free";
   enableChatTools(Boolean(answer));
  }catch(err){
+  messageBox.classList.remove("is-pending");
   if(err.name==="AbortError"){$("chatStatus").textContent="Response stopped";if(waiting)node.textContent="Response stopped.";}
-  else{$("chatStatus").textContent="Unable to complete";node.textContent="The AI request could not finish.\n\n"+err.message+"\n\nTry a shorter question. Auto Free availability can vary, so you can retry without losing your earlier messages.";}
+  else{$("chatStatus").textContent="Unable to complete";node.textContent="The AI request could not finish.\n\n"+err.message+"\n\nTry a shorter question. Auto Free availability can vary, so you can retry without losing your earlier messages.";node.classList.add("chat-message-error");}
   enableChatTools(Boolean(lastChatAnswer));
  }finally{
   if(activeChatController===controller)activeChatController=null;
-  chatBusy=false;send.disabled=false;input.disabled=false;stop.disabled=true;input.focus();
+  chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();
  }
 }
 $("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
 $("chatInput").addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();$("chatForm").requestSubmit();}});
-$("chatMessages").addEventListener("click",function(ev){const btn=ev.target.closest("[data-chat-prompt]");if(btn){$("chatInput").value=btn.dataset.chatPrompt;$("chatInput").focus();}});
+$("chatMessages").addEventListener("click",async function(ev){
+ const copyButton=ev.target.closest("[data-copy-message]");
+ if(copyButton){
+  const box=copyButton.closest(".chat-message"),content=box&&box.querySelector(".chat-message-content"),value=content?(content.innerText||content.textContent||"").trim():"";
+  if(!value){toast("There is no response to copy yet.");return;}
+  try{await navigator.clipboard.writeText(value);toast("Response copied.");}catch(e){toast("Clipboard permission was blocked.");}
+  return;
+ }
+ const btn=ev.target.closest("[data-chat-prompt]");if(btn){$("chatInput").value=btn.dataset.chatPrompt;$("chatInput").focus();}
+});
 $("chatStop").addEventListener("click",function(){if(activeChatController)activeChatController.abort();});
 $("chatCopy").addEventListener("click",async function(){if(!lastChatAnswer)return;try{await navigator.clipboard.writeText(lastChatAnswer);toast("Answer copied.");}catch(e){toast("Clipboard permission was blocked.");}});
 $("chatPdf").addEventListener("click",function(){if(lastChatAnswer)printAsPdf("AI study answer",lastChatAnswer);});
 $("chatText").addEventListener("click",function(){if(lastChatAnswer)download("kaushalpath-ai-answer.txt",lastChatAnswer,"text/plain");});
 $("chatSpeak").addEventListener("click",function(){if(!lastChatAnswer)return;if(!("speechSynthesis" in window)){toast("Read aloud is not supported in this browser.");return;}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(lastChatAnswer);utterance.lang="en-IN";window.speechSynthesis.speak(utterance);});
 $("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chatBusy)sendChat(lastChatPrompt,true);});
-$("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What shall we work on?</h3><p>Ask for an explanation, a worked example, revision notes, or a short quiz. You can ask follow-up questions in the same chat.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
+$("chatClear").addEventListener("click",function(){if(activeChatController)activeChatController.abort();chatHistory=[];lastChatAnswer="";lastChatPrompt="";enableChatTools(false);$("chatMessages").innerHTML='<div class="chat-welcome"><div class="chat-welcome-mark">✦</div><h3>What would you like to understand?</h3><p>Choose a starting point below, or ask your own question. Your conversation stays together as you work through a topic.</p><div class="chat-welcome-prompts"><button type="button" data-chat-prompt="Explain this topic simply, with one everyday example and a quick self-check.">Explain simply</button><button type="button" data-chat-prompt="Create a well-organised revision sheet with key ideas, formulas or facts, examples, and a short recap.">Make revision notes</button><button type="button" data-chat-prompt="Create five original practice questions with answers and short explanations.">Quiz me</button></div></div>';$("chatStatus").textContent="New conversation";});
 $("saveStudyPdf").disabled=true;
 
 function getHistory(){try{return JSON.parse(localStorage.getItem("kp-results")||"[]");}catch(e){return [];}}
