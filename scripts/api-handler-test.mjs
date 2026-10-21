@@ -68,6 +68,9 @@ assert.equal(wrongMethod.headers.allow, undefined, "GET denial should not falsel
 const health = await call({ method: "GET", headers: { "x-kaushalpath-status": "1" } });
 assert.equal(health.statusCode, 200, "the status endpoint should remain usable for health probes");
 assert.equal(health.payload.ready, true);
+assert.equal(health.headers["cache-control"], "no-store, max-age=0", "health data should never be cached");
+assert.equal(health.headers["x-content-type-options"], "nosniff", "JSON API responses should disable MIME sniffing");
+assert.equal(health.headers["referrer-policy"], "no-referrer", "JSON API responses should not leak referrers");
 assert.match(health.headers["x-request-id"], /^[0-9a-f-]{36}$/i, "every API response should have a server-generated request ID");
 assert.deepEqual(health.payload.features, { liveSearch: true, readPublicUrls: true, imageAnalysis: true });
 assert.doesNotMatch(JSON.stringify(health.payload), /model|provider|qwen|kilo|inclusionai|webgpu/i, "health output must not reveal model/provider/runtime metadata");
@@ -268,6 +271,7 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.equal(streamedResponse.statusCode, 200, "streaming study requests should open an event stream");
   assert.match(streamedResponse.headers["content-type"], /text\/event-stream/i);
   assert.match(streamedResponse.headers["cache-control"], /no-store/i, "private streamed answers must not be cached");
+  assert.equal(streamedResponse.headers["referrer-policy"], "no-referrer", "streamed answers should also set a restrictive referrer policy");
   assert.match(streamedResponse.writes, /streamed study chunk/, "upstream streamed content should reach the client");
   assert.equal(streamedResponse.ended, true, "the stream should close after the upstream completion event");
   assert.equal(streamedResponse._hasWritten, true, "the stream test should exercise response backpressure");
