@@ -33,6 +33,9 @@ assert.match(api, /getScreenshot/, "scanned PDFs should render pages for visual 
 assert.match(api, /hasVisualInput/, "scanned PDF page images should use the vision route");
 assert.match(api, /error\.status = 400/, "malformed upload payloads should return a client error");
 assert.match(api, /error\.status = 413/, "oversized file payloads should return a payload-too-large error");
+assert.match(api, /randomUUID/, "API requests should receive server-generated trace IDs");
+assert.match(api, /X-Request-Id/, "trace IDs should be returned as a response header");
+assert.match(api, /study request failed:", requestId/, "backend failure logs should include the trace ID");
 assert.match(api, /function assertSafeZipArchive\(buffer\)/, "Office archive uploads should be checked before decompression");
 assert.match(api, /MAX_ARCHIVE_ENTRY_BYTES = 12 \* 1024 \* 1024/, "Office archive expansion should have a per-entry cap");
 assert.match(api, /MAX_ARCHIVE_TOTAL_BYTES = 32 \* 1024 \* 1024/, "Office archive expansion should have a total cap");
