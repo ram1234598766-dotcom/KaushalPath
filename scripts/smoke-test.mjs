@@ -31,6 +31,10 @@ assert.match(api, /extractAttachmentText/, "the backend should extract text from
 assert.match(api, /new PDFParse/, "the backend should read PDFs");
 assert.match(api, /getScreenshot/, "scanned PDFs should render pages for visual analysis");
 assert.match(api, /hasVisualInput/, "scanned PDF page images should use the vision route");
+assert.match(api, /function assertSafeZipArchive\(buffer\)/, "Office archive uploads should be checked before decompression");
+assert.match(api, /MAX_ARCHIVE_ENTRY_BYTES = 12 \* 1024 \* 1024/, "Office archive expansion should have a per-entry cap");
+assert.match(api, /MAX_ARCHIVE_TOTAL_BYTES = 32 \* 1024 \* 1024/, "Office archive expansion should have a total cap");
+assert.match(api, /assertSafeZipArchive\(buffer\)/, "Office document parsers should only run after archive validation");
 assert.match(api, /mammoth\.extractRawText/, "the backend should read Word documents");
 assert.match(api, /WordExtractor/, "the backend should read legacy Word documents");
 assert.match(api, /XLSX\.read/, "the backend should read spreadsheet attachments");
