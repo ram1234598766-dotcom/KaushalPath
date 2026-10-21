@@ -149,6 +149,12 @@ assert.match(html, /id="resumeTestBanner"/, "unfinished timed tests should have 
 assert.match(html, /id="resumeSavedTest"/, "students should be able to resume an autosaved test");
 assert.match(app, /function saveActiveTest\(\)/, "test answers and remaining deadline should autosave locally");
 assert.match(app, /function getSavedTest\(\)/, "saved test recovery should validate stored quiz state");
+assert.match(app, /function validTestSnapshot\(test,expectedId\)/, "custom review tests should validate their saved question snapshots");
+assert.match(app, /testSnapshot:active\.test\.id\.indexOf\("review-"\)===0\?active\.test:null/, "targeted review attempts should autosave a bounded test snapshot");
+assert.match(app, /const missedCount=r\.review\.filter/, "test results should detect wrong and unanswered questions for targeted retakes");
+assert.match(app, /id="retryMissed"/, "test results should offer a retry for missed questions");
+assert.match(app, /questions\.push\(retryTest\);startTest\(retryTest\.id\)/, "missed questions should launch as a targeted practice set");
+assert.match(app, /Targeted retake: missed or unanswered questions only/, "targeted review should identify its focused scoring context");
 assert.match(app, /function initFocusTimer\(\)/, "focus timer should restore its state after a refresh");
 assert.match(app, /function validLibraryItem\(item\)/, "saved library records should be validated before use");
 assert.match(html, /id="focusStartPause"/, "students should have a controllable focus timer");
