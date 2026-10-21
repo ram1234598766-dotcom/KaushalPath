@@ -4,7 +4,7 @@ const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf
 assert.ok(html.includes("KaushalPath"), "site title/brand should be present");
 assert.ok(html.includes("studyForm"), "study form should be present");
 assert.ok(html.includes("testGrid"), "practice test grid should be present");
-assert.ok(html.includes("JE E"), "placeholder check");
+assert.ok(html.includes("JEE Main"), "JEE practice should be present");
 assert.ok(html.includes("NEET UG"), "NEET practice should be present");
 assert.ok(html.includes("downloadJson") || html.includes("Download result JSON"), "downloadable results should be present");
 assert.ok(existsSync(new URL("../netlify/functions/study-guide.mjs", import.meta.url)), "Netlify AI function should exist");
