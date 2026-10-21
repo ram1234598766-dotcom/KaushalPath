@@ -133,7 +133,7 @@ export function createPinnedLookup(addresses) {
   }
   const pinned = addresses.map((item) => ({
     address: item.address,
-    family: Number(item.family) === 4 || Number(item.family) === 6 ? Number(item.family) : isIP(item.address)
+    family: isIP(item.address)
   })).sort((a, b) => (a.family === 4 ? 0 : 1) - (b.family === 4 ? 0 : 1));
   return function pinnedLookup(_hostname, options, callback) {
     if (typeof options === "function") { callback = options; options = {}; }
