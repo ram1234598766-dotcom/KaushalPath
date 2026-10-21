@@ -45,8 +45,45 @@ const questions=[
 {q:"The oxidation number of manganese in KMnO₄ is:",o:["+2","+4","+6","+7"],a:3,e:"K is +1 and four oxygens total −8, so Mn must be +7 for a neutral compound."},
 {q:"The principal role of decomposers in an ecosystem is to:",o:["Fix solar energy","Recycle nutrients from organic matter","Produce all oxygen","Stop food chains"],a:1,e:"Decomposers break down organic matter and return nutrients to ecosystems."}]}
 ];
-let active=null,tick=null,lastAnswerText="";
+let active=null,tick=null,lastAnswerText="",studyImageData=null,chatImageData=null,lastChatImageData=null;
 function safe(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function resizeImageFile(file){
+ return new Promise(function(resolve,reject){
+  if(!file||!file.type||!file.type.startsWith("image/")){reject(new Error("Choose an image file."));return;}
+  if(file.size>15*1024*1024){reject(new Error("Choose an image smaller than 15 MB; it will be compressed before upload."));return;}
+  const url=URL.createObjectURL(file),image=new Image();
+  image.onload=function(){
+   try{
+    const max=1280,scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
+    const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    const ctx=canvas.getContext("2d");if(!ctx)throw new Error("This browser could not process the image.");
+    ctx.fillStyle="#ffffff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+    let data=canvas.toDataURL("image/jpeg",0.78);
+    if(data.length>2800000)data=canvas.toDataURL("image/jpeg",0.62);
+    if(data.length>3500000)throw new Error("That image is still too large after compression. Choose a smaller image.");
+    URL.revokeObjectURL(url);resolve(data);
+   }catch(error){URL.revokeObjectURL(url);reject(error);}
+  };
+  image.onerror=function(){URL.revokeObjectURL(url);reject(new Error("The selected image could not be opened."));};
+  image.src=url;
+ });
+}
+function renderSourceLinks(root,sources){
+ if(!root)return;root.replaceChildren();
+ (Array.isArray(sources)?sources:[]).slice(0,8).forEach(function(source,index){
+  if(!source||typeof source.url!=="string")return;let url;
+  try{url=new URL(source.url);if(!["https:","http:"].includes(url.protocol))return;}catch(e){return;}
+  const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
+  const title=String(source.title||url.hostname).slice(0,140);link.textContent=(index+1)+". "+title;
+  link.title=String(source.snippet||title).slice(0,500);root.appendChild(link);
+ });
+}
+function searchIntent(text){return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text||""));}
+function needsRemoteTools(payload){
+ if(!payload)return false;
+ if(payload.imageData||payload.webSearch||(Array.isArray(payload.urls)&&payload.urls.length))return true;
+ return searchIntent(payload.searchQuery||payload.userPrompt||payload.prompt||"");
+}
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(function(){el.classList.add("hidden");},3200);}
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
@@ -130,18 +167,71 @@ function fillSubjects(select,level,selected){
  values.forEach(function(value){const option=document.createElement("option");option.value=value==="Other subject / language…"?"other":value;option.textContent=value;select.appendChild(option);});
  if(selected&&values.some(function(v){return(v==="Other subject / language…"?"other":v)===selected;}))select.value=selected;
 }
-function addTopicChips(root,level,subject,onChoose,compact){
+const chapterSubtopics=[
+ {level:"Class 10",subject:"Mathematics",match:/real numbers|number system|fundamental theorem of arithmetic/,topics:["Euclid’s division lemma","Fundamental theorem of arithmetic","HCF and LCM using prime factorisation","Proofs of irrationality","Decimal expansions of rational numbers"]},
+ {level:"Class 10",subject:"Mathematics",match:/polynomial|zeroes of polynomial/,topics:["Finding zeroes of a polynomial","Relationship between zeroes and coefficients","Forming a polynomial from its zeroes","Graphical interpretation of zeroes","Division algorithm for polynomials"]},
+ {level:"Class 10",subject:"Mathematics",match:/pair of linear|linear equations in two variables/,topics:["Graphical method","Substitution method","Elimination method","Cross-multiplication method","Consistency and number of solutions","Word problems using two equations"]},
+ {level:"Class 10",subject:"Mathematics",match:/quadratic equation/,topics:["Standard form ax² + bx + c = 0","Factorisation method","Quadratic formula","Discriminant and nature of roots","Word problems leading to quadratic equations"]},
+ {level:"Class 10",subject:"Mathematics",match:/arithmetic progression|\bap\b/,topics:["Common difference","nth term of an AP","Sum of the first n terms","Finding missing terms","Word problems based on AP"]},
+ {level:"Class 10",subject:"Mathematics",match:/triangle|similarity/,topics:["Criteria for triangle similarity","Basic proportionality theorem","Converse of the basic proportionality theorem","Pythagoras theorem and converse","Areas of similar triangles"]},
+ {level:"Class 10",subject:"Mathematics",match:/coordinate geometry/,topics:["Distance formula","Section formula","Midpoint of a line segment","Area of a triangle using coordinates","Applications of coordinate geometry"]},
+ {level:"Class 10",subject:"Mathematics",match:/trigonometry|heights and distances/,topics:["Trigonometric ratios","Standard angle values","Trigonometric identities","Complementary angles","Heights and distances"]},
+ {level:"Class 10",subject:"Mathematics",match:/circle/,topics:["Tangent to a circle","Radius perpendicular to tangent","Tangents from an external point","Proofs involving tangents","Length of tangents"]},
+ {level:"Class 10",subject:"Science",match:/chemical reaction|equation/,topics:["Writing and balancing chemical equations","Types of chemical reactions","Oxidation and reduction","Corrosion","Rancidity"]},
+ {level:"Class 10",subject:"Science",match:/acids bases salts|acid|base|salt/,topics:["Indicators and pH scale","Properties of acids and bases","Neutralisation reactions","Importance of pH in everyday life","Preparation and uses of salts"]},
+ {level:"Class 10",subject:"Science",match:/life process/,topics:["Nutrition in plants and humans","Human respiration","Transportation in humans and plants","Excretion","Photosynthesis"]},
+ {level:"Class 10",subject:"Science",match:/light|reflection|refraction/,topics:["Ray diagrams for spherical mirrors","Mirror formula and magnification","Refraction through a glass slab","Lens formula and magnification","Power of a lens","Sign convention"]},
+ {level:"Class 10",subject:"Science",match:/electricity|current/,topics:["Ohm’s law and V–I graphs","Resistance and resistivity","Resistors in series and parallel","Heating effect of current","Electric power and energy"]},
+ {level:"Class 10",subject:"Science",match:/magnetic effect/,topics:["Magnetic field lines","Field around a straight conductor and coil","Fleming’s left-hand rule","Electric motor","Domestic electric circuits"]},
+ {level:"Class 11",subject:"Mathematics",match:/sets/,topics:["Roster and set-builder forms","Types of sets","Subsets and power sets","Venn diagrams","Union, intersection and complements"]},
+ {level:"Class 11",subject:"Mathematics",match:/trigonometric function/,topics:["Radian measure","Unit-circle interpretation","Trigonometric identities","Graphs of sine and cosine","Trigonometric equations"]},
+ {level:"Class 11",subject:"Mathematics",match:/complex number/,topics:["Imaginary unit i","Algebra of complex numbers","Modulus and conjugate","Argand plane","Quadratic equations with complex roots"]},
+ {level:"Class 11",subject:"Physics",match:/motion in a straight line|kinematics/,topics:["Distance and displacement","Speed and velocity","Position-time graphs","Velocity-time graphs","Equations of uniformly accelerated motion","Relative motion in one dimension"]},
+ {level:"Class 11",subject:"Physics",match:/motion in a plane|projectile/,topics:["Vectors and vector components","Vector addition","Projectile motion","Uniform circular motion","Relative velocity in two dimensions"]},
+ {level:"Class 11",subject:"Physics",match:/laws of motion|newton/,topics:["Newton’s first law","Newton’s second law and momentum","Newton’s third law","Free-body diagrams","Friction","Circular-motion applications"]},
+ {level:"Class 11",subject:"Physics",match:/work energy power/,topics:["Work by constant and variable forces","Kinetic energy theorem","Potential energy","Conservation of mechanical energy","Power","Collisions"]},
+ {level:"Class 11",subject:"Chemistry",match:/structure of atom|atomic structure/,topics:["Electromagnetic radiation","Bohr model","Quantum numbers","Orbitals and electron configuration","Aufbau principle, Pauli principle and Hund’s rule"]},
+ {level:"Class 11",subject:"Chemistry",match:/chemical bonding|bonding/,topics:["Lewis structures","Ionic and covalent bonds","VSEPR shapes","Hybridisation","Molecular orbital theory","Hydrogen bonding"]},
+ {level:"Class 11",subject:"Biology",match:/cell structure|cell the unit/,topics:["Cell theory","Prokaryotic and eukaryotic cells","Cell organelles and functions","Plasma membrane transport","Plant versus animal cells"]},
+ {level:"Class 12",subject:"Mathematics",match:/matrices/,topics:["Types and order of matrices","Matrix operations","Transpose of a matrix","Symmetric and skew-symmetric matrices","Inverse of a matrix","Solving linear equations using matrices"]},
+ {level:"Class 12",subject:"Mathematics",match:/determinant/,topics:["Evaluating determinants","Properties of determinants","Minors and cofactors","Adjoint and inverse","Area of a triangle using determinants","Solving linear systems"]},
+ {level:"Class 12",subject:"Mathematics",match:/continuity|differentiability|derivative/,topics:["Continuity at a point","Differentiability and continuity","Chain rule","Implicit differentiation","Derivatives of inverse trigonometric functions","Logarithmic differentiation"]},
+ {level:"Class 12",subject:"Mathematics",match:/integral/,topics:["Indefinite integrals","Substitution method","Integration by parts","Partial fractions","Definite integral properties","Area under a curve"]},
+ {level:"Class 12",subject:"Mathematics",match:/vector|three dimensional|3d geometry/,topics:["Vector operations","Dot and cross products","Direction ratios and cosines","Equation of a line in 3D","Angle between lines","Shortest distance between skew lines"]},
+ {level:"Class 12",subject:"Physics",match:/electric charge|electric field|electrostatics/,topics:["Coulomb’s law","Electric field and field lines","Electric dipole","Electric flux","Gauss’s law and applications"]},
+ {level:"Class 12",subject:"Physics",match:/current electricity/,topics:["Electric current and drift velocity","Ohm’s law","Resistivity and temperature dependence","Cells and internal resistance","Kirchhoff’s rules","Wheatstone bridge"]},
+ {level:"Class 12",subject:"Physics",match:/ray optics|optics/,topics:["Reflection and refraction at spherical surfaces","Lens maker’s formula","Thin-lens equation","Total internal reflection","Optical instruments","Ray diagrams"]},
+ {level:"Class 12",subject:"Chemistry",match:/electrochemistry/,topics:["Galvanic and electrolytic cells","Standard electrode potential","Nernst equation","Conductivity and molar conductivity","Kohlrausch’s law","Faraday’s laws of electrolysis"]},
+ {level:"Class 12",subject:"Chemistry",match:/chemical kinetic/,topics:["Rate of reaction","Rate law and order","Integrated rate equations","Half-life","Arrhenius equation","Activation energy"]},
+ {level:"Class 12",subject:"Biology",match:/molecular basis|inheritance|genetics/,topics:["DNA and RNA structure","DNA replication","Transcription and translation","Genetic code","Gene regulation","Human Genome Project"]},
+ {level:"Class 12",subject:"Biology",match:/human reproduction|reproduction/,topics:["Male and female reproductive systems","Gametogenesis","Menstrual cycle","Fertilisation and implantation","Pregnancy and parturition","Reproductive health"]}
+];
+function chapterTopicsFor(level,subject,chapter){
+ const value=String(chapter||"").trim();
+ if(!value)return topicsFor(level,subject);
+ const match=chapterSubtopics.find(function(rule){return rule.level===level&&rule.subject===subject&&rule.match.test(value);});
+ if(match)return match.topics;
+ const norm=function(t){return String(t||"").toLowerCase().replace(/[^a-z0-9\\s]/g," ").replace(/\\s+/g," ").trim();};
+ const stop=new Set(["chapter","unit","the","and","for","with","of","in","on","an","a","to","class","introduction","basics"]);
+ const words=norm(value).split(" ").filter(function(w){return w.length>2&&!stop.has(w);});
+ const scored=topicsFor(level,subject).map(function(t){const candidate=norm(t),score=words.reduce(function(n,w){return n+(candidate.includes(w)?1:0);},0);return {topic:t,score:score};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).map(function(x){return x.topic;});
+ if(scored.length>=4)return scored.slice(0,9);
+ return ["Key concepts and definitions in "+value,"Important formulas, facts and diagrams in "+value,"Worked examples from "+value,"Common mistakes and exam questions from "+value,"Quick revision of "+value].concat(scored).slice(0,9);
+}
+function addTopicChips(root,level,subject,onChoose,compact,chapter){
  if(!root)return;
  root.innerHTML="";
- topicsFor(level,subject).slice(0,compact?7:9).forEach(function(topic){
+ chapterTopicsFor(level,subject,chapter).slice(0,compact?7:9).forEach(function(topic){
   const button=document.createElement("button");button.type="button";button.className=compact?"chat-topic-button":"topic-chip";button.textContent=topic;
   button.addEventListener("click",function(){onChoose(topic);});root.appendChild(button);
  });
 }
 function updateHubTopics(){
  const level=$("classLevel").value;
- const subject=subjectName()||$("subject").value;
- addTopicChips($("topicSuggestions"),level,subject,function(topic){$("topic").value=topic;$("topic").focus();},false);
+ const subject=subjectName()||$("subject").value,chapter=$("chapter").value.trim();
+ addTopicChips($("topicSuggestions"),level,subject,function(topic){$("topic").value=topic;$("topic").focus();},false,chapter);
+ const hint=$("topicSuggestionsHint");
+ if(hint)hint.textContent=chapter?"Topics related to “"+chapter+"” · select one to fill the question box.":"Type a chapter to get chapter-specific topics. Select one to fill the question box.";
  $("chapter").placeholder=level==="Class 10"?"e.g. Light – Reflection and Refraction":level==="Class 11"?"e.g. Motion in a Straight Line":"e.g. Integrals";
 }
 function updateChatTopics(){
@@ -181,10 +271,12 @@ $("classLevel").addEventListener("change",function(){syncClass(this);});
 $("chatClass").addEventListener("change",function(){syncClass(this);});
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";updateHubTopics();});
 $("chatSubject").addEventListener("change",updateChatTopics);
-$("topic").addEventListener("input",function(){});
-async function streamStudyRequest(payload,onText,signal,onStatus){
+$("chapter").addEventListener("input",updateHubTopics);$("chapter").addEventListener("change",updateHubTopics);
+async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
  const local=window.KaushalPathLocalAI;
- if(local&&local.isActive()){
+ const remoteTools=needsRemoteTools(payload);
+ if(remoteTools&&onStatus)onStatus(payload&&payload.imageData?"Preparing image analysis…": "Searching the web and reading available source pages…");
+ if(local&&local.isActive()&&!remoteTools){
   if(onStatus)onStatus("Using on-device Qwen model · your prompt stays on this device");
   return local.generate(payload,onText,signal,onStatus);
  }
@@ -198,10 +290,10 @@ async function streamStudyRequest(payload,onText,signal,onStatus){
   return "";
  };
  if(!response.body||!contentType.includes("text/event-stream")){
-  const data=await response.json().catch(function(){return{};});if(data.error)throw new Error(data.error);
+  const data=await response.json().catch(function(){return{};});if(data.error)throw new Error(data.error);if(onSources&&Array.isArray(data.sources))onSources(data.sources);
   const value=data.text||(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content);
   const text=contentText(value);if(text.trim()){onText(text);return text;}
-  return retryCloudWithoutStream(payload,onText,signal,onStatus);
+  return retryCloudWithoutStream(payload,onText,signal,onStatus,onSources);
  }
  const reader=response.body.getReader(),decoder=new TextDecoder();let pending="",answer="",streamError=null;
  function consume(line){
@@ -209,6 +301,7 @@ async function streamStudyRequest(payload,onText,signal,onStatus){
   const raw=clean.slice(5).trim();if(!raw||raw==="[DONE]")return;
   let event;try{event=JSON.parse(raw);}catch(e){return;}
   if(event.error){streamError=new Error(typeof event.error==="string"?event.error:(event.error.message||"The AI provider stopped the response."));return;}
+  if(onSources&&Array.isArray(event.sources))onSources(event.sources);
   const choice=event.choices&&event.choices[0];
   if(choice&&choice.finish_reason==="error"){streamError=new Error("The AI provider stopped before returning an answer. Try again or use on-device AI.");return;}
   const delta=choice&&choice.delta,values=[delta&&delta.content,choice&&choice.message&&choice.message.content,choice&&choice.text,event.text,event.output_text,event.response&&event.response.output_text];
@@ -224,11 +317,11 @@ async function streamStudyRequest(payload,onText,signal,onStatus){
  if(answer.trim())return answer;
  return retryCloudWithoutStream(payload,onText,signal,onStatus);
 }
-async function retryCloudWithoutStream(payload,onText,signal,onStatus){
+async function retryCloudWithoutStream(payload,onText,signal,onStatus,onSources){
  if(signal&&signal.aborted)throw new DOMException("Request aborted","AbortError");
  if(onStatus)onStatus("The stream contained no answer · trying a standard completion…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(Object.assign({},payload,{stream:false})),signal:signal});
- const data=await response.json().catch(function(){return{};});
+ const data=await response.json().catch(function(){return{};});if(onSources&&Array.isArray(data.sources))onSources(data.sources);
  if(!response.ok)throw new Error(data.error||"The AI service is temporarily unavailable (HTTP "+response.status+").");
  let answer=typeof data.text==="string"?data.text:"";
  if(!answer.trim()){const choice=data.choices&&data.choices[0],content=choice&&choice.message&&choice.message.content;if(typeof content==="string")answer=content;else if(Array.isArray(content))answer=content.map(function(part){return part&&typeof part.text==="string"?part.text:"";}).join("");}
@@ -240,6 +333,18 @@ function makePrompt(level,subject,chapter,mode,topic){
  return "Act as a careful CBSE study tutor. Student level: "+level+". Subject: "+subject+". Chapter: "+(chapter||"not specified")+". Task: "+task+"\nLearner request:\n"+topic+"\nBe accurate and age-appropriate. Keep the answer focused. Do not invent official citations or claim live syllabus verification.";
 }
 let lastStudyController=null;
+$("studyImage").addEventListener("change",async function(){
+ const file=this.files&&this.files[0],hint=$("studyImageHint");studyImageData=null;if(!file){if(hint)hint.textContent="Upload a question photo, diagram, or screenshot for cloud image analysis.";return;}
+ if(hint)hint.textContent="Compressing image…";
+ try{studyImageData=await resizeImageFile(file);if(hint)hint.textContent="Image ready for analysis · compressed before upload.";}
+ catch(error){this.value="";if(hint)hint.textContent=error.message;toast(error.message);}
+});
+$("chatImage").addEventListener("change",async function(){
+ const file=this.files&&this.files[0],hint=$("chatImageHint");chatImageData=null;if(!file){if(hint)hint.textContent="Question photos and diagrams use the cloud vision route.";return;}
+ if(hint)hint.textContent="Compressing image…";
+ try{chatImageData=await resizeImageFile(file);if(hint)hint.textContent="Image ready · it will accompany your next question.";}
+ catch(error){this.value="";if(hint)hint.textContent=error.message;toast(error.message);}
+});
 $("studyForm").addEventListener("submit",async function(ev){
  ev.preventDefault();
  const topic=$("topic").value.trim(),subject=subjectName(),chapter=$("chapter").value.trim(),level=$("classLevel").value,mode=$("studyMode").value;
@@ -251,8 +356,9 @@ $("studyForm").addEventListener("submit",async function(ev){
  $("copyAnswer").disabled=true;if($("saveStudyPdf"))$("saveStudyPdf").disabled=true;
  try{
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
+  renderSourceLinks($("sourceList"),[]);
   const prompt=makePrompt(level,subject,chapter,mode,topic);
-  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){if($("localAiStatus"))$("localAiStatus").textContent=status;btn.textContent=String(status).includes("standard completion")?"Retrying…":String(status).includes("on-device")||String(status).includes("locally")?"Generating locally…":"Generating…";});
+  const answer=await streamStudyRequest({prompt:prompt,urls:urls,mode:mode,imageData:studyImageData,searchQuery:topic,userPrompt:topic},function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;},controller.signal,function(status){if($("localAiStatus"))$("localAiStatus").textContent=status;btn.textContent=String(status).includes("standard completion")?"Retrying…":String(status).includes("on-device")||String(status).includes("locally")?"Generating locally…":String(status).includes("Searching")?"Researching…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
   lastAnswerText=answer;
   const local=window.KaushalPathLocalAI,usingLocal=Boolean(local&&local.isActive());
   const note=document.createElement("p");note.className="tiny";note.textContent=(usingLocal?"Generated on-device with Qwen. Your study prompt stayed on this device. ":"Generated with Kilo Auto Free. ")+"Check important details against your textbook.";
@@ -304,9 +410,15 @@ function updateLocalAiControls(){
  const ai=window.KaushalPathLocalAI,status=$("localAiStatus"),enable=$("localAiEnable"),disable=$("localAiDisable");
  if(!ai||!status||!enable||!disable)return;
  const supported=ai.isSupported();
- if(ai.isActive()){status.textContent="Local AI is active · questions run on this device.";enable.hidden=true;disable.hidden=false;enable.disabled=false;}
- else{status.textContent=supported?"Optional local model is available. First setup downloads the model and may take a few minutes; later starts use browser cache.":"Local AI needs a WebGPU-capable browser and compatible GPU. Kilo Auto Free remains available.";enable.hidden=false;disable.hidden=true;enable.disabled=!supported;}
+ if(ai.isActive()){status.textContent="Local AI is active · ordinary study prompts run on this device.";enable.hidden=true;disable.hidden=false;enable.disabled=false;}
+ else if(ai.isLoading()){status.textContent=ai.getStatus?ai.getStatus():"Automatically preparing the local model…";enable.hidden=false;enable.disabled=true;enable.textContent="Preparing automatically…";disable.hidden=true;}
+ else if(supported){status.textContent=ai.getStatus?ai.getStatus():"Local Qwen setup starts automatically on supported browsers.";enable.hidden=false;enable.disabled=false;enable.textContent="Retry local setup";disable.hidden=true;}
+ else{status.textContent=ai.getStatus?ai.getStatus():"Local AI needs a WebGPU-capable browser. Cloud AI remains available.";enable.hidden=true;disable.hidden=true;}
 }
+window.addEventListener("kaushalpath:local-ai-progress",function(event){
+ const detail=event.detail||{},status=$("localAiStatus");if(status)status.textContent=String(detail.text||"Preparing local AI…")+(typeof detail.progress==="number"?" · "+Math.round(detail.progress*100)+"%":"");
+ if(detail.ready||(!detail.loading&&!detail.active))updateLocalAiControls();
+});
 async function enableLocalAiAndRetry(retryStudy){
  const ai=window.KaushalPathLocalAI,status=$("localAiStatus"),enable=$("localAiEnable");
  if(!ai||!ai.isSupported()){if(status)status.textContent="Local AI needs a secure WebGPU-capable browser. Use Kilo Auto Free instead.";toast("This browser or GPU does not support local AI.");return false;}
@@ -402,8 +514,13 @@ function enableChatTools(enabled){
 async function sendChat(raw,regenerate){
  const question=String(raw||"").trim();if(!question||chatBusy)return;
  if(activeChatController)activeChatController.abort();
- if(!regenerate){chatHistory.push({role:"user",content:question});chatAddMessage("user",question);lastChatPrompt=question;}
- else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
+ if(!regenerate){
+  lastChatImageData=chatImageData;chatImageData=null;
+  if($("chatImage"))$("chatImage").value="";
+  if($("chatImageHint"))$("chatImageHint").textContent=lastChatImageData?"Image attached to this question.":"Attach an image for diagram or question analysis.";
+  chatHistory.push({role:"user",content:question});chatAddMessage("user",question+(lastChatImageData?"\n\n[Image attached for analysis]":""));lastChatPrompt=question;
+ }else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
+ const imageForRequest=lastChatImageData,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
  chatBusy=true;activeChatController=new AbortController();
  const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop"),messages=$("chatMessages");
  send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent="Connecting to the study assistant…";
@@ -414,19 +531,20 @@ async function sendChat(raw,regenerate){
  try{
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
-  answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6)},function(delta){
+  renderSourceLinks($("chatSources"),[]);
+  answer=await streamStudyRequest({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),imageData:imageForRequest,webSearch:webSearch,searchQuery:question,userPrompt:question},function(delta){
    const shouldFollow=messages.scrollHeight-messages.scrollTop-messages.clientHeight<120;
    if(waiting){node.innerHTML="";waiting=false;messageBox.classList.remove("is-pending");const copyButton=messageBox.querySelector("[data-copy-message]");if(copyButton)copyButton.disabled=false;}
    answer+=delta;renderMarkdownInto(node,answer);
    if(shouldFollow)messages.scrollTop=messages.scrollHeight;
    $("chatStatus").textContent="Writing your answer · "+answer.length+" characters";
-  },controller.signal,function(status){$("chatStatus").textContent=status;});
+  },controller.signal,function(status){$("chatStatus").textContent=status;},function(sources){renderSourceLinks($("chatSources"),sources);});
   if(!String(answer||"").trim()){
    waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
   }
   messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);
-  $("chatStatus").textContent=window.KaushalPathLocalAI&&window.KaushalPathLocalAI.isActive()?"Answer ready · on-device Qwen":"Answer ready · Kilo Auto Free";
+  $("chatStatus").textContent=window.KaushalPathLocalAI&&window.KaushalPathLocalAI.isActive()&&!needsRemoteTools({imageData:imageForRequest,webSearch:webSearch,userPrompt:question})?"Answer ready · on-device Qwen":(needsRemoteTools({imageData:imageForRequest,webSearch:webSearch,userPrompt:question})?"Answer ready · web tools + cloud AI":"Answer ready · Kilo Auto Free");
   enableChatTools(Boolean(answer));
  }catch(err){
   messageBox.classList.remove("is-pending");
