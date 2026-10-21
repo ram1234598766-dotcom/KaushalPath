@@ -1,4 +1,5 @@
 import { lookup } from "node:dns/promises";
+import { randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
@@ -410,6 +411,8 @@ async function research(urls, shouldSearch, query) {
   return { sources, context: (pageContext + searchContext + warning + noData).slice(0, 22000), searched: Boolean(searched.sources.length), pagesRead: pages.length, searchError };
 }
 export default async function handler(req, res) {
+  const requestId = randomUUID();
+  res.setHeader("X-Request-Id", requestId);
   if (req.method === "GET") {
     if (req.headers["x-kaushalpath-status"] !== "1") return send(res, { error: "Use POST to ask the study guide a question." }, 405);
     return send(res, {
@@ -525,7 +528,7 @@ export default async function handler(req, res) {
       try { fallbackPayload = await response.json(); } catch {}
       const fallbackText = responseText(fallbackPayload?.choices?.[0]?.message?.content);
       if (!fallbackText) return send(res, { error: "The study assistant did not return a usable response. Please retry.", sources: web.sources }, 502);
-      return send(res, { text: fallbackText, sources: web.sources, liveSources: web.sources.length > 0, mode });
+      return send(res, { text: fallbackText, sources: web.sources, liveSources: web.sources.length > 0, mode, requestId });
     }
     if (wantsStream) {
       if (!response.body) return send(res, { error: "The study assistant could not start a response. Please try again.", sources: web.sources }, 502);
@@ -545,15 +548,15 @@ export default async function handler(req, res) {
     try { payload = await response.json(); } catch { payload = {}; }
     const answer = responseText(payload?.choices?.[0]?.message?.content);
     if (!answer) return send(res, { error: "The study assistant did not return an answer. Try a more focused question.", sources: web.sources }, 502);
-    return send(res, { text: answer, sources: web.sources, liveSources: web.sources.length > 0, mode, requestId: payload?.id || null });
+    return send(res, { text: answer, sources: web.sources, liveSources: web.sources.length > 0, mode, requestId });
   } catch (error) {
     const status = Number(error?.status || error?.statusCode || error?.httpStatusCode || 0);
     const message = String(error?.message || "");
-    console.error("KaushalPath study request failed:", status || "unknown", message.slice(0, 300));
+    console.error("KaushalPath study request failed:", requestId, status || "unknown", message.slice(0, 300));
     if (hasVisualInput && (status === 400 || status === 404 || /image_url|vision|multimodal|image input|not support.*image/i.test(message))) {
       const notice = "The image could not be analyzed right now. Try a clearer, smaller image or try again later.";
       if (streamStarted) { try { res.write("data: " + JSON.stringify({ error: notice }) + "\n\n"); res.end(); } catch {} return; }
-      return send(res, { error: notice, sources: web.sources }, 422);
+      return send(res, { error: notice, sources: web.sources, requestId }, 422);
     }
     if (streamStarted) {
       const userMessage = status === 429 || /rate.?limit|too many requests|quota/i.test(message)
@@ -561,14 +564,14 @@ export default async function handler(req, res) {
         : /timeout|deadline|abort/i.test(message)
           ? "The study assistant took too long to respond. Your question is still available to retry."
           : "The AI provider stopped the response. Please retry.";
-      try { res.write("data: " + JSON.stringify({ error: userMessage }) + "\n\n"); } catch {}
+      try { res.write("data: " + JSON.stringify({ error: userMessage, requestId }) + "\n\n"); } catch {}
       try { res.end(); } catch {}
       return;
     }
-    if (status === 429 || /rate.?limit|too many requests|quota/i.test(message)) return send(res, { error: "The study assistant is temporarily busy. Please wait a moment and try again.", sources: web.sources }, 429);
-    if (status === 401 || status === 403) return send(res, { error: "The study service could not authenticate this request. Please try again later.", sources: web.sources }, 502);
-    if (/timeout|deadline|abort/i.test(message)) return send(res, { error: "The AI request or source retrieval took too long. Please retry, or choose a shorter task.", sources: web.sources }, 504);
-    return send(res, { error: "The study assistant could not complete this request. Please try again later.", sources: web.sources }, 502);
+    if (status === 429 || /rate.?limit|too many requests|quota/i.test(message)) return send(res, { error: "The study assistant is temporarily busy. Please wait a moment and try again.", sources: web.sources, requestId }, 429);
+    if (status === 401 || status === 403) return send(res, { error: "The study service could not authenticate this request. Please try again later.", sources: web.sources, requestId }, 502);
+    if (/timeout|deadline|abort/i.test(message)) return send(res, { error: "The AI request or source retrieval took too long. Please retry, or choose a shorter task.", sources: web.sources, requestId }, 504);
+    return send(res, { error: "The study assistant could not complete this request. Please try again later.", sources: web.sources, requestId }, 502);
   }
 }
 export const config = { maxDuration: 60 };
