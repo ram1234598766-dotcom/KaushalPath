@@ -69,6 +69,10 @@ assert.match(api, /Retry-After/, "rate-limited requests should tell clients when
 assert.match(api, /function createPinnedLookup\(addresses\)/, "research should pin validated DNS answers to prevent DNS-rebinding SSRF");
 assert.match(api, /lookup: createPinnedLookup\(addresses\)/, "page fetches should use only the prevalidated DNS addresses");
 assert.match(api, /requestPublicPage\(url, addresses\)/, "research HTTP requests should use the pinned public-address transport");
+assert.match(api, /function waitForResponseDrain\(res, signal\)/, "streaming should respect response backpressure");
+assert.match(api, /AbortSignal.any\(\[AbortSignal.timeout\(38000\), clientAbortController.signal\]\)/, "abandoned AI requests should be cancelled");
+assert.match(api, /research\(urls, shouldSearch, query, clientAbortController.signal\)/, "client disconnects should cancel public research work");
+assert.match(api, /Cache-Control", "no-store, no-cache, no-transform"/, "streamed study answers should not be stored by intermediaries");
 assert.match(api, /X-Request-Id/, "trace IDs should be returned as a response header");
 assert.match(api, /study request failed:", requestId/, "backend failure logs should include the trace ID");
 assert.match(api, /function assertSafeZipArchive\(buffer\)/, "Office archive uploads should be checked before decompression");
