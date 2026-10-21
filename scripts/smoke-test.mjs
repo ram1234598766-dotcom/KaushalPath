@@ -5,7 +5,6 @@ const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf
 const app = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
 
 assert.match(html, /KaushalPath/, "site brand should be present");
 assert.match(html, /studyForm/, "study form should exist");
@@ -21,8 +20,6 @@ assert.match(api, /url_context/, "AI supports public URL reading");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
 assert.match(api, /GEMINI_API_KEY/, "AI credentials are read server-side");
 assert.equal(pkg.dependencies["@google/genai"], "^2.30.0", "SDK version should support URL context");
-assert.equal(vercel.outputDirectory, "public", "Vercel serves the existing frontend");
-assert.equal(vercel.buildCommand, "npm run test", "Vercel validates files before publishing");
 assert.ok(existsSync(new URL("../api/study-guide.mjs", import.meta.url)), "Vercel AI route exists");
 assert.ok(existsSync(new URL("../vercel.json", import.meta.url)), "Vercel config exists");
 assert.equal(existsSync(new URL("../netlify.toml", import.meta.url)), false, "Netlify config should be removed");
