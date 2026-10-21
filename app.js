@@ -587,7 +587,7 @@ $("chatRegenerate").addEventListener("click",function(){if(lastChatPrompt&&!chat
 $("chatClear").addEventListener("click",function(){if(chatBusy){toast("Stop the current response before starting a new conversation.");return;}resetCurrentChat();});
 $("saveStudyPdf").disabled=true;
 
-const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library",CHAT_SESSIONS_KEY="kp-chat-sessions";
+const HISTORY_KEY="kp-results",FOCUS_KEY="kp-focus-sessions",FOCUS_STATE_KEY="kp-focus-state",ACTIVE_TEST_KEY="kp-active-test",LIBRARY_KEY="kp-saved-library",CHAT_SESSIONS_KEY="kp-chat-sessions",PLANNER_KEY="kp-planner-tasks";
 function readLocalJSON(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}}
 function writeLocalJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}}
 function validResult(r){return !!r&&typeof r==="object"&&typeof r.title==="string"&&r.title.length<=250&&typeof r.exam==="string"&&typeof r.date==="string"&&r.date.length<=120&&Number.isFinite(Number(r.score))&&Number.isFinite(Number(r.max))&&Number(r.max)>0&&Number.isFinite(Number(r.correct))&&Number.isFinite(Number(r.wrong))&&Number.isFinite(Number(r.blank));}
@@ -689,7 +689,7 @@ $("resumeSavedTest").addEventListener("click",function(){
 $("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
 window.addEventListener("beforeunload",function(){if(active)saveActiveTest();});
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden"&&active)saveActiveTest();});
-function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary(),chatSessions:getChatSessions()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
+function exportProgressBackup(){const payload={app:"KaushalPath",version:1,exportedAt:new Date().toISOString(),results:getHistory(),focusSessions:getFocusSessions(),savedLibrary:getSavedLibrary(),chatSessions:getChatSessions(),plannerTasks:getPlannerTasks()};download("kaushalpath-progress-backup.json",JSON.stringify(payload,null,2),"application/json");toast("Progress backup exported.");}
 $("exportBackup").addEventListener("click",exportProgressBackup);
 $("importBackup").addEventListener("click",function(){$("backupFile").click();});
 $("backupFile").addEventListener("change",async function(){
@@ -697,21 +697,22 @@ $("backupFile").addEventListener("change",async function(){
  try{
   if(file.size>3*1024*1024)throw new Error("Choose a progress backup smaller than 3 MB.");
   const payload=JSON.parse(await file.text());
-  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40)||(payload.chatSessions!=null&&!Array.isArray(payload.chatSessions))||(Array.isArray(payload.chatSessions)&&payload.chatSessions.length>8))throw new Error("This is not a supported KaushalPath progress backup.");
+  if(!payload||payload.app!=="KaushalPath"||payload.version!==1||!Array.isArray(payload.results)||!Array.isArray(payload.focusSessions)||payload.results.length>60||payload.focusSessions.length>100||(payload.savedLibrary!=null&&!Array.isArray(payload.savedLibrary))||(Array.isArray(payload.savedLibrary)&&payload.savedLibrary.length>40)||(payload.chatSessions!=null&&!Array.isArray(payload.chatSessions))||(Array.isArray(payload.chatSessions)&&payload.chatSessions.length>8)||(payload.plannerTasks!=null&&!Array.isArray(payload.plannerTasks))||(Array.isArray(payload.plannerTasks)&&payload.plannerTasks.length>120))throw new Error("This is not a supported KaushalPath progress backup.");
   if(payload.results.some(function(r){return !validResult(r);}))throw new Error("The backup contains a result record with invalid fields.");
   if(payload.focusSessions.some(function(s){return !s||typeof s.date!=="string"||!Number.isFinite(Date.parse(s.date))||!Number.isInteger(Number(s.seconds))||Number(s.seconds)<60||Number(s.seconds)>7200||s.mode!=="focus";}))throw new Error("The backup contains an invalid focus-session record.");
   const importedLibrary=Array.isArray(payload.savedLibrary)?payload.savedLibrary:[];if(importedLibrary.some(function(item){return !validLibraryItem(item);}))throw new Error("The backup contains an invalid saved-study record.");
   const importedChats=Array.isArray(payload.chatSessions)?payload.chatSessions:[];if(importedChats.some(function(item){return !validChatSession(item);}))throw new Error("The backup contains an invalid saved-chat record.");
+  const importedPlannerTasks=Array.isArray(payload.plannerTasks)?payload.plannerTasks:[];if(importedPlannerTasks.some(function(item){return !validPlannerTask(item);}))throw new Error("The backup contains an invalid study-plan task.");
   if(chatBusy)throw new Error("Stop the current AI response before importing a progress backup.");
-  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), "+getSavedLibrary().length+" saved answer(s), and "+getChatSessions().length+" conversation(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), "+importedLibrary.length+" saved answer(s), and "+importedChats.length+" conversation(s) from this backup? Export your current progress first if you need a copy."))return;
-  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary(),previousChats=getChatSessions();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)||!writeLocalJSON(CHAT_SESSIONS_KEY,importedChats)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);writeLocalJSON(CHAT_SESSIONS_KEY,previousChats);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
-  clearSavedTest();renderHistory();renderSavedLibrary();resetCurrentChat();renderChatSessions();refreshResumeBanner();toast("Progress backup imported successfully.");
+  if(!confirm("Replace this browser's "+getHistory().length+" result(s), "+getFocusSessions().length+" focus session(s), "+getSavedLibrary().length+" saved answer(s), and "+getChatSessions().length+" conversation(s), and "+getPlannerTasks().length+" study task(s) with "+payload.results.length+" result(s), "+payload.focusSessions.length+" focus session(s), "+importedLibrary.length+" saved answer(s), "+importedChats.length+" conversation(s), and "+importedPlannerTasks.length+" study task(s) from this backup? Export your current progress first if you need a copy."))return;
+  const previousResults=getHistory(),previousSessions=getFocusSessions(),previousLibrary=getSavedLibrary(),previousChats=getChatSessions(),previousPlannerTasks=getPlannerTasks();if(!writeLocalJSON(HISTORY_KEY,payload.results)||!saveFocusSessions(payload.focusSessions)||!writeLocalJSON(LIBRARY_KEY,importedLibrary)||!writeLocalJSON(CHAT_SESSIONS_KEY,importedChats)||!writeLocalJSON(PLANNER_KEY,importedPlannerTasks)){writeLocalJSON(HISTORY_KEY,previousResults);saveFocusSessions(previousSessions);writeLocalJSON(LIBRARY_KEY,previousLibrary);writeLocalJSON(CHAT_SESSIONS_KEY,previousChats);writeLocalJSON(PLANNER_KEY,previousPlannerTasks);throw new Error("Browser storage could not save the imported progress. Your browser may be out of space.");}
+  clearSavedTest();renderHistory();renderSavedLibrary();renderPlanner();resetCurrentChat();renderChatSessions();refreshResumeBanner();toast("Progress backup imported successfully.");
  }catch(error){toast(error&&error.message?error.message:"Could not import that backup.");}
  finally{$("backupFile").value="";}
 });
 $("clearProgress").addEventListener("click",function(){
- if(!confirm("Clear all saved test results, focus sessions, saved study answers, and the unfinished test on this browser? This cannot be undone."))return;
- writeLocalJSON(HISTORY_KEY,[]);writeLocalJSON(FOCUS_KEY,[]);writeLocalJSON(LIBRARY_KEY,[]);clearSavedTest();setFocusPreset("focus",1500);renderHistory();renderSavedLibrary();refreshResumeBanner();toast("Saved progress cleared.");
+ if(!confirm("Clear all saved test results, focus sessions, saved study answers, study-planner tasks, and the unfinished test on this browser? This cannot be undone."))return;
+ writeLocalJSON(HISTORY_KEY,[]);writeLocalJSON(FOCUS_KEY,[]);writeLocalJSON(LIBRARY_KEY,[]);writeLocalJSON(PLANNER_KEY,[]);clearSavedTest();setFocusPreset("focus",1500);renderHistory();renderSavedLibrary();renderPlanner();refreshResumeBanner();toast("Saved progress cleared.");
 });
 function getHistoryForExport(){return getHistory();}
 
@@ -858,6 +859,77 @@ $("chatSessionList").addEventListener("click",function(event){
  const open=event.target.closest("[data-open-chat-session]");if(open)restoreChatSession(open.dataset.openChatSession,false);
 });
 
+
+let plannerFilter="today";
+function validPlannerTask(item){
+ if(!item||typeof item!=="object"||typeof item.id!=="string"||!item.id||item.id.length>120||typeof item.title!=="string"||!item.title.trim()||item.title.length>160||typeof item.subject!=="string"||item.subject.length>80||typeof item.dueDate!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate)||!Number.isInteger(Number(item.minutes))||Number(item.minutes)<5||Number(item.minutes)>240||!["low","normal","high"].includes(item.priority)||typeof item.completed!=="boolean"||typeof item.createdAt!=="string"||!Number.isFinite(Date.parse(item.createdAt))||(item.completedAt!=null&&(typeof item.completedAt!=="string"||!Number.isFinite(Date.parse(item.completedAt)))))return false;
+ const parts=item.dueDate.split("-").map(Number),due=new Date(parts[0],parts[1]-1,parts[2]);
+ return localDayKey(due)===item.dueDate;
+}
+function getPlannerTasks(){const stored=readLocalJSON(PLANNER_KEY,[]);return Array.isArray(stored)?stored.filter(validPlannerTask).slice(0,120):[];}
+function plannerTaskDate(date){return new Date(date+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});}
+function savePlannerTasks(tasks){return writeLocalJSON(PLANNER_KEY,tasks.slice(0,120));}
+function renderPlanner(){
+ const root=$("plannerTaskList");if(!root)return;
+ const tasks=getPlannerTasks(),today=localDayKey(new Date()),open=tasks.filter(function(task){return !task.completed;}),due=open.filter(function(task){return task.dueDate<=today;}),upcoming=open.filter(function(task){return task.dueDate>today;}),done=tasks.filter(function(task){return task.completed;});const todayLabel=$("plannerTodayLabel");if(todayLabel)todayLabel.textContent=new Date().toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
+ const counts={open:$("plannerOpenCount"),due:$("plannerDueCount"),minutes:$("plannerPlannedMinutes"),done:$("plannerCompletedCount")};
+ if(counts.open)counts.open.textContent=String(open.length);
+ if(counts.due)counts.due.textContent=String(due.length);
+ if(counts.minutes)counts.minutes.textContent=String(open.reduce(function(sum,task){return sum+Number(task.minutes);},0))+"m";
+ if(counts.done)counts.done.textContent=String(done.length);
+ const pct=tasks.length?Math.round(done.length/tasks.length*100):0,bar=$("plannerProgressBar"),label=$("plannerProgressLabel");
+ if(bar){bar.style.width=pct+"%";bar.setAttribute("aria-valuenow",String(pct));}
+ if(label)label.textContent=done.length+" of "+tasks.length+" tasks complete · "+pct+"%";
+ document.querySelectorAll("[data-planner-filter]").forEach(function(button){const selected=button.dataset.plannerFilter===plannerFilter;button.classList.toggle("active",selected);button.setAttribute("aria-pressed",selected?"true":"false");});
+ let visible=tasks.filter(function(task){if(plannerFilter==="today")return !task.completed&&task.dueDate<=today;if(plannerFilter==="upcoming")return !task.completed&&task.dueDate>today;if(plannerFilter==="done")return task.completed;return true;});
+ const priorityRank={high:0,normal:1,low:2};
+ visible.sort(function(a,b){if(plannerFilter==="all"&&a.completed!==b.completed)return a.completed?1:-1;return a.dueDate.localeCompare(b.dueDate)||(priorityRank[a.priority]-priorityRank[b.priority])||a.title.localeCompare(b.title);});
+ root.replaceChildren();
+ if(!visible.length){const empty=document.createElement("div");empty.className="empty planner-empty";empty.textContent=plannerFilter==="today"?"No overdue or due-today tasks. Add a small next step or check Upcoming.":plannerFilter==="upcoming"?"No upcoming tasks yet. Add a task with a future due date.":plannerFilter==="done"?"Completed tasks will collect here. A small finish is still progress.":"No tasks yet. Start with one clear, manageable action.";root.appendChild(empty);return;}
+ visible.forEach(function(task){
+  const row=document.createElement("article");row.className="planner-task"+(task.completed?" is-complete":"");
+  const toggle=document.createElement("button");toggle.type="button";toggle.className="planner-task-check";toggle.dataset.plannerAction="toggle";toggle.dataset.taskId=task.id;toggle.textContent=task.completed?"✓":"";toggle.setAttribute("aria-label",task.completed?"Mark incomplete: "+task.title:"Mark complete: "+task.title);toggle.setAttribute("aria-pressed",task.completed?"true":"false");
+  const main=document.createElement("div");main.className="planner-task-main";
+  const title=document.createElement("strong");title.className="planner-task-title";title.textContent=task.title;
+  const meta=document.createElement("p");meta.className="planner-task-meta";meta.textContent=task.subject+" · "+plannerTaskDate(task.dueDate)+" · "+task.minutes+" minutes";
+  const badges=document.createElement("div");badges.className="planner-task-badges";
+  const priority=document.createElement("span");priority.className="planner-badge planner-priority-"+task.priority;priority.textContent=task.priority.charAt(0).toUpperCase()+task.priority.slice(1)+" priority";badges.appendChild(priority);
+  if(!task.completed&&task.dueDate<today){const overdue=document.createElement("span");overdue.className="planner-badge planner-overdue";overdue.textContent="Overdue";badges.appendChild(overdue);}
+  else if(!task.completed&&task.dueDate===today){const dueToday=document.createElement("span");dueToday.className="planner-badge planner-due-today";dueToday.textContent="Due today";badges.appendChild(dueToday);}
+  main.append(title,meta,badges);
+  const remove=document.createElement("button");remove.type="button";remove.className="planner-task-delete";remove.dataset.plannerAction="delete";remove.dataset.taskId=task.id;remove.textContent="Delete";remove.setAttribute("aria-label","Delete task: "+task.title);
+  row.append(toggle,main,remove);root.appendChild(row);
+ });
+}
+function initPlanner(){
+ const today=localDayKey(new Date()),date=$("plannerTaskDate");if(date){date.min=today;if(!date.value)date.value=today;}
+ $("plannerTaskForm").addEventListener("submit",function(event){
+  event.preventDefault();const title=$("plannerTaskTitle").value.trim(),subject=$("plannerTaskSubject").value,dueDate=$("plannerTaskDate").value,minutes=Number($("plannerTaskMinutes").value),priority=$("plannerTaskPriority").value;
+  if(!title||title.length>160){toast("Give the task a title of 1–160 characters.");return;}
+  const list=getPlannerTasks();if(list.length>=120){toast("Your study plan has reached 120 tasks. Delete finished tasks to make room.");return;}
+  const task={id:"task-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7),title:title,subject:subject,dueDate:dueDate,minutes:minutes,priority:priority,completed:false,createdAt:new Date().toISOString(),completedAt:null};
+  if(!validPlannerTask(task)){toast("Check the task date and time estimate, then try again.");return;}
+  if(!savePlannerTasks([task].concat(list))){toast("The task could not be saved in this browser. Export your progress or free up storage.");return;}
+  $("plannerTaskForm").reset();date.value=localDayKey(new Date());$("plannerTaskMinutes").value="25";$("plannerTaskPriority").value="normal";renderPlanner();toast("Task added to your study plan.");
+ });
+ $("plannerTaskList").addEventListener("click",function(event){
+  const button=event.target.closest("[data-planner-action]");if(!button)return;
+  const id=button.dataset.taskId,task=getPlannerTasks().find(function(item){return item.id===id;});if(!task)return;
+  if(button.dataset.plannerAction==="delete"){
+   if(!confirm("Delete this study task?"))return;
+   const next=getPlannerTasks().filter(function(item){return item.id!==id;});if(!savePlannerTasks(next)){toast("Could not delete the task from browser storage.");return;}renderPlanner();toast("Task deleted.");return;
+  }
+  if(button.dataset.plannerAction==="toggle"){
+   const next=getPlannerTasks().map(function(item){return item.id===id?Object.assign({},item,{completed:!item.completed,completedAt:!item.completed?new Date().toISOString():null}):item;});
+   if(!savePlannerTasks(next)){toast("Could not update this task in browser storage.");return;}renderPlanner();toast(task.completed?"Task marked as active.":"Task completed. Nice work.");
+  }
+ });
+ document.querySelectorAll("[data-planner-filter]").forEach(function(button){button.addEventListener("click",function(){plannerFilter=button.dataset.plannerFilter;renderPlanner();});});
+ $("plannerClearTasks").addEventListener("click",function(){if(!getPlannerTasks().length){toast("Your study plan is already empty.");return;}if(!confirm("Delete all study-planner tasks? This cannot be undone."))return;if(!savePlannerTasks([])){toast("Could not clear the plan.");return;}renderPlanner();toast("Study plan cleared.");});
+ $("plannerStartFocus").addEventListener("click",function(){if(focusState.running&&!confirm("Restart the timer and replace the current focus session?"))return;setFocusPreset("focus",1500);focusState.running=true;focusState.endsAt=Date.now()+focusState.remaining*1000;saveFocusState();renderFocusTimer();beginFocusInterval();const history=$("history");if(history)history.scrollIntoView({behavior:"smooth",block:"start"});toast("25-minute focus session started.");});
+ renderPlanner();
+}
+
 function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
 function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div><div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
@@ -872,18 +944,18 @@ $("exportHistory").addEventListener("click",function(){const history=getHistory(
 async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x-kaushalpath-status":"1"}});const j=await r.json();$("aiStatus").textContent=j.ready?"AI guide ready":"AI guide setup needed";$("aiStatus").style.background=j.ready?"#1c584f":"#654a2d";}catch(e){$("aiStatus").textContent="AI status unavailable";}}
 
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
-document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
+document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library","#planner":"Study Planner"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();
 
 function activateWorkspaceView(view,clicked){
- const valid=["overview","learn","ai-guide","tests","history","resources","library"] ;
+ const valid=["overview","learn","ai-guide","tests","history","resources","library","planner"];
  const target=valid.includes(view)?view:"overview";
  const overviewNodes=[document.getElementById("overview"),document.querySelector("main > .hero"),document.querySelector("main > .quickstats"),document.getElementById("learningPath")];
  overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
- ["learn","ai-guide","tests","resources","history","library"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
+ ["learn","ai-guide","tests","resources","history","library","planner"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
- const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library"};
+ const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library",planner:"Study Planner"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
   document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",exam!=="all"&&card.dataset.exam!==exam);});
