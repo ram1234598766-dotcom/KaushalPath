@@ -125,10 +125,10 @@ export default async function handler(req, res) {
   // Keep Auto Free responses intentionally concise: shorter completions usually feel much faster.
   const budget = ({ explain: 650, revision: 800, solve: 1050, questions: 1350, notes: 1650 })[mode];
   const history = Array.isArray(body.messages)
-    ? body.messages.slice(-8).filter((item) =>
+    ? body.messages.slice(-6).filter((item) =>
         item && (item.role === "user" || item.role === "assistant") &&
         typeof item.content === "string" && item.content.trim()
-      ).map((item) => ({ role: item.role, content: item.content.trim().slice(0, 3500) }))
+      ).map((item) => ({ role: item.role, content: item.content.trim().slice(0, 2000) }))
     : [];
   const input = [
     "Study request type: " + mode + ".",
