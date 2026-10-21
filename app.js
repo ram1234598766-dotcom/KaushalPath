@@ -791,18 +791,18 @@ $("exportHistory").addEventListener("click",function(){const history=getHistory(
 async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x-kaushalpath-status":"1"}});const j=await r.json();$("aiStatus").textContent=j.ready?"AI guide ready":"AI guide setup needed";$("aiStatus").style.background=j.ready?"#1c584f":"#654a2d";}catch(e){$("aiStatus").textContent="AI status unavailable";}}
 
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
-document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
+document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
 renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();
 
 function activateWorkspaceView(view,clicked){
- const valid=["overview","learn","ai-guide","tests","history","resources"];
+ const valid=["overview","learn","ai-guide","tests","history","resources","library"] ;
  const target=valid.includes(view)?view:"overview";
  const overviewNodes=[document.getElementById("overview"),document.querySelector("main > .hero"),document.querySelector("main > .quickstats"),document.getElementById("learningPath")];
  overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
- ["learn","ai-guide","tests","resources","history"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
+ ["learn","ai-guide","tests","resources","history","library"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
- const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources"};
+ const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
   document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",exam!=="all"&&card.dataset.exam!==exam);});
