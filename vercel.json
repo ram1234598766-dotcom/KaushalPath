@@ -31,11 +31,6 @@
       ]
     }
   ],
-  "functions": {
-    "api/study-guide.mjs": {
-      "maxDuration": 60
-    }
-  },
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "builds": [
     {
