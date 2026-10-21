@@ -1,0 +1,14 @@
+KaushalPath India - Source-Aware CBSE AI Learning Edition
+
+app.py                                    Flask app + optional source-aware AI guide
+requirements.txt                          Python dependencies
+templates/index.html                      Responsive learning interface
+static/style.css                          Responsive visual styling
+static/app.js                             Navigation, AI study modes, citations, skill discovery
+data/curriculum.json                     Subject catalogue for Classes 10-12
+data/lessons.json                         Offline starter notes
+docs/KaushalPath_India_Humanized_Concept_Note.pdf
+                                           Human-centered concept note
+tests/test_app.py                         Local Flask API tests
+.env.example                              Optional AI environment settings
+README.md                                 Setup, sources, AI guide, accuracy/privacy limits
