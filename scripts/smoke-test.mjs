@@ -103,6 +103,27 @@ assert.doesNotMatch(api, /provider: "Kilo Auto Free"|provider: imageData|sources
 assert.doesNotMatch(api, /Kilo Gateway rejected|Kilo Auto Free returned|Kilo Auto Free is temporarily|KILO_API_KEY in Vercel/, "user-facing errors should not expose provider configuration");
 assert.doesNotMatch(api, /No live web search is available in this endpoint/, "the model instructions should not disable the implemented research route");
 assert.doesNotMatch(api, /GEMINI_API_KEY|GoogleGenAI|google_search|url_context/, "the API should not depend on Gemini credentials or tools");
+assert.match(app, /id:"cbse12cs26"/, "the question bank should include an official CBSE Class XII CS SQP sampler");
+assert.match(app, /One exact 1-mark MCQ/, "the official paper excerpt should state that it is only a sampler");
+assert.match(app, /id:"cbse12cs26"[\s\S]*?qs:\[\s*\{q:"Which of the following data types in Python is mutable\?"[\s\S]*?\}\s*\]\s*\}/, "official sampler should use a short, source-attributed actual CBSE sample-paper question");
+assert.match(html, /href="https:\/\/jeemain\.nta\.nic\.in\/2026\//, "JEE card should link to current official shift-wise papers");
+assert.match(html, /neet\.nta\.nic\.in\/archive\//, "NEET card should link to the official question-paper archive");
+
+assert.match(app, /ComputerScience-SQP\.pdf/, "the official sampler should link to its question paper");
+assert.match(app, /ComputerScience-MS\.pdf/, "the official sampler should link to the corresponding marking scheme");
+assert.match(app, /negativeMark:1/, "JEE and NEET practice sets should explicitly configure negative marking");
+assert.match(app, /const score=t\.qs\.reduce/, "scoring should honor per-question marks and configured penalties");
+assert.match(app, /const maxMarks=t\.qs\.reduce/, "test cards should display their real maximum marks");
+assert.ok(app.includes("Scoring: '+marking"), "test cards should display correct, wrong and blank scoring explicitly");
+assert.match(app, /Official sample-paper question/, "question cards should label authentic official-paper questions");
+assert.match(app, /Original practice set/, "question cards should distinguish original practice from official questions");
+assert.match(html, /id="official-papers"/, "the UI should expose an official paper catalogue");
+assert.match(html, /sqp_classx_2026-27\.html/, "the official catalogue should link CBSE Class X current papers");
+assert.match(html, /SQP_CLASSXII_2026-27\.html/, "the official catalogue should link CBSE Class XII current papers");
+assert.match(html, /jeemain\.nta\.nic\.in\/2026\//, "the official catalogue should link the JEE Main 2026 question-paper archive");
+assert.match(html, /neet\.nta\.nic\.in\/2026/, "the official catalogue should link the NEET UG 2026 NTA portal");
+assert.match(html, /180 compulsory MCQs in 180 minutes, for 720 total marks/, "NEET card should reflect the current official pattern");
+assert.match(html, /75 questions, 300 marks/, "JEE Main card should reflect the current Paper 1 pattern");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 
