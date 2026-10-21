@@ -31,10 +31,19 @@
       ]
     }
   ],
-  "functions": {
-    "api/study-guide.mjs": {
-      "maxDuration": 60
+  "framework": null,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "app.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/study-guide.mjs",
+      "use": "@vercel/node"
     }
-  },
-  "framework": null
+  ]
 }
