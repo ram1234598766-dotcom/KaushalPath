@@ -17,6 +17,7 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - A local Study Planner with due dates, priority levels, time estimates, task completion tracking, and backup/restore support.
 - Local AI conversation history: recent chats restore after refresh, can be searched or deleted, and are included in backups. Uploaded file contents are not retained in chat history.
 - A retry-after signal on backend rate-limit responses, with provider details kept out of student-facing errors.
+- Public-page research pins each HTTP connection to DNS addresses checked by the SSRF guard, preventing a second DNS lookup from rebinding to private infrastructure.
 - Official CBSE, NCERT and NTA resource links.
 - Mobile-friendly layout and accessible controls.
 
