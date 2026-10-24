@@ -37,7 +37,7 @@ assert.match(studyLibrary, /function printNotes\(items\)/, "curated notes should
 assert.match(studyLibrary, /window\.KP_DEVICE_PROFILE/, "device capability detection should run before app initialization");
 assert.match(studyLibrary, /navigator\.deviceMemory/, "the UI should use available browser memory hints without assuming universal support");
 assert.match(studyLibrary, /prefers-reduced-motion/, "the animated guide should respect reduced-motion preferences");
-assert.match(studyLibrary, /id="kpTourOverlay"/, "the guided tour should have an accessible modal overlay");
+assert.match(studyLibrary, /overlay\.id\s*=\s*"kpTourOverlay"/, "the guided tour should create an accessible modal overlay");
 assert.match(app, /questions\.push\(\.\.\.window\.KP_EXTRA_QUESTIONS\)/, "the main test runner should include the additional MCQ bank");
 assert.equal((questionBank.match(/\n    q\(/g) || []).length, 120, "the added question bank must contain 120 individually authored practice MCQs");
 assert.match(questionBank, /JEE Main · Mathematics Practice 01/, "the bank should include a JEE mathematics set");
