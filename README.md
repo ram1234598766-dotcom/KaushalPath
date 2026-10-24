@@ -1,4 +1,4 @@
-# KaushalPath
+ # KaushalPath
 
 **A learning hub for CBSE Classes 10–12, AI-guided study, and JEE Main / NEET UG practice.**
 
