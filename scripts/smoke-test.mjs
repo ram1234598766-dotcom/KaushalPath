@@ -101,6 +101,8 @@ assert.match(html, /accept="image\/\*,\.pdf,\.txt,\.md,\.csv,\.tsv,\.json,\.xml,
 assert.match(app, /prepareAttachmentFile/, "the UI should prepare supported attachments by file type");
 assert.match(app, /attachmentPayload/, "prepared files should be sent with study and chat requests");
 assert.match(api, /extractAttachmentText/, "the backend should extract text from uploaded documents");
+assert.match(api, /from "pdf-parse\/worker"/, "the PDF worker must initialize before pdf-parse to avoid serverless DOMMatrix crashes");
+assert.match(api, /new PDFParse\(\{ data: buffer, CanvasFactory \}\)/, "PDF parsing must inject the supported canvas factory in serverless runtime");
 assert.match(api, /new PDFParse/, "the backend should read PDFs");
 assert.match(api, /getScreenshot/, "scanned PDFs should render pages for visual analysis");
 assert.match(api, /hasVisualInput/, "scanned PDF page images should use the vision route");

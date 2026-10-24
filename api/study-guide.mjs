@@ -4,6 +4,7 @@ import { isIP } from "node:net";
 import { request as requestHttp } from "node:http";
 import { request as requestHttps } from "node:https";
 import { Readable } from "node:stream";
+import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
@@ -431,7 +432,7 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
   let text = "";
   let renderedImages = [];
   if (ext === "pdf") {
-    const parser = new PDFParse({ data: buffer });
+    const parser = new PDFParse({ data: buffer, CanvasFactory });
     try {
       const result = await parser.getText();
       text = String(result?.text || "");
