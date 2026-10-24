@@ -1,14 +1,18 @@
-const CACHE_NAME = "kaushalpath-shell-v1";
+const CACHE_NAME = "kaushalpath-shell-v2";
 const SHELL_FILES = [
   "/",
   "/index.html",
   "/app.js",
+  "/study-library.js",
+  "/question-bank.js",
   "/manifest.webmanifest",
   "/app-icon.svg",
   "/offline.html"
 ];
 const STATIC_FILES = new Set([
   "/app.js",
+  "/study-library.js",
+  "/question-bank.js",
   "/manifest.webmanifest",
   "/app-icon.svg"
 ]);

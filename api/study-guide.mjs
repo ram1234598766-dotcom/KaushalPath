@@ -13,7 +13,10 @@ import sharp from "sharp";
 
 const MODEL = "kilo-auto/free";
 const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
-const GATEWAY_URL = "https://api.kilo.ai/api/gateway/chat/completions";
+const GATEWAY_URLS = [
+  "https://api.kilo.ai/api/gateway/chat/completions",
+  "https://ai-gateway.kilo.ai/api/v1/chat/completions"
+];
 const MAX_PROMPT_CHARS = 12000;
 const MAX_URLS = 5;
 const MAX_BODY_CHARS = 4100000;
@@ -514,6 +517,55 @@ async function research(urls, shouldSearch, query, signal) {
   return { sources, context: (pageContext + searchContext + warning + noData).slice(0, 22000), searched: Boolean(searched.sources.length), pagesRead: pages.length, searchError };
 }
 
+
+async function requestGateway(payload, signal, requestedModel) {
+  const hasConfiguredKey = Boolean(process.env.KILO_API_KEY);
+  const allowsAnonymousFallback = requestedModel === MODEL || String(requestedModel).endsWith(":free");
+  let lastError = null;
+  for (let index = 0; index < GATEWAY_URLS.length; index++) {
+    const url = GATEWAY_URLS[index];
+    const send = (useConfiguredKey) => {
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": payload.stream ? "text/event-stream" : "application/json"
+      };
+      if (useConfiguredKey && process.env.KILO_API_KEY) headers.Authorization = "Bearer " + process.env.KILO_API_KEY;
+      return fetch(url, { method: "POST", headers, body: JSON.stringify(payload), signal });
+    };
+    let response;
+    try {
+      response = await send(hasConfiguredKey);
+    } catch (error) {
+      if (signal.aborted) throw error;
+      lastError = error;
+      if (index + 1 < GATEWAY_URLS.length) continue;
+      throw error;
+    }
+    if (!response.ok && hasConfiguredKey && allowsAnonymousFallback && [401, 403].includes(response.status)) {
+      // Free models support anonymous requests. A stale optional key should not
+      // break a request that could otherwise use the public free tier.
+      try { await response.body?.cancel(); } catch {}
+      try {
+        response = await send(false);
+      } catch (error) {
+        if (signal.aborted) throw error;
+        lastError = error;
+        if (index + 1 < GATEWAY_URLS.length) continue;
+        throw error;
+      }
+    }
+    if (response.ok) return response;
+    const canTryOtherOfficialEndpoint = [404, 405, 410, 502, 503, 504].includes(response.status);
+    if (canTryOtherOfficialEndpoint && index + 1 < GATEWAY_URLS.length) {
+      try { await response.body?.cancel(); } catch {}
+      continue;
+    }
+    return response;
+  }
+  if (lastError) throw lastError;
+  throw new Error("The study service could not be reached.");
+}
+
 function waitForResponseDrain(res, signal) {
   if (signal.aborted) return Promise.reject(signal.reason || new Error("Client disconnected"));
   if (typeof res.once !== "function") return Promise.resolve();
@@ -551,7 +603,7 @@ export default async function handler(req, res) {
     return send(res, {
       ready: true,
       features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true },
-      message: "The study assistant is ready to help with questions, public sources, and image-based problems.",
+      message: "The study route is configured; actual response availability can vary with the current public inference service.",
       notice: "Avoid submitting personal or confidential information."
     });
   }
@@ -665,13 +717,9 @@ export default async function handler(req, res) {
   const wantsStream = body.stream === true;
   let streamStarted = false;
   try {
-    const headers = { "Content-Type": "application/json", "Accept": wantsStream ? "text/event-stream" : "application/json" };
-    if (process.env.KILO_API_KEY) headers.Authorization = "Bearer " + process.env.KILO_API_KEY;
-    const response = await fetch(GATEWAY_URL, {
-      method: "POST", headers,
-      body: JSON.stringify({ model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream }),
-      signal: AbortSignal.any([AbortSignal.timeout(38000), clientAbortController.signal])
-    });
+    const gatewayPayload = { model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream };
+    const gatewaySignal = AbortSignal.any([AbortSignal.timeout(38000), clientAbortController.signal]);
+    const response = await requestGateway(gatewayPayload, gatewaySignal, requestedModel);
     if (!response.ok) {
       let payload = {};
       try { payload = await response.json(); } catch {}
