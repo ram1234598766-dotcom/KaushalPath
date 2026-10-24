@@ -10,7 +10,6 @@ const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.u
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
 const manifest = JSON.parse(readFileSync(new URL("../manifest.webmanifest", import.meta.url), "utf8"));
-const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const offline = readFileSync(new URL("../offline.html", import.meta.url), "utf8");
 
 assert.match(html, /KaushalPath/, "site brand should be present");
