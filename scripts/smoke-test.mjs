@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
+const questionBank = readFileSync(new URL("../question-bank.js", import.meta.url), "utf8");
+const studyLibrary = readFileSync(new URL("../study-library.js", import.meta.url), "utf8");
+const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
 const manifest = JSON.parse(readFileSync(new URL("../manifest.webmanifest", import.meta.url), "utf8"));
@@ -27,6 +30,28 @@ assert.match(serviceWorker, /caches\.match\("\/offline\.html"\)/, "navigation sh
 assert.match(offline, /AI explanations, live research and new uploads need an internet connection/, "offline guidance should explain which services require connectivity");
 
 assert.match(html, /studyForm/, "study form should exist");
+assert.match(html, /id="notesResults"/, "CBSE Study Hub should render a curated chapter-notes catalogue");
+assert.match(html, /id="notesDownloadAll"/, "the notes catalogue should export filtered notes as a print-ready PDF");
+assert.match(html, /id="startTour"/, "the app should expose the animated guided tour");
+assert.match(html, /does not send your chapter selection to the AI endpoint/, "the visible CBSE notes hub should be independent of AI requests");
+assert.match(studyLibrary, /function printNotes\(items\)/, "curated notes should be exportable through the browser PDF print flow");
+assert.match(studyLibrary, /window\.KP_DEVICE_PROFILE/, "device capability detection should run before app initialization");
+assert.match(studyLibrary, /navigator\.deviceMemory/, "the UI should use available browser memory hints without assuming universal support");
+assert.match(studyLibrary, /prefers-reduced-motion/, "the animated guide should respect reduced-motion preferences");
+assert.match(studyLibrary, /id="kpTourOverlay"/, "the guided tour should have an accessible modal overlay");
+assert.match(app, /questions\.push\(\.\.\.window\.KP_EXTRA_QUESTIONS\)/, "the main test runner should include the additional MCQ bank");
+assert.equal((questionBank.match(/\n    q\(/g) || []).length, 120, "the added question bank must contain 120 individually authored practice MCQs");
+assert.match(questionBank, /JEE Main · Mathematics Practice 01/, "the bank should include a JEE mathematics set");
+assert.match(questionBank, /NEET UG · Biology Practice 01/, "the bank should include a NEET biology set");
+assert.match(api, /async function requestGateway\(/, "the AI request should use a resilient gateway helper");
+assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI backend should have a second official gateway endpoint");
+assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
+assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
+assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
+assert.match(serviceWorker, /kaushalpath-shell-v2/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
+assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
+
 assert.match(html, /sourceUrls/, "manual website URL input should exist");
 assert.match(html, /id="ai-guide"/, "AI guide should have a dedicated workspace");
 assert.match(html, /id="chatMessages"/, "horizontal AI conversation should exist");
