@@ -192,13 +192,18 @@ const validSvgDataUrl = "data:image/svg+xml;base64," + testSvg.toString("base64"
 
 // Exercise valid text and image request paths with a mocked provider response.
 const originalFetch = globalThis.fetch;
+const originalKiloKey = process.env.KILO_API_KEY;
 const mockedRequests = [];
+const mockedRequestHeaders = [];
 globalThis.fetch = async (url, options = {}) => {
-  assert.match(String(url), /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "valid study requests should call the configured server-side gateway");
+  assert.match(String(url), /(?:api\.kilo\.ai\/api\/gateway\/chat\/completions|ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions)/, "study requests should use an official Kilo Gateway endpoint");
   const payload = JSON.parse(options.body);
   mockedRequests.push(payload);
+  mockedRequestHeaders.push(options.headers || {});
   const lastMessage = payload.messages.at(-1);
   const requestText = typeof lastMessage.content === "string" ? lastMessage.content : Array.isArray(lastMessage.content) ? lastMessage.content.filter((part) => part.type === "text").map((part) => part.text).join(" ") : "";
+  if (requestText.includes("AUTH_FALLBACK_TEST") && options.headers && options.headers.Authorization) return new Response(JSON.stringify({ error: { message: "invalid optional key" } }), { status: 401, headers: { "content-type": "application/json; charset=utf-8" } });
+  if (requestText.includes("ENDPOINT_FALLBACK_TEST") && String(url).includes("api.kilo.ai/api/gateway")) return new Response(JSON.stringify({ error: { message: "temporary gateway response" } }), { status: 503, headers: { "content-type": "application/json; charset=utf-8" } });
   if (requestText.includes("RATE_LIMIT_TEST")) return new Response(JSON.stringify({ error: { message: "rate limit reached" } }), { status: 429, headers: { "content-type": "application/json; charset=utf-8" } });
   if (payload.stream) {
     const encoder = new TextEncoder();
@@ -288,6 +293,27 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.match(invalidImage.payload.error, /could not be decoded safely/i);
   assert.equal(mockedRequests.length, countBeforeInvalidImage, "invalid image bytes must never be forwarded to the AI gateway");
 
+  const beforeAuthFallback = mockedRequests.length;
+  process.env.KILO_API_KEY = "stale-test-key";
+  const authFallback = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Please run AUTH_FALLBACK_TEST to recover the AI study service", stream: false }
+  });
+  assert.equal(authFallback.statusCode, 200, "a stale optional key should fall back to anonymous inference for free models");
+  assert.equal(mockedRequests.length, beforeAuthFallback + 2, "auth recovery should make one keyed request then one anonymous request");
+  assert.ok(mockedRequestHeaders[beforeAuthFallback].Authorization, "first recovery attempt should use the configured key");
+  assert.equal(mockedRequestHeaders[beforeAuthFallback + 1].Authorization, undefined, "anonymous recovery must not include the stale key");
+  if (originalKiloKey === undefined) delete process.env.KILO_API_KEY; else process.env.KILO_API_KEY = originalKiloKey;
+
+  const beforeEndpointFallback = mockedRequests.length;
+  const alternateEndpointResponse = await call({
+    method: "POST", headers: {},
+    body: { prompt: "Please run ENDPOINT_FALLBACK_TEST to check gateway failover", stream: false }
+  });
+  assert.equal(alternateEndpointResponse.statusCode, 200, "a transient primary gateway failure should try the second documented endpoint");
+  assert.equal(mockedRequests.length, beforeEndpointFallback + 2, "endpoint failover should retry once, not loop");
+  assert.match(String(mockedRequestHeaders[beforeEndpointFallback].Accept || ""), /application\/json/i);
+
   const rateLimitedResponse = await call({
     method: "POST",
     headers: {},
@@ -320,6 +346,7 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
 
 } finally {
   globalThis.fetch = originalFetch;
+  if (originalKiloKey === undefined) delete process.env.KILO_API_KEY; else process.env.KILO_API_KEY = originalKiloKey;
 }
 
 console.log("KaushalPath API handler validation tests passed.");
