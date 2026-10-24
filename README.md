@@ -5,10 +5,10 @@
 KaushalPath is a responsive student workspace with a purple learning dashboard, original timed practice sets, answer explanations, downloadable results, official education links, and an AI Study Guide.
 
 ## Features
-- CBSE study workspace for Classes 10, 11 and 12, including subject and chapter prompts.
+- A non-AI CBSE chapter-notes catalogue with 66 curated note packs across core subjects, formula summaries, worked examples, recall checks and print-to-PDF exports. Official NCERT/CBSE links point to the complete current syllabus and textbook catalogue.
 - AI-generated notes, explanations, revision sheets, practice questions and step-by-step solutions.
 - Kilo Auto Free inference through the OpenAI-compatible Kilo AI Gateway endpoint.
-- Seven compact original practice sets across CBSE foundation, JEE Main and NEET UG topics.
+- 120 additional original exam-style MCQs across JEE mathematics/physics/chemistry and NEET physics/chemistry/biology, with +4/-1 scoring and exam-proportional mini-set timers. These are not represented as copied previous-year questions; official past-paper sources remain linked.
 - Timed tests with autosave and resume after refresh, one-click retakes of missed or unanswered questions, answer explanations, result history, CSV exports and downloadable PDF/JSON reports.
 - A focus timer with persistent countdowns, completed-session tracking, accuracy summaries and active-day streaks.
 - Full progress backup and restore as validated JSON, plus intentional progress clearing.
@@ -21,7 +21,7 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - Public-page research pins each HTTP connection to DNS addresses checked by the SSRF guard, preventing a second DNS lookup from rebinding to private infrastructure.
 - Research URL validation also rejects special-use, documentation, benchmarking, and deprecated IPv4/IPv6 ranges, even when IPv6 is supplied in expanded notation.
 - Disconnected AI requests abort upstream work, and streamed answers respect client backpressure to avoid wasting resources on abandoned or slow connections.
-- Official CBSE, NCERT and NTA resource links.
+- An animated first-visit guided tour, browser capability-aware performance profile, lighter image preparation on low-resource devices, and official CBSE, NCERT and NTA resource links.
 - Mobile-friendly layout and accessible controls.
 
 ## Deploy on Vercel
@@ -54,7 +54,7 @@ node --check api/study-guide.mjs
 node --check service-worker.js
 ```
 
-The smoke tests check the frontend, API route and deployment configuration. The AI endpoint uses the public Kilo Auto Free route; no AI key is stored in source code or sent to the browser.
+The smoke tests check the frontend, API route and deployment configuration. The AI endpoint uses the server-side Kilo Gateway with a second official endpoint as a fallback. If an optional configured key is stale, free-tier requests retry anonymously. No AI key is stored in source code or sent to the browser. Browser RAM detection is approximate and capability-limited: the app adapts interface animations and image preparation but does not silently download/install a model on a visitor's device.
 
 ## Accuracy and limits
 
