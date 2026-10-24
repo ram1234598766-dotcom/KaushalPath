@@ -34,6 +34,7 @@ assert.match(html, /id="notesDownloadAll"/, "the notes catalogue should export f
 assert.match(html, /id="startTour"/, "the app should expose the animated guided tour");
 assert.match(html, /does not send your chapter selection to the AI endpoint/, "the visible CBSE notes hub should be independent of AI requests");
 assert.match(studyLibrary, /function printNotes\(items\)/, "curated notes should be exportable through the browser PDF print flow");
+assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
 assert.match(studyLibrary, /window\.KP_DEVICE_PROFILE/, "device capability detection should run before app initialization");
 assert.match(studyLibrary, /navigator\.deviceMemory/, "the UI should use available browser memory hints without assuming universal support");
 assert.match(studyLibrary, /prefers-reduced-motion/, "the animated guide should respect reduced-motion preferences");
