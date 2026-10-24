@@ -335,11 +335,7 @@
       ["Identify task, audience, format, tone and word limit before writing.","Use an opening that answers the task, organised body paragraphs and a concise closing.","For literature, distinguish plot summary from analysis of character, imagery, theme and author choices.","Reserve a final check for factual consistency, grammar, punctuation and format."],
       ["Analytical response: claim -> textual evidence -> explanation -> connection to prompt."],
       "When asked how imagery builds mood, quote or point to a specific image and explain its effect instead of retelling the whole scene.",
-      ["How does evidence strengthen an interpretation?","What information belongs in a formal letter's subject line?"])
-  ];
-
-
-    ,
+      ["How does evidence strengthen an interpretation?","What information belongs in a formal letter's subject line?"]),
     note("Class 10","Mathematics","Coordinate Geometry","Locate points on the Cartesian plane and calculate distances and section ratios.",
       ["An ordered pair (x,y) identifies a point relative to perpendicular coordinate axes.","The distance formula follows from Pythagoras; keep squared differences positive regardless of coordinate order.","The midpoint averages the two x-coordinates and the two y-coordinates.","For section formula problems, establish the internal ratio and the order of points before substituting."],
       ["Distance = sqrt((x2-x1)^2+(y2-y1)^2)","Midpoint = ((x1+x2)/2,(y1+y2)/2)"],
@@ -605,6 +601,7 @@
       ["Analytical paragraph: claim -> textual detail -> explanation of effect -> link to theme/task."],
       "A mood analysis should identify an image or word choice and explain how it shapes the reader's response.",
       ["What makes textual evidence relevant to a claim?","How does analysis differ from summary?"])
+  ];
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
