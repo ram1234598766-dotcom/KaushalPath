@@ -62,6 +62,7 @@ assert.throws(() => createPinnedLookup([{ address: "3fff::1", family: 6 }]), /va
 assert.doesNotThrow(() => createPinnedLookup([{ address: "2606:4700:4700::1111", family: 6 }]), "a globally routable IPv6 address should remain usable");
 
 
+assert.ok(typeof handler === "function", "the study API module should initialize without browser-only DOMMatrix globals");
 const wrongMethod = await call({ method: "GET", headers: {} });
 assert.equal(wrongMethod.statusCode, 405, "status details must not be returned without the status header");
 assert.equal(wrongMethod.headers.allow, undefined, "GET denial should not falsely advertise method support");
