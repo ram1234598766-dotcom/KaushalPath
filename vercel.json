@@ -42,6 +42,14 @@
       "use": "@vercel/static"
     },
     {
+      "src": "study-library.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "question-bank.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "manifest.webmanifest",
       "use": "@vercel/static"
     },
