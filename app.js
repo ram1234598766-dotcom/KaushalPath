@@ -48,7 +48,8 @@ const questions=[
 ,{id:"cbse12cs26",title:"CBSE Class XII Computer Science · Official SQP Sampler 2026–27",exam:"CBSE",level:"Official SQP",duration:3,mark:1,negativeMark:0,official:true,sourceUrl:"https://cbseacademic.nic.in/web_material/SQP/ClassXII_2026_27/ComputerScience-SQP.pdf",schemeUrl:"https://cbseacademic.nic.in/web_material/SQP/ClassXII_2026_27/ComputerScience-MS.pdf",desc:"One exact 1-mark MCQ from CBSE's 2026–27 official sample paper. Open the full 3-hour, 70-mark paper and marking scheme for complete practice.",qs:[
 {q:"Which of the following data types in Python is mutable?",o:["Tuple","String","Integer","List"],a:3,e:"A Python list is mutable; tuples, strings, and integers are immutable."}
 ]}
-];
+ ];
+if (Array.isArray(window.KP_EXTRA_QUESTIONS)) questions.push(...window.KP_EXTRA_QUESTIONS);
 let active=null,tick=null,lastAnswerText="",studyAttachment=null,chatAttachment=null,lastChatAttachment=null;
 function safe(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function resizeImageFile(file){
@@ -58,7 +59,7 @@ function resizeImageFile(file){
   const url=URL.createObjectURL(file),image=new Image();
   image.onload=function(){
    try{
-    const max=1280,scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
+    const max=(window.KP_DEVICE_PROFILE&&window.KP_DEVICE_PROFILE.imageMaxDimension)||1280,scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
     const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
     const ctx=canvas.getContext("2d");if(!ctx)throw new Error("This browser could not process the image.");
     ctx.fillStyle="#ffffff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
@@ -325,12 +326,21 @@ $("chatClass").addEventListener("change",function(){syncClass(this);});
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";updateHubTopics();});
 $("chatSubject").addEventListener("change",updateChatTopics);
 $("chapter").addEventListener("input",updateHubTopics);$("chapter").addEventListener("change",updateHubTopics);
+function describeApiFailure(response,data){
+ const requestId=String(data&&data.requestId||response.headers.get("x-request-id")||"").trim();
+ let message=String(data&&data.error||"");
+ if(!message&&response.status===429)message="The study assistant is busy. Wait a short while and retry.";
+ if(!message&&[502,503,504].includes(response.status))message="The study assistant could not reach an available response service. Your prompt is preserved; retry in a moment.";
+ if(!message)message="The study assistant request failed (HTTP "+response.status+").";
+ if(response.status===429&&!/wait|retry/i.test(message))message+=" Please wait a short while before retrying.";
+ return message+(requestId?" (Reference: "+requestId+")":"");
+}
 async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
  const remoteTools=needsRemoteTools(payload);
  if(remoteTools&&onStatus)onStatus(payload&&payload.imageData?"Preparing your image…": "Checking relevant public sources…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"text/event-stream, application/json"},body:JSON.stringify(Object.assign({},payload,{stream:true})),signal:signal});
  const contentType=response.headers.get("content-type")||"";
- if(!response.ok){const errorData=await response.json().catch(function(){return{};});throw new Error(errorData.error||"The AI guide is currently unavailable (HTTP "+response.status+").");}
+ if(!response.ok){const errorData=await response.json().catch(function(){return{};});throw new Error(describeApiFailure(response,errorData));}
  const contentText=function(value){
   if(typeof value==="string")return value;
   if(Array.isArray(value))return value.map(function(part){return typeof part==="string"?part:(part&&typeof part.text==="string"?part.text:(part&&typeof part.content==="string"?part.content:""));}).join("");
@@ -348,7 +358,7 @@ async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
   const clean=String(line||"").trim();if(!clean.startsWith("data:"))return;
   const raw=clean.slice(5).trim();if(!raw||raw==="[DONE]")return;
   let event;try{event=JSON.parse(raw);}catch(e){return;}
-  if(event.error){streamError=new Error(typeof event.error==="string"?event.error:(event.error.message||"The study assistant stopped responding. Please try again."));return;}
+  if(event.error){const message=typeof event.error==="string"?event.error:(event.error.message||"The study assistant stopped responding. Please try again.");const requestId=String(event.requestId||response.headers.get("x-request-id")||"").trim();streamError=new Error(message+(requestId?" (Reference: "+requestId+")":""));return;}
   if(onSources&&Array.isArray(event.sources))onSources(event.sources);
   const choice=event.choices&&event.choices[0];
   if(choice&&choice.finish_reason==="error"){streamError=new Error("The study assistant stopped before returning an answer. Please try again.");return;}
@@ -370,7 +380,7 @@ async function retryCloudWithoutStream(payload,onText,signal,onStatus,onSources)
  if(onStatus)onStatus("Trying an alternate response format…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(Object.assign({},payload,{stream:false})),signal:signal});
  const data=await response.json().catch(function(){return{};});if(onSources&&Array.isArray(data.sources))onSources(data.sources);
- if(!response.ok)throw new Error(data.error||"The AI service is temporarily unavailable (HTTP "+response.status+").");
+ if(!response.ok)throw new Error(describeApiFailure(response,data));
  let answer=typeof data.text==="string"?data.text:"";
  if(!answer.trim()){const choice=data.choices&&data.choices[0],content=choice&&choice.message&&choice.message.content;if(typeof content==="string")answer=content;else if(Array.isArray(content))answer=content.map(function(part){return part&&typeof part.text==="string"?part.text:"";}).join("");}
  if(!answer.trim())throw new Error("The study assistant did not return an answer. Please retry.");
@@ -726,6 +736,7 @@ function saveLibraryItem(kind,title,text){
  items.unshift(item);if(!writeLocalJSON(LIBRARY_KEY,items.slice(0,40))){toast("Browser storage is full or unavailable. Export your progress and try again.");return;}
  renderSavedLibrary();toast(truncated?"Saved the first 12,000 characters to your study library.":"Saved to your study library.");
 }
+window.KP_SAVE_NOTE_TO_LIBRARY=function(title,text){saveLibraryItem("study",String(title||"Curated chapter notes"),String(text||""));};
 function saveStudyAnswerToLibrary(){
  if(!lastAnswerText)return;
  const level=$("classLevel").value,subject=subjectName()||"Study",chapter=$("chapter").value.trim(),topic=$("topic").value.trim(),detail=chapter||topic||$("studyMode").value;
