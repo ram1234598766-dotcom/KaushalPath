@@ -498,7 +498,7 @@
     const step = tourSteps[tourIndex], box = $("kpTourCard");
     if (!box) return;
     box.classList.remove("tour-step-enter");
-    box.innerHTML = '<div class="tour-kicker"><span class="tour-spark">✦</span>' + esc(step.label) + '</div><h2>' + esc(step.title) + '</h2><p>' + esc(step.text) + '</p><div class="tour-progress" aria-label="Tour progress"><span style="width:' + ((tourIndex + 1) / tourSteps.length * 100) + '%"></span></div><div class="tour-actions"><button type="button" class="btn btn-light" id="tourSkip">Skip guide</button><div><button type="button" class="btn btn-light" id="tourBack"' + (tourIndex === 0 ? ' disabled' : '') + '>Back</button> <button type="button" class="btn btn-purple" id="tourNext">' + (tourIndex === tourSteps.length - 1 ? 'Finish guide' : 'Next step →') + '</button></div></div>';
+    box.innerHTML = '<div class="tour-kicker"><span class="tour-spark">✦</span>' + esc(step.label) + '</div><h2 id="tourDialogTitle">' + esc(step.title) + '</h2><p>' + esc(step.text) + '</p><div class="tour-progress" aria-label="Tour progress"><span style="width:' + ((tourIndex + 1) / tourSteps.length * 100) + '%"></span></div><div class="tour-actions"><button type="button" class="btn btn-light" id="tourSkip">Skip guide</button><div><button type="button" class="btn btn-light" id="tourBack"' + (tourIndex === 0 ? ' disabled' : '') + '>Back</button> <button type="button" class="btn btn-purple" id="tourNext">' + (tourIndex === tourSteps.length - 1 ? 'Finish guide' : 'Next step →') + '</button></div></div>';
     void box.offsetWidth; box.classList.add("tour-step-enter");
     $("tourSkip").addEventListener("click", finishTour);
     $("tourBack").addEventListener("click", () => { tourIndex = Math.max(0, tourIndex - 1); renderTourStep(); });
