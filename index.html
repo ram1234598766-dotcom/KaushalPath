@@ -501,6 +501,65 @@ main{min-height:70vh}
 .install-app-button{border:1px solid #d9ccef;background:#fff;color:#5b359b;cursor:pointer}
 .install-app-button:hover{background:#f4eeff;border-color:#bca6ec}
 
+
+/* Curated notes library, device-aware performance and animated guided tour */
+.notes-section-head{align-items:center}
+.notes-count{white-space:nowrap;padding:9px 12px;border-radius:999px;background:#eee5ff;color:#5c329d;font-size:.78rem;font-weight:850}
+.notes-promise{display:flex;gap:13px;padding:17px 19px;margin:0 0 16px;border:1px solid #d9efe6;background:#f3fbf7;border-radius:15px}
+.notes-promise-icon{display:grid;place-items:center;flex:0 0 33px;height:33px;border-radius:10px;background:#d5f3e5;color:#157957;font-weight:900}
+.notes-promise strong{font-size:.9rem;color:#235b49}
+.notes-promise p{margin:4px 0 0;font-size:.83rem;color:#537c6d}
+.notes-toolbar{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(150px,.9fr) minmax(190px,1.4fr) auto;align-items:end;gap:14px;margin:0 0 18px;padding:17px}
+.notes-toolbar .field{margin:0;min-width:0}
+.notes-toolbar .btn{min-height:45px;white-space:nowrap}
+.notes-search-field input{max-width:none}
+.notes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.notes-card{display:flex;flex-direction:column;align-items:stretch;background:#fff;border:1px solid var(--line);border-radius:17px;padding:19px;min-width:0;box-shadow:0 9px 25px #28134708;animation:note-card-enter .28s ease both}
+.notes-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.notes-meta{font-size:.72rem;color:#866da6;font-weight:850;letter-spacing:.02em}
+.notes-tag{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#f2ebff;color:#6f43b7;font-weight:800;font-size:.66rem}
+.notes-card h3{font-size:1.04rem;line-height:1.35;margin:11px 0 7px;letter-spacing:-.02em}
+.notes-summary{font-size:.86rem;color:#746586;line-height:1.65;margin:0;flex:1}
+.notes-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.notes-card-actions .btn{padding:9px 11px;font-size:.78rem}
+.notes-empty{grid-column:1/-1;padding:28px;background:#fff;border:1px dashed #d8cbe9;border-radius:17px;text-align:center;color:#77678d}
+.notes-empty p{max-width:620px;margin:8px auto 16px;line-height:1.65}
+.notes-empty .actions{justify-content:center;margin-top:10px}
+.notes-detail{margin:0 0 18px;scroll-margin-top:90px;animation:note-detail-enter .28s ease both}
+.notes-detail h2{margin:12px 0;font-size:1.6rem}
+.notes-detail h3{margin:22px 0 9px;font-size:1rem}
+.notes-detail li{padding:0 0 8px;line-height:1.7;color:#554565}
+.notes-detail p{line-height:1.75;color:#665777}
+.notes-detail-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.notes-official-resources{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:center;margin-top:22px;padding:23px;border-radius:18px;background:#fbf9ff;border:1px solid #e8def6}
+.notes-official-resources h3{margin:7px 0;font-size:1.2rem}
+.notes-official-resources p{margin:0;color:#78688d;font-size:.86rem;line-height:1.7}
+.notes-official-links{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.notes-official-links a{display:block;padding:11px 12px;background:#fff;border:1px solid #e9e0f4;border-radius:11px;font-size:.8rem;font-weight:800}
+.tour-launch{padding:8px 12px;font-size:.78rem;white-space:nowrap;color:#6337a7}
+.tour-overlay{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:20px}
+.tour-backdrop{position:absolute;inset:0;background:#150d23c9;backdrop-filter:blur(7px);animation:tour-backdrop-in .22s ease both}
+.tour-card{position:relative;width:min(100%,520px);padding:29px 29px 24px;background:#fff;border:1px solid #e8dcf7;border-radius:24px;box-shadow:0 30px 100px #0b051d6b;overflow:hidden}
+.tour-card:before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#7040ce,#bd8dff,#f0c7ff)}
+.tour-step-enter{animation:tour-card-in .32s cubic-bezier(.2,.8,.2,1) both}
+.tour-kicker{display:flex;align-items:center;gap:8px;margin:4px 0 15px;color:#7a4cca;font-size:.72rem;letter-spacing:.12em;font-weight:900;text-transform:uppercase}
+.tour-spark{display:grid;place-items:center;width:29px;height:29px;border-radius:9px;background:#f0e6ff;font-size:1rem}
+.tour-card h2{margin:0 0 11px;font-size:clamp(1.65rem,5vw,2.15rem);line-height:1.1;letter-spacing:-.05em;color:#2f194d}
+.tour-card p{margin:0;color:#756487;font-size:.94rem;line-height:1.8}
+.tour-progress{height:5px;background:#eee7f5;border-radius:999px;overflow:hidden;margin:24px 0 20px}
+.tour-progress span{display:block;height:100%;background:linear-gradient(90deg,#7545dd,#ba8af5);border-radius:999px;transition:width .28s ease}
+.tour-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tour-actions .btn{padding:10px 13px;font-size:.82rem}
+@keyframes note-card-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes note-detail-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tour-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes tour-card-in{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+html[data-kp-performance="lite"] .notes-card{animation:none}
+html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion *::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+@media(max-width:1000px){.notes-toolbar{grid-template-columns:1fr 1fr}.notes-search-field{grid-column:1/-1}.notes-toolbar .btn{grid-column:1/-1;width:100%}}
+@media(max-width:680px){.notes-grid{grid-template-columns:1fr}.notes-official-resources{grid-template-columns:1fr}.notes-official-links{grid-template-columns:1fr}.tour-card{padding:24px 20px}.tour-actions{align-items:flex-start}.tour-actions>div{display:flex;gap:6px}.tour-actions .btn{padding:9px 10px}.notes-promise{padding:14px}.notes-section-head{align-items:flex-start}.notes-count{margin-top:8px}}
+@media print{.notes-toolbar,.notes-promise,.notes-official-resources,.tour-overlay,.sidebar,.topbar,.site-footer{display:none!important}}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
@@ -534,7 +593,7 @@ main{min-height:70vh}
   </div>
 </aside>
 <div class="content-shell">
-<header class="topbar"><div class="wrap nav"><div class="breadcrumb"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumbPage">Overview</strong></div><a class="topbar-resource" href="#resources" data-view="resources"><span>↗</span> Official source links</a></div></header>
+<header class="topbar"><div class="wrap nav"><div class="breadcrumb"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumbPage">Overview</strong></div><a class="topbar-resource" href="#resources" data-view="resources"><span>↗</span> Official source links</a><button class="btn btn-light tour-launch" id="startTour" type="button" aria-haspopup="dialog">Guided tour ✦</button></div></header>
 <main>
 <section class="dashboard-intro wrap" id="overview">
   <div class="workspace-eyebrow"><span class="spark">✦</span> YOUR WORKSPACE</div>
@@ -555,11 +614,37 @@ main{min-height:70vh}
     <a class="path-card ai-card" href="#ai-guide" data-view="ai-guide"><div class="path-card-top"><span class="path-icon">✦</span><span class="path-label">PERSONALISED SUPPORT</span></div><h3>AI Study Guide</h3><p>Ask about a hard concept, make revision notes, or bring a public source page to read.</p><strong>Ask the study guide <span>→</span></strong></a>
   </div>
 </section>
-<section class="section wrap" id="learn"><div class="section-head"><div><div class="kicker">01 / Study hub</div><h2>Make a difficult topic clearer.</h2><p>Choose a class, write the subject and chapter, then ask for notes or an explanation. You can enter languages, electives and vocational subjects too.</p></div></div>
+<section class="section wrap" id="learn">
+  <div class="section-head notes-section-head">
+    <div><div class="kicker">01 / CBSE chapter notes</div><h2>Real notes. No AI required.</h2>
+    <p>Browse structured revision notes, key formulas, worked examples and self-check questions. Open a chapter and use <strong>Save as PDF</strong>; choose “Save as PDF” in the browser print dialog.</p></div>
+    <span class="notes-count" id="notesCount">66 note packs</span>
+  </div>
+  <div class="notes-promise"><span class="notes-promise-icon" aria-hidden="true">✓</span><div><strong>Prepared notes, not generated answers</strong><p>The CBSE Study Hub uses a built-in notes catalogue. It does not send your chapter selection to the AI endpoint. For the complete and current prescribed chapter list, use the official curriculum and textbook catalogue below.</p></div></div>
+  <div class="notes-toolbar panel">
+    <div class="field"><label for="notesClass">Class</label><select id="notesClass"><option value="all">All classes</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
+    <div class="field"><label for="notesSubject">Subject</label><select id="notesSubject">
+      <option value="all">All subjects</option><option>Mathematics</option><option>Science</option><option>Social Science</option><option>English</option><option>Computer Applications</option><option>Physics</option><option>Chemistry</option><option>Biology</option><option>Computer Science</option><option>Accountancy</option><option>Business Studies</option><option>Economics</option>
+    </select></div>
+    <div class="field notes-search-field"><label for="notesSearch">Find a chapter</label><input id="notesSearch" type="search" placeholder="Search chapter, formula or concept" autocomplete="off"></div>
+    <button class="btn btn-purple" id="notesDownloadAll" type="button">Export filtered notes as PDF</button>
+  </div>
+  <div id="notesDetail" class="panel notes-detail hidden" tabindex="-1"></div>
+  <div id="notesResults" class="notes-grid" aria-live="polite"></div>
+  <div class="notes-official-resources">
+    <div><div class="kicker">Official study source</div><h3>Use the complete current syllabus</h3><p>The curated catalogue contains reusable chapter-note packs. Some language, elective and vocational chapters need their own dedicated notes; the official portals below provide the full subject material and current chapter scope.</p></div>
+    <div class="notes-official-links"><a href="https://cbseacademic.nic.in/curriculum_2027.html" target="_blank" rel="noopener noreferrer">CBSE curriculum 2026–27 ↗</a><a href="https://ncert.nic.in/textbook.php" target="_blank" rel="noopener noreferrer">NCERT textbooks ↗</a><a href="https://cbseacademic.nic.in/sqp_classx_2026-27.html" target="_blank" rel="noopener noreferrer">Class X sample papers ↗</a><a href="https://cbseacademic.nic.in/SQP_CLASSXII_2026-27.html" target="_blank" rel="noopener noreferrer">Class XII sample papers ↗</a></div>
+  </div>
+</section>
+<div class="hidden" id="legacyStudyControls" aria-hidden="true" inert>
+<section class="section wrap" id="legacy-learn-controls"><div class="section-head"><div><div class="kicker">01 / Study hub</div><h2>Make a difficult topic clearer.</h2><p>Choose a class, write the subject and chapter, then ask for notes or an explanation. You can enter languages, electives and vocational subjects too.</p></div></div>
 <div class="learn-grid"><form class="panel" id="studyForm"><div class="formrow"><div class="field"><label for="classLevel">Class</label><select id="classLevel"><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div><div class="field"><label for="studyMode">What do you need?</label><select id="studyMode"><option value="notes">Full chapter notes</option><option value="explain">Explain a specific topic</option><option value="revision">Quick revision sheet</option><option value="questions">Practice questions with answers</option><option value="solve">Solve a question step by step</option></select></div></div><div class="formrow"><div class="field"><label for="subject">Subject</label><select id="subject"><option>Mathematics</option><option>Science</option><option>English</option><option>Social Science</option><option>Physics</option><option>Chemistry</option><option>Biology</option><option>Computer Science</option><option>Informatics Practices</option><option>Accountancy</option><option>Business Studies</option><option>Economics</option><option>Political Science</option><option>History</option><option>Geography</option><option>Psychology</option><option>Sociology</option><option>Physical Education</option><option>Hindi</option><option>Applied Mathematics</option><option value="other">Other subject / language…</option></select></div><div class="field subject-extra" id="otherSubjectWrap" hidden><label for="otherSubject">Enter subject</label><input id="otherSubject" maxlength="80" placeholder="e.g. Tamil, Sanskrit, Legal Studies"></div></div><div class="field"><label for="chapter">Chapter name</label><input id="chapter" maxlength="160" placeholder="e.g. Chemical Reactions and Equations"></div><div class="topic-suggestions-wrap"><div class="hint" id="topicSuggestionsHint">Type a chapter to get chapter-specific topics. Select one to fill the question box.</div><div id="topicSuggestions" class="topic-suggestions" aria-live="polite"></div></div><div class="field"><label for="topic">Topic or question</label><textarea id="topic" maxlength="4000" required placeholder="What would you like to learn? Add a question, confusing step, or the exact topic from your textbook."></textarea><span class="hint">For an exact textbook-aligned explanation, mention the chapter and edition or paste a short excerpt you are allowed to share.</span></div>
 <div class="field"><label for="sourceUrls">Reference URLs (optional)</label><textarea id="sourceUrls" maxlength="5000" placeholder="Paste public article, textbook page or official syllabus URLs — one per line (up to 5)."></textarea><span class="hint">Public reference pages are used when accessible. For current facts, use the web-search option in AI Study Guide.</span></div><div class="field"><label for="studyImage">Attach a file (optional)</label><input id="studyImage" type="file" accept="image/*,.pdf,.txt,.md,.csv,.tsv,.json,.xml,.html,.htm,.rtf,.doc,.docx,.pptx,.xlsx,.xls,.ods,.odt"><span class="hint" id="studyImageHint">Images, PDFs, Word, PowerPoint, Excel, OpenDocument, CSV and text files. Files up to 2.5 MB; images are compressed.</span></div>
 <div class="resource-note" style="margin-bottom:15px">Use reference links and web search for source-backed help. You can also attach a question image or diagram for analysis.</div><button class="btn btn-blue" id="askBtn" type="submit">Generate study help ↗</button><p class="tiny">AI responses can be wrong. Compare important facts with your prescribed textbook and official syllabus.</p><div class="resource-note">You can add a question image or public reference link. For current facts, use the web-search option in AI Study Guide. Check important answers against your prescribed textbook.</div></form>
 <div class="panel"><div class="section-head" style="margin-bottom:14px"><div><div class="kicker">Your study notes</div><h2 style="font-size:1.4rem;margin-bottom:0">Study output</h2></div><div class="study-output-tools"><button class="btn btn-light" type="button" id="copyAnswer" disabled>Copy text</button><button class="btn btn-light" type="button" id="saveStudyLibrary" disabled>Save answer</button><button class="btn btn-light" type="button" id="saveStudyPdf" disabled>Print / Save PDF</button></div></div><div id="studyOutput" class="output"><div class="output-placeholder"><div><div class="icon">✦</div><strong>Your learning starts here.</strong><p>Pick a chapter and ask a question. Notes will appear here, with source links when available.</p></div></div></div><div class="source-list" id="sourceList"></div></div></div></section>
+
+</div>
+
 <section class="section wrap view-hidden" id="ai-guide">
   <div class="section-head"><div><div class="kicker">AI LEARNING STUDIO</div><h2>AI Study Guide</h2><p>A focused space for clear explanations, worked examples, revision notes and practice. Ask follow-up questions without losing the thread.</p></div></div>
   <div class="chat-context panel" role="group" aria-label="Study preferences">
