@@ -237,7 +237,7 @@ assert.match(studyLibrary, /navigator\.deviceMemory/, "the UI should use availab
 assert.match(studyLibrary, /prefers-reduced-motion/, "the animated guide should respect reduced-motion preferences");
 assert.match(studyLibrary, /overlay\.id\s*=\s*"kpTourOverlay"/, "the guided tour should create an accessible modal overlay");
 assert.match(app, /questions\.push\(\.\.\.window\.KP_EXTRA_QUESTIONS\)/, "the main test runner should include the additional MCQ bank");
-assert.equal((questionBank.match(/\n    q\(/g) || []).length, 120, "the added question bank must contain 120 individually authored practice MCQs");
+assert.ok((questionBank.match(/\n    q\(/g) || []).length >= 300, "the expanded question bank must retain the starter bank and contain enough authored questions for full-length JEE/NEET mocks");
 assert.match(questionBank, /JEE Main · Mathematics Practice 01/, "the bank should include a JEE mathematics set");
 assert.match(questionBank, /NEET UG · Biology Practice 01/, "the bank should include a NEET biology set");
 assert.match(api, /async function requestGateway\(/, "the AI request should use a resilient gateway helper");
