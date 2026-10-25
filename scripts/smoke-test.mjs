@@ -52,8 +52,8 @@ assert.equal((formulaSheets.match(/const .* = sheet\(/g) || []).length, 14, "for
 assert.equal((schoolGuides.match(/const g[0-9]+[A-Za-z0-9]* = guide\(/g) || []).length, 17, "core CBSE chapters should have expanded master guides");
 const humanitiesGuides = readFileSync(new URL("../school-humanities-commerce-guides.js", import.meta.url), "utf8");
 assert.equal((humanitiesGuides.match(/=guide\("/g) || []).length, 14, "CBSE humanities, language, commerce and CS should have expanded guides");
-assert.match(formulaSheets, /Common trap:/, "formula cards should name common mistakes");
-assert.match(formulaSheets, /Units\/notation:/, "formula cards should explain units and notation");
+assert.match(studyLibrary, /Common trap:/, "formula cards should render common mistakes");
+assert.match(studyLibrary, /Units \/ notation:/, "formula cards should explain units and notation");
 assert.match(studyLibrary, /Explained formula cheat sheet/, "the chapter reader should show formula cards with explanations");
 assert.match(studyLibrary, /FORMULA CHEAT SHEET/, "PDF and saved-text notes should preserve explained formula cards");
 
