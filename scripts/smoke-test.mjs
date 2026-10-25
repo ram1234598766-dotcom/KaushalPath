@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
@@ -385,6 +386,15 @@ assert.match(app, /payload\.version!==1/, "progress imports should validate back
 assert.match(app, /payload\.results\.some\(function\(r\)\{return !validResult\(r\);\}\)/, "progress imports should reject malformed result records");
 assert.match(app, /function readLocalJSON\(key,fallback\)/, "local storage parsing should fail safely when browser data is unavailable");
 assert.match(html, /id="clearProgress"/, "students should be able to clear saved progress intentionally");
+assert.ok(html.includes('src="/cbse-english-chapter-notes.js"'), "HTML must load English chapter notes");
+assert.ok(html.includes('src="/cbse-commerce-computing-hindi-chapters.js"'), "HTML must load Hindi/commerce/computing chapter notes");
+assert.ok(serviceWorker.includes('"/cbse-english-chapter-notes.js"'), "PWA shell must cache English chapter notes");
+assert.ok(serviceWorker.includes('"/cbse-commerce-computing-hindi-chapters.js"'), "PWA shell must cache Hindi/commerce/computing chapter notes");
+assert.ok(vercel.builds.some(b => b.src === "cbse-english-chapter-notes.js" && b.use === "@vercel/static"), "Vercel must publish English chapter notes");
+assert.ok(vercel.builds.some(b => b.src === "cbse-commerce-computing-hindi-chapters.js" && b.use === "@vercel/static"), "Vercel must publish other CBSE chapter notes");
+assert.match(await readFile(new URL("../scripts/cloudflare-build.mjs", import.meta.url), "utf8"), /cbse-english-chapter-notes[.]js/);
+assert.match(await readFile(new URL("../scripts/cloudflare-build.mjs", import.meta.url), "utf8"), /cbse-commerce-computing-hindi-chapters[.]js/);
+assert.ok(html.includes("<option>Hindi</option>") && html.includes("<option>Informatics Practices</option>"), "Study Hub must expose expanded subject filters");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 
