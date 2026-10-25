@@ -86,6 +86,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "smart-system-client.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "app.js",
       "use": "@vercel/static"
     },

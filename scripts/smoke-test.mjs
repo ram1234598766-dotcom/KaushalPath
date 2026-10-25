@@ -500,3 +500,9 @@ assert.match(cloudflareWorker, /const STATIC_FILES = new Set\(\[/, "Cloudflare s
 assert.match(cloudflareWorker, /if \(url\.pathname === "\/api\/study-guide"\)/, "Cloudflare must preserve the existing study-guide API route");
 assert.match(cloudflareWorker, /pathname === "\/service-worker\.js"/, "the service worker file must bypass the edge cache to refresh promptly");
 assert.ok(!/^\[assets\]/m.test(wranglerConfig), "Wrangler should not invoke the failing Cloudflare static-assets upload flow");
+
+const smartClient = readFileSync(new URL("../smart-system-client.js", import.meta.url), "utf8");
+assert.match(smartClient, /kp-results/, "Smart System must read the existing local test history");
+assert.match(smartClient, /kp-planner-tasks/, "Smart System must keep planner writes local");
+assert.ok(smartClient.includes("/api/v2/analytics/benchmarks"), "Smart System UI must request aggregate community benchmarks");
+assert.ok(vercel.builds.some(b => b.src === "smart-system-client.js" && b.use === "@vercel/static"), "Vercel must publish Smart System UI client");

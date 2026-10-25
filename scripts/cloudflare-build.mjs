@@ -7,6 +7,7 @@ const output = resolve(root, "dist");
 const staticFiles = [
   "index.html",
   "app.js",
+  "smart-system-client.js",
   "app-icon.svg",
   "offline.html",
   "manifest.webmanifest",

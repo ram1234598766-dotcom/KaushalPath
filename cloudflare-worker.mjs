@@ -2,7 +2,7 @@ import { onRequest } from "./functions/api/study-guide.js";
 
 const STATIC_ORIGIN = "https://raw.githubusercontent.com/ram1234598766-dotcom/KaushalPath/main";
 const STATIC_FILES = new Set([
-  "index.html", "app.js", "app-icon.svg", "offline.html", "manifest.webmanifest",
+  "index.html", "app.js", "smart-system-client.js", "app-icon.svg", "offline.html", "manifest.webmanifest",
   "service-worker.js", "school-chapter-guides.js", "school-humanities-commerce-guides.js",
   "formula-cheat-sheets.js", "exam-prep-notes.js", "cbse-english-chapter-notes.js",
   "cbse-commerce-computing-hindi-chapters.js", "jee-neet-chapter-notes.js",
