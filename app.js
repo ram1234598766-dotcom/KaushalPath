@@ -1321,7 +1321,7 @@ function initCommandPalette(){
   }
   status.textContent=entries.length+" result"+(entries.length===1?"":"s")+" · Use ↑ ↓ to move, Enter to open, Esc to close.";
  }
- function open(){lastTrigger=document.activeElement;if(!dialog.open){if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");}input.value="";render();window.setTimeout(function(){input.focus();},0);}
+ function open(){if(document.body.classList.contains("mock-test-window"))return;lastTrigger=document.activeElement;if(!dialog.open){if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");}input.value="";render();window.setTimeout(function(){input.focus();},0);}
  trigger.addEventListener("click",open);
  if(close)close.addEventListener("click",function(){if(typeof dialog.close==="function")dialog.close();else dialog.removeAttribute("open");});
  dialog.addEventListener("close",function(){if(lastTrigger&&typeof lastTrigger.focus==="function")lastTrigger.focus();});
@@ -1334,6 +1334,7 @@ function initCommandPalette(){
  });
  input.addEventListener("keydown",function(event){const buttons=Array.from(results.querySelectorAll(".command-result"));if(event.key==="ArrowDown"&&buttons.length){event.preventDefault();buttons[0].focus();}else if(event.key==="Enter"&&buttons.length){event.preventDefault();buttons[0].click();}});
  document.addEventListener("keydown",function(event){
+  if(document.body.classList.contains("mock-test-window"))return;
   const target=event.target,typing=target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
   if((event.ctrlKey||event.metaKey)&&String(event.key).toLowerCase()==="k"){event.preventDefault();if(!dialog.open)open();else input.focus();}
   else if(event.key==="/"&&!typing&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!dialog.open){event.preventDefault();open();}
