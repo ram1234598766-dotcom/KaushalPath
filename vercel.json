@@ -54,6 +54,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "jee-neet-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "local-ai.js",
       "use": "@vercel/static"
     },
