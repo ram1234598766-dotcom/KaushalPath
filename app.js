@@ -462,11 +462,11 @@ function buildCbseAnnualPaper(className, subject){
  const total=qs.reduce(function(sum,q){return sum+Number(q.mark||1);},0);
  if(total!==cfg.marks)throw new Error("The annual-paper blueprint does not sum to the required maximum marks.");
  const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
- const id="cbse-annual-"+className.toLowerCase().replace(/\s+/g,"-")+"-"+slug;
+ const id="cbse-sample-"+className.toLowerCase().replace(/\s+/g,"-")+"-"+slug;
  return {
-  id:id,title:"CBSE-Style Annual Exam · "+className+" · "+subject,exam:"CBSE Annual",subject:subject,level:className,
-  duration:cfg.duration,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
-  desc:fallback?"Original subject-format competency scaffold because class-specific curated chapters were not available. Check coverage against the current official curriculum. This is not an official CBSE paper.":"Original syllabus-mapped competency model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
+  id:id,title:"CBSE Sample Test · "+className+" · "+subject,exam:"CBSE",subject:subject,level:className,
+  duration:cfg.duration,timed:false,sampleTest:true,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
+  desc:fallback?"Self-paced original subject-format sample test. Class-specific curated chapters were not available, so check coverage against the current official curriculum. This is not an official CBSE paper.":"Self-paced original syllabus-mapped sample test with objective, constructed-response and case/source-based questions. No timer is enforced. Not an official CBSE paper.",
   sourceScope:source.scope,subjectFormatFallback:fallback,qs:qs
  };
 }
@@ -477,11 +477,11 @@ function updateCbseAnnualPattern(){
  const totalQuestions=config.mcq+config.veryShort+config.short+config.long+config.case;
  const marks=$("cbseAnnualMarks"),duration=$("cbseAnnualDuration"),count=$("cbseAnnualQuestionCount"),competency=$("cbseAnnualCompetency");
  if(marks)marks.textContent=config.marks+" marks";
- if(duration)duration.textContent=(config.duration/60)+" hour"+(config.duration===60?"":"s");
+ if(duration)duration.textContent="Self-paced";
  if(count)count.textContent=totalQuestions+" questions";
  if(competency)competency.textContent=config.profile==="class-x-science"?"Science · 39-question model":config.profile==="class-x-mathematics"?"Maths · 38-question model":config.profile==="class-xii-computer-science"?"CS · 37-question model":config.profile==="senior-science"?"Science · 33-question model":config.profile==="language-paper"?"Reading + language application":"Case + application";
  const status=$("cbseAnnualStatus");
- if(status){const source=cbseAnnualSources(classNode.value,subjectNode.value);status.textContent=source.fallback?"This subject will use an original subject-format competency scaffold. Verify chapter coverage against the current CBSE curriculum and your school syllabus.":"Class-specific curated chapter content is available for this selection. The paper will be an original practice model, not an official CBSE paper.";}
+ if(status){const source=cbseAnnualSources(classNode.value,subjectNode.value);status.textContent=source.fallback?"This self-paced sample test uses an original subject-format competency scaffold. Verify chapter coverage against the current CBSE curriculum and your school syllabus.":"Class-specific curated chapter content is available for this self-paced sample test. It is original practice, not an official CBSE paper.";}
 }
 function initCbseAnnualBuilder(){
  const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject"),start=$("cbseAnnualStart"),downloadPaper=$("cbseAnnualDownloadPaper"),downloadKey=$("cbseAnnualDownloadKey"),status=$("cbseAnnualStatus");
@@ -536,7 +536,7 @@ function initCbseAnnualBuilder(){
 
 
 function downloadCbseAnnualPaperPdf(paper,withKey){
- if(!paper||!Array.isArray(paper.qs)||!paper.qs.length)throw new Error("The selected annual paper has no questions.");
+ if(!paper||!Array.isArray(paper.qs)||!paper.qs.length)throw new Error("The selected sample test has no questions.");
  if(typeof window.KP_LOAD_PDF_ENGINE!=="function")throw new Error("The direct PDF engine is unavailable.");
  return window.KP_LOAD_PDF_ENGINE().then(function(engine){
   const pdf=new engine.jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true,putOnlyUsedFonts:true});
@@ -588,7 +588,7 @@ function downloadCbseAnnualPaperPdf(paper,withKey){
   pageStart(false);
   pdf.setFont("helvetica","bold");pdf.setFontSize(16);color(pdf.setTextColor,palette.ink);
   const titleLines=pdf.splitTextToSize(title,size().w-margin*2);pdf.text(titleLines,margin,y);y+=titleLines.length*7+3;
-  addText("Maximum marks: "+paper.maxMarks+"    Time allowed: "+(paper.duration/60)+" hour"+(paper.duration===60?"":"s"),{fontSize:9,style:"bold",color:palette.blue,after:3});
+  addText("Maximum marks: "+paper.maxMarks+" · Self-paced sample test · No timer · Suggested practice time: "+(paper.duration/60)+" hour"+(paper.duration===60?"":"s"),{fontSize:9,style:"bold",color:palette.blue,after:3});
   addText(isKey
    ?"Marking scheme and suggested answers. Accept equivalent correct reasoning and syllabus-appropriate wording; this is an original practice model, not an official CBSE key."
    :"Instructions: Attempt every question. Read any source or case before answering. Show calculations/reasoning where relevant. This is an original KaushalPath practice model, not an official CBSE paper.",{fontSize:8.5,color:palette.muted,after:5});
@@ -622,7 +622,7 @@ function downloadCbseAnnualPaperPdf(paper,withKey){
   if(!(blob instanceof Blob)||blob.size<1000)throw new Error("The generated PDF is unexpectedly small.");
   const url=URL.createObjectURL(blob),anchor=document.createElement("a");
   const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
-  anchor.href=url;anchor.download="CBSE-"+className.replace(/\s+/g,"-")+"-"+slug+"-Annual-"+(isKey?"Marking-Scheme":"Question-Paper")+".pdf";
+  anchor.href=url;anchor.download="CBSE-"+className.replace(/\s+/g,"-")+"-"+slug+"-Sample-Test-"+(isKey?"Marking-Scheme":"Question-Paper")+".pdf";
   anchor.style.display="none";document.body.appendChild(anchor);anchor.click();anchor.remove();
   window.setTimeout(function(){URL.revokeObjectURL(url);},30000);
   return {filename:anchor.download,pages:total,size:blob.size};
@@ -637,7 +637,7 @@ function renderTests(){
   card.style.setProperty("--kp-card-index",String(Math.min(index,12)));
   card.dataset.exam=t.exam;
   const cls=t.exam==="NEET UG"?"teal":(t.exam==="CBSE"||t.exam==="CBSE Annual")?"orange":"";
-  const kind=t.annualExam?"CBSE-style annual model paper · competency + written responses":t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
+  const kind=t.sampleTest?"CBSE sample test · self-paced · competency + written responses":t.annualExam?"CBSE model paper · competency + written responses":t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
   const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);
   const marking=t.annualExam?"Objective marks automatic; written responses self-marked":t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
   let sourceLinks="";
