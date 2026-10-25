@@ -110,6 +110,11 @@ assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("sele
 assert.ok(app.includes("Keep labelled previous-year questions in every mock") && app.includes("Previous-year question"), "full mocks must prioritize source-labelled PYQs and display a source label in each question");
 assert.ok(html.includes("scrollbar-width:none!important") && html.includes("*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}"), "scrollbars must be visually hidden without disabling scrolling");
 assert.ok(html.includes("Each NEET full mock contains 180 questions") && html.includes("official JEE Main 2026 Paper 1 format has 75 questions"), "the test catalogue must clearly distinguish NEET's official pattern from the requested extended JEE mock");
+assert.match(app, /function openMockTestWindow\(id\)/, "full-length mocks must launch in a separate popup window");
+assert.match(app, /searchParams\.set\("kpMockTest",test\.id\)/, "the popup URL must identify its requested full-length mock");
+assert.match(app, /Automatically submitted because you switched tabs or left the mock-test window/, "leaving a mock test must show an automatic-submission reason in the result");
+assert.match(app, /document\.visibilityState==="hidden"&&active\)/, "the app must observe hidden-tab transitions during test attempts");
+assert.match(html, /body\.mock-test-window #examWorkspace/, "mock-test popups must use the focused test-only layout");
 
 const bankRuntime = { window: {} };
 runInNewContext(questionBank, bankRuntime);
