@@ -526,7 +526,7 @@ function initCbseAnnualBuilder(){
   const existing=questions.findIndex(function(test){return test.id===paper.id;});
   if(existing>=0)questions[existing]=paper;else questions.push(paper);
   renderTests();
-  if(status)status.textContent=(paper.subjectFormatFallback?"This subject uses an original subject-format competency scaffold because no class-specific curated chapter set was available. Check chapter coverage against the official syllabus. ":"Paper content is drawn from available class-specific curated chapter notes. ")+ "Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
+  if(status)status.textContent=(paper.subjectFormatFallback?"This sample test uses an original subject-format competency scaffold because no class-specific curated chapter set was available. Check chapter coverage against the official syllabus. ":"Sample test content is drawn from available class-specific curated chapter notes. ")+ "Started "+paper.title+". This test is self-paced with no timer. Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
   startTest(paper.id);
  });
  downloadPaper.addEventListener("click",function(){exportPaper(false);});
