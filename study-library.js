@@ -603,12 +603,73 @@
       ["What makes textual evidence relevant to a claim?","How does analysis differ from summary?"])
   ];
   const schoolGuides = Array.isArray(window.KP_SCHOOL_CHAPTER_GUIDES) ? window.KP_SCHOOL_CHAPTER_GUIDES : [];
+  const ncertChapterNotes = Array.isArray(window.KP_NCERT_CHAPTER_NOTES) ? window.KP_NCERT_CHAPTER_NOTES : [];
   const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
   const humanitiesGuides = Array.isArray(window.KP_HUMANITIES_GUIDES) ? window.KP_HUMANITIES_GUIDES : [];
-  if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
-  notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
-  notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
-  notes.push(...humanitiesGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
+  const deepExamNotes = Array.isArray(window.KP_DEEP_NOTES) ? window.KP_DEEP_NOTES : [];
+
+  // The original 119 compact cards remain as the catalogue spine. When an authored chapter guide
+  // matches one of them, merge the full guide INTO that card instead of silently dropping it.
+  // Punctuation and common textbook title variants are normalised for reliable chapter matching.
+  function normaliseChapterTitle(value) {
+    return String(value || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+  }
+  const chapterAliases = {
+    "class 10|science|magnetic effects of current": "magnetic effects of electric current",
+    "class 11|chemistry|atomic structure": "structure of atom",
+    "class 11|chemistry|chemical bonding": "chemical bonding and molecular structure",
+    "class 11|chemistry|thermodynamics": "chemical thermodynamics",
+    "class 12|physics|electrostatics": "electric charges and fields",
+    "class 12|physics|electromagnetic induction and ac": "electromagnetic induction",
+    "class 12|physics|ray and wave optics": "ray optics and optical instruments",
+    "class 12|chemistry|solutions and electrochemistry": "solutions"
+  };
+  function chapterKey(item) {
+    if (!item || typeof item !== "object") return "";
+    const base = String(item.level || "").toLowerCase().trim() + "|" +
+      String(item.subject || "").toLowerCase().trim() + "|" + normaliseChapterTitle(item.chapter);
+    const aliasTitle = chapterAliases[base];
+    return String(item.level || "").toLowerCase().trim() + "|" +
+      String(item.subject || "").toLowerCase().trim() + "|" +
+      normaliseChapterTitle(aliasTitle || item.chapter);
+  }
+  function hasRichContent(item) {
+    return Boolean(item && (
+      (Array.isArray(item.sections) && item.sections.length) ||
+      (Array.isArray(item.formulaCheatSheet) && item.formulaCheatSheet.length) ||
+      (Array.isArray(item.workedExamples) && item.workedExamples.length) ||
+      (Array.isArray(item.commonMistakes) && item.commonMistakes.length)
+    ));
+  }
+  function integrateChapterGuides(source) {
+    source.forEach((item) => {
+      if (!item || typeof item !== "object" || typeof item.chapter !== "string") return;
+      const key = chapterKey(item);
+      const existing = notes.find((candidate) => chapterKey(candidate) === key);
+      if (!existing) {
+        notes.push(item);
+        return;
+      }
+      // Let the richer authored guide replace the short summary fields, while retaining any
+      // useful material from an earlier pack if the richer pack omits that field.
+      const merged = Object.assign({}, existing, item);
+      ["sections", "formulaCheatSheet", "workedExamples", "commonMistakes", "examFocus", "glossary"].forEach((field) => {
+        if ((!Array.isArray(item[field]) || item[field].length === 0) &&
+            Array.isArray(existing[field]) && existing[field].length) merged[field] = existing[field];
+      });
+      if (!Array.isArray(item.formulas) || item.formulas.length === 0) merged.formulas = existing.formulas || [];
+      if (!Array.isArray(item.points) || item.points.length === 0) merged.points = existing.points || [];
+      if (!Array.isArray(item.recall) || item.recall.length === 0) merged.recall = existing.recall || [];
+      merged.depth = hasRichContent(merged) ? "detailed" : (existing.depth || item.depth);
+      const index = notes.indexOf(existing);
+      notes[index] = merged;
+    });
+  }
+  integrateChapterGuides(ncertChapterNotes);
+  integrateChapterGuides(schoolGuides);
+  integrateChapterGuides(humanitiesGuides);
+  integrateChapterGuides(formulaSheets);
+  integrateChapterGuides(deepExamNotes);
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
