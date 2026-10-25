@@ -1,25 +1,10 @@
-name: KaushalPath Vercel quality checks
+name: KaushalPath deployment quality checks
 
 on:
   push:
     branches: [main]
-    paths:
-      - "index.html"
-      - "app.js"
-      - "api/**"
-      - "vercel.json"
-      - "package.json"
-      - "scripts/**"
-      - ".github/workflows/kaushalpath-ai-smoke.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "index.html"
-      - "api/**"
-      - "vercel.json"
-      - "package.json"
-      - "scripts/**"
-      - ".github/workflows/kaushalpath-ai-smoke.yml"
   workflow_dispatch:
 
 permissions:
@@ -40,6 +25,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: Build and validate Cloudflare Pages assets and Function routing
+        run: |
+          node --check scripts/cloudflare-build.mjs
+          npm run build:cloudflare
+          node --check functions/api/study-guide.js
 
       - name: Run application checks
         run: |
