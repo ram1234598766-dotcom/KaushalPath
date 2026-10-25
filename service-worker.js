@@ -1,13 +1,13 @@
-const CACHE_NAME = "kaushalpath-shell-v3";
+const CACHE_NAME = "kaushalpath-shell-v4";
 const SHELL_FILES = [
   "/",
   "/index.html",
   "/app.js",
-  "/exam-prep-notes.js",
+  "/school-chapter-guides.js",
+  "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
   "/study-library.js",
   "/question-bank.js",
-  "/local-ai.js",
   "/local-ai.js",
   "/manifest.webmanifest",
   "/app-icon.svg",
