@@ -85,7 +85,7 @@ assert.match(studyLibrary, /const pageTitle = chapter\s*\?\s*\(chapter\.chapter 
 assert.ok(studyLibrary.includes("<title>' + esc(pageTitle) + '</title><style>'"), "the chapter PDF HTML should use its defined title");
 assert.doesNotMatch(studyLibrary, /esc\(title\)/, "the chapter PDF generator must not reference an undefined title variable");
 assert.match(studyLibrary, /id="chapterPdfContent"/, "only the chapter content should be included in the exported PDF");
-assert.ok(studyLibrary.includes("Print / Save PDF"), "the chapter notes preview should expose the print/save action");
+assert.ok(studyLibrary.includes('downloadButton.textContent = "Download PDF"'), "the chapter notes preview should expose an explicit Download PDF action");
 assert.ok(studyLibrary.includes("The print dialog didn’t open."), "the preview should explain how to recover if native printing fails");
 assert.match(studyLibrary, /Preparing your PDF/, "PDF generation should show progress instead of appearing unresponsive");
 assert.ok(studyLibrary.includes("function mapPalette(index)") && studyLibrary.includes("stroke-width=\"7\"") && studyLibrary.includes("stroke-width=\"2.1\""), "mind maps should use distinct colorful curved main and sub-branches");
