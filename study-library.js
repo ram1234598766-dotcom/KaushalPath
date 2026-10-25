@@ -1443,7 +1443,7 @@
       ? formulas.map((card) => explain(card.formula || "Key rule", (card.meaning || "") + (card.when ? " " + card.when : ""), 11))
       : (item.formulas || []).map((formula) => String(formula));
     const workedItems = worked.map((example) =>
-      explain(example.title || "Worked example", (example.steps || []).slice(0, 2).join(" "), 10))
+      explain(example.title || "Worked example", (example.steps || []).slice(-1)[0] || (example.steps || [])[0] || "", 10))
       .concat(item.example ? ["Main example — " + shortExplanation(item.example, 12)] : []);
     const methodItems = methods.map((method) =>
       explain(method.title || "Problem-solving method", method.when || (method.steps || []).slice(0, 2).join(" "), 10))
