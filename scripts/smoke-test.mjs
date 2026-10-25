@@ -9,6 +9,10 @@ const studyLibrary = readFileSync(new URL("../study-library.js", import.meta.url
 const examPrepNotes = readFileSync(new URL("../exam-prep-notes.js", import.meta.url), "utf8");
 const formulaSheets = readFileSync(new URL("../formula-cheat-sheets.js", import.meta.url), "utf8");
 const schoolGuides = readFileSync(new URL("../school-chapter-guides.js", import.meta.url), "utf8");
+const ncertPhysics = readFileSync(new URL("../ncert-physics-chapter-notes.js", import.meta.url), "utf8");
+const ncertChemistry = readFileSync(new URL("../ncert-chemistry-chapter-notes.js", import.meta.url), "utf8");
+const ncertMathematics = readFileSync(new URL("../ncert-mathematics-chapter-notes.js", import.meta.url), "utf8");
+const ncertBiology = readFileSync(new URL("../ncert-biology-chapter-notes.js", import.meta.url), "utf8");
 const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -43,7 +47,19 @@ assert.match(html, /id="localAiPrefer"/, "local model preference must be explici
 assert.match(html, /value="JEE Main"/, "the notes library should filter detailed JEE Main notes");
 assert.match(html, /value="NEET UG"/, "the notes library should filter detailed NEET UG notes");
 assert.ok(html.indexOf('src="/exam-prep-notes.js"') < html.indexOf('src="/study-library.js"'), "exam note data must load before the library renderer");
-assert.match(html, /225 detailed notes & cheat sheets/, "the notes catalogue should reflect 119 school packs + 61 JEE/NEET packs + 17 STEM master guides + 14 formula sheets + 14 humanities/commerce/CS guides");
+assert.match(html, /Loading full chapter notes/, "the page should wait for the merged full chapter catalogue rather than display a stale fixed count");
+assert.ok(html.indexOf('src="/ncert-physics-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "NCERT Physics notes must load before the catalogue renderer");
+assert.ok(html.indexOf('src="/ncert-chemistry-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "NCERT Chemistry notes must load before the catalogue renderer");
+assert.ok(html.indexOf('src="/ncert-mathematics-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "individual Mathematics notes must load before the catalogue renderer");
+assert.ok(html.indexOf('src="/ncert-biology-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "individual Biology notes must load before the catalogue renderer");
+assert.match(ncertPhysics, /make\("Class 11","Physics","Gravitation"/, "a detailed Class 11 Physics Gravitation chapter must exist");
+assert.match(ncertPhysics, /Explained formula|Universal gravitation and field/, "Physics chapters should include topic-by-topic explanations");
+assert.ok((ncertPhysics.match(/make\("Class /g) || []).length >= 33, "Physics should include individual Class 10-12 chapters");
+assert.ok((ncertChemistry.match(/make\("Class /g) || []).length >= 23, "Chemistry should include individual Class 10-12 chapters");
+assert.ok((ncertMathematics.match(/make\("Class /g) || []).length >= 40, "Mathematics should include individual Class 10-12 chapters");
+assert.ok((ncertBiology.match(/make\("Class /g) || []).length >= 40, "Biology should include individual Class 10-12 chapters");
+assert.match(studyLibrary, /function chapterDepthScore\(item\)/, "the catalogue should rank detailed NCERT content above short duplicate summaries");
+assert.match(studyLibrary, /KP_NCERT_CHAPTER_NOTES/, "the catalogue must merge the detailed NCERT chapter data");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
 assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
 assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/, "deep-dive notes should include dedicated JEE and NEET views");
@@ -75,6 +91,10 @@ assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Pol
 assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "Vercel should publish the local inference controller");
 assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@vercel/static"), "Vercel should publish the expanded exam notes");
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
+assert.ok(vercel.builds.some(b => b.src === "ncert-biology-chapter-notes.js" && b.use === "@vercel/static"), "Vercel should publish ncert-biology-chapter-notes.js");
+assert.ok(vercel.builds.some(b => b.src === "ncert-mathematics-chapter-notes.js" && b.use === "@vercel/static"), "Vercel should publish ncert-mathematics-chapter-notes.js");
+assert.ok(vercel.builds.some(b => b.src === "ncert-chemistry-chapter-notes.js" && b.use === "@vercel/static"), "Vercel should publish ncert-chemistry-chapter-notes.js");
+assert.ok(vercel.builds.some(b => b.src === "ncert-physics-chapter-notes.js" && b.use === "@vercel/static"), "Vercel should publish ncert-physics-chapter-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
 assert.match(serviceWorker, /kaushalpath-shell-v5/, "service worker cache should be bumped to include local model controls");
@@ -95,7 +115,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v5/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v6/, "offline shell cache should be version-bumped for the full NCERT chapter assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
