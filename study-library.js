@@ -1644,35 +1644,35 @@
     ).join("");
   }
   function formulaContentHtml(item) {
-    const rules = (item.formulas || []).map((formula) => String(formula));
-    const cards = (item.formulaCheatSheet || []).map((card, index) =>
+    const rules = (Array.isArray(item.formulas) ? item.formulas : []).map((formula) => String(formula));
+    const cards = (Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : []).map((card, index) =>
       '<section class="formula-card"><h2>' + esc((index + 1) + ". " + (card.formula || "Rule")) + '</h2>' +
-      '<p><strong>Meaning:</strong> ' + esc(card.meaning || "See the stated rule and its chapter context.") + '</p>' +
-      '<p><strong>When to use:</strong> ' + esc(card.when || "Use only after confirming the question matches the rule’s assumptions.") + '</p>' +
-      '<p><strong>Units / notation:</strong> ' + esc(card.units || "Follow the units and notation used in the prescribed text/question.") + '</p>' +
-      '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "Check assumptions, signs, units and the valid domain before applying the rule.") + '</p></section>'
+      '<p><strong>Meaning:</strong> ' + esc(card.meaning || "Read the rule in context before using it.") + '</p>' +
+      '<p><strong>When to use:</strong> ' + esc(card.when || "Use it when the question meets the conditions described here.") + '</p>' +
+      '<p><strong>Units / notation:</strong> ' + esc(card.units || "Keep the symbols and units consistent with the question.") + '</p>' +
+      '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "Before you start, check the signs, units and conditions.") + '</p></section>'
     ).join("");
     return (rules.length ? '<h2>Chapter formulas and rules</h2>' + noteListHtml(rules, false) : '<h2>Key relationships and rules</h2>' + noteListHtml(item.points || [], false)) + cards;
   }
   function workedContentHtml(item) {
     const primary = '<section class="content-block"><h2>Primary worked example</h2><p>' + esc(item.example || "Use the chapter concepts to build a complete answer.") + '</p></section>';
-    const extra = (item.workedExamples || []).map((example, index) =>
+    const extra = (Array.isArray(item.workedExamples) ? item.workedExamples : []).map((example, index) =>
       '<section class="content-block"><h2>' + esc((index + 1) + ". " + (example.title || "Worked method")) + '</h2>' +
       noteListHtml(example.steps || [], true) + '</section>'
     ).join("");
     return primary + extra;
   }
   function methodsContentHtml(item) {
-    const methods = (item.fastMethods || []).map((method, index) =>
+    const methods = (Array.isArray(item.fastMethods) ? item.fastMethods : []).map((method, index) =>
       '<section class="content-block"><h2>' + esc((index + 1) + ". " + (method.title || "Problem-solving path")) + '</h2>' +
       (method.when ? '<p><strong>Use when:</strong> ' + esc(method.when) + '</p>' : "") +
       noteListHtml(method.steps || [], true) + (method.caution ? '<p class="formula-trap"><strong>Caution:</strong> ' + esc(method.caution) + '</p>' : "") + '</section>'
     ).join("");
-    const defaultMethod = '<h2>A reliable answer workflow</h2>' + noteListHtml([
-      "Identify the exact concept, event, process, quantity or claim the question asks about.",
-      "Select the chapter definition, relation, evidence or method that directly supports the answer.",
-      "Write each reasoning step clearly; state assumptions and units where the subject requires them.",
-      "Connect the final result or explanation back to the question, then verify it against the chapter notes."
+    const defaultMethod = '<h2>How to build a clear answer</h2>' + noteListHtml([
+      "Start by checking exactly what the question wants you to find or explain.",
+      "Choose the definition, formula, evidence or method that fits the question.",
+      "Show your reasoning one step at a time, including units or assumptions where they matter.",
+      "Finish by answering the question directly and checking your result against the chapter notes."
     ], true);
     return methods + defaultMethod;
   }
@@ -1681,53 +1681,53 @@
     if (problems.length) {
       return '<ol class="practice-list">' + problems.map((problem) =>
         '<li><p><strong>' + esc(problem.question || "Practice prompt") + '</strong></p>' +
-        '<p><strong>Answer:</strong> ' + esc(problem.answer || "Construct the answer using the relevant definition, rule or worked method above.") + '</p>' +
-        '<p><strong>Reasoning:</strong> ' + esc(problem.solution || "Explain why the selected concept or method applies, then check each step against the chapter notes.") + '</p></li>'
+        '<p><strong>Answer:</strong> ' + esc(problem.answer || "Use the idea or method explained above to build your answer.") + '</p>' +
+        '<p><strong>Reasoning:</strong> ' + esc(problem.solution || "Explain in your own words why this answer fits the question, then check your reasoning.") + '</p></li>'
       ).join("") + '</ol>';
     }
     return '<h2>Recall questions</h2>' + noteListHtml(item.recall || [], true) +
-      '<p>For each prompt, write an answer from memory and verify it against the concept explanations on the preceding pages.</p>';
+      '<p>Try each question before checking your notes. Mark anything you had to guess, then revisit that part of the chapter.</p>';
   }
   function fullChapterPacket(item) {
-    const glossary = item.glossary && item.glossary.length ? noteListHtml(item.glossary, false) : noteListHtml((item.sections || []).map((section) => section.heading), false);
-    const conceptLinks = (item.sections || []).map((section) => (section.heading || "Concept") + " — " + (section.body || ""));
-    const exam = item.examFocus && item.examFocus.length ? noteListHtml(item.examFocus, false) : noteListHtml(item.points || [], false);
-    const traps = (item.commonMistakes || []).concat((item.formulaCheatSheet || []).map((card) => card.trap ? card.trap : "").filter(Boolean));
+    const chapterSections = Array.isArray(item.sections) ? item.sections : []; const glossary = Array.isArray(item.glossary) && item.glossary.length ? noteListHtml(item.glossary, false) : noteListHtml(chapterSections.map((section) => section.heading), false);
+    const conceptLinks = chapterSections.map((section) => (section.heading || "Concept") + " — " + (section.body || ""));
+    const exam = Array.isArray(item.examFocus) && item.examFocus.length ? noteListHtml(item.examFocus, false) : noteListHtml(Array.isArray(item.points) ? item.points : [], false);
+    const traps = (Array.isArray(item.commonMistakes) ? item.commonMistakes : []).concat((Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : []).map((card) => card.trap ? card.trap : "").filter(Boolean));
     const revisionChecklist = [
-      "I can explain the chapter’s main ideas without copying a paragraph.",
-      "I can state each important definition and explain where it applies.",
-      "I can choose and justify the relevant formula, rule, evidence or process.",
-      "I can complete a worked example and explain every step.",
-      "I can identify common traps and correct my own mistakes.",
-      "I have checked the lesson’s scope against the current official textbook and curriculum."
+      "I can explain the main ideas without looking at the notes.",
+      "I know the key definitions and when to use them.",
+      "I can choose a suitable formula or method and explain why it fits.",
+      "I can solve an example and show how I reached the answer.",
+      "I can spot common mistakes and put them right.",
+      "I have checked these notes against the prescribed textbook and current syllabus."
     ];
     const pages = [
-      notePage(item, 2, "Chapter overview & learning outcomes", item.intro,
+      notePage(item, 2, "Chapter overview & learning outcomes", "Start here to see how the main ideas fit together and what you should be able to explain by the end.",
         '<h2>What this chapter covers</h2>' + noteListHtml((item.sections || []).map((section) => section.heading).concat(item.points || []), false) +
-        '<h2>Learning outcomes</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false) +
-        '<h2>Recommended study order</h2>' + noteListHtml(["Read the concept explanations before memorising terms or formulas.", "Work through the example and show the missing reasoning steps yourself.", "Review conditions, traps and exam focus before attempting practice.", "Finish with closed-book recall and correct gaps from the source text."], true)),
-      notePage(item, 3, "Core concept explanations", "Read each topic with its meaning, conditions and connections in mind.",
+        '<h2>What you should be able to do</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false) +
+        '<h2>A good way to study this chapter</h2>' + noteListHtml(["Understand the idea before trying to memorise a definition or formula.", "Work through the examples on paper, then try one without looking.", "Check the conditions and common mistakes before you begin the practice questions.", "Finish by explaining the main points in your own words and revisiting anything unclear."], true)),
+      notePage(item, 3, "Core concept explanations", "Build your understanding one idea at a time. Notice how each concept connects to the next.",
         sectionContentHtml(item.sections) + '<h2>Chapter key ideas</h2>' + noteListHtml(item.points || [], false)),
-      notePage(item, 4, "Definitions, vocabulary & concept links", "A useful answer defines terms precisely and connects them to the lesson’s main ideas.",
+      notePage(item, 4, "Key terms and how they connect", "Learn the important terms, then practise explaining them in your own words.",
         '<h2>Important terms</h2>' + glossary + '<h2>Connections between concepts</h2>' + noteListHtml(conceptLinks, false)),
-      notePage(item, 5, "Formulas, rules & relationships", "Use the exact relations and definitions included in the chapter pack; check the conditions before applying them.",
+      notePage(item, 5, "Formulas, rules & relationships", "Before using a formula or rule, check that its conditions match the question.",
         formulaContentHtml(item)),
-      notePage(item, 6, "How to choose and apply a rule", "This page links the chapter’s rules to their conditions, notation and common errors.",
+      notePage(item, 6, "Choosing the right formula or rule", "Here is what the rules mean, when they help, and what to check before using them.",
         noteListHtml((item.formulaCheatSheet || []).map((card) => (card.formula || "Rule") + " — Meaning: " + (card.meaning || "") + " — Use when: " + (card.when || "") + " — Units/notation: " + (card.units || "") + " — Trap: " + (card.trap || "")), false) +
-        '<h2>Check before using a formula or rule</h2>' + noteListHtml(["Does the question match the stated assumptions and domain?", "Are symbols, signs, units and reference conditions consistent?", "Does the result make sense in the original context?", "Can I explain why this method is more suitable than an alternative?"], true)),
-      notePage(item, 7, "Worked examples & full reasoning", "Follow the reasoning, then close the page and solve the same problem independently.",
+        '<h2>Before you use it</h2>' + noteListHtml(["Do the conditions in the question match the formula or rule?", "Have you checked the signs, symbols and units?", "Does the answer make sense in the context of the question?", "Can you explain why this method fits better than another one?"], true)),
+      notePage(item, 7, "Worked examples & full reasoning", "Follow each step, then cover the solution and try the example again on your own.",
         workedContentHtml(item)),
-      notePage(item, 8, "Methods, strategies & answer construction", "Choose a method because the conditions fit—not because a question looks familiar.",
+      notePage(item, 8, "Methods and exam strategies", "Choose your method based on what the question gives you and what it asks you to find.",
         methodsContentHtml(item)),
-      notePage(item, 9, "Applications & exam focus", "Use this page to translate chapter knowledge into clear, relevant answers.",
+      notePage(item, 9, "Applications and exam focus", "Practise using what you know to answer exam-style questions clearly and directly.",
         '<h2>Exam approach</h2>' + exam + '<h2>Transfer the idea to a new question</h2>' +
-        noteListHtml(["Identify which chapter concept the question tests and quote the relevant definition or relation.", "List the given facts and the information that must be found or explained.", "Show a clear sequence from evidence/givens to reasoning and conclusion.", "Check whether the answer includes the requested units, comparison, diagram, condition or explanation."], true)),
-      notePage(item, 10, "Common mistakes & how to correct them", "Use errors as a checklist: identify the cause, correct the method and retry without notes.",
+        noteListHtml(["Work out which concept the question is testing and choose the definition or relation that fits.", "Write down what you know and what you still need to find or explain.", "Show how you move from the given information to your conclusion.", "Check that you included any units, comparison, diagram or explanation the question asks for."], true)),
+      notePage(item, 10, "Common mistakes and how to avoid them", "Use these points to check your work. When you find a mistake, fix it and try the question again.",
         '<h2>Chapter-specific mistakes</h2>' + noteListHtml(traps, false) +
-        '<h2>Final verification checks</h2>' + noteListHtml(["Definitions match the meaning used by the lesson.", "Every step follows from a stated fact, rule or observation.", "Units, signs, notation, dates, names or classifications are checked where relevant.", "The final statement answers the question directly rather than repeating the prompt."], true)),
-      notePage(item, 11, "Practice questions with worked answers", "Try each question before revealing or reading the answer. Mark the step that was hardest.",
+        '<h2>Final verification checks</h2>' + noteListHtml(["Have you used each definition in the right way?", "Can you explain why every step follows from the information given?", "Have you checked the units, signs, names or dates where needed?", "Does your final sentence actually answer the question?"], true)),
+      notePage(item, 11, "Practice questions with worked answers", "Give each question a real attempt before reading the solution. Pay attention to the step that felt hardest.",
         practiceContentHtml(item)),
-      notePage(item, 12, "Final revision sheet & retrieval practice", "The final page is a closed-book checklist. Revisit any item you cannot explain confidently.",
+      notePage(item, 12, "Final revision and self-check", "Close your notes and see what you remember. Revisit anything you cannot explain confidently.",
         '<h2>Chapter at a glance</h2>' + noteListHtml(item.points || [], false) +
         '<h2>Recall prompts</h2>' + noteListHtml(item.recall || [], true) +
         '<h2>Revision checklist</h2>' + noteListHtml(revisionChecklist, true) +
@@ -1747,30 +1747,71 @@
   }
   function printNotes(items) {
     if (!Array.isArray(items) || !items.length) {
-      toast("Choose at least one chapter before exporting the notes.");
+      toast("Choose a chapter first, then I’ll prepare the notes for you.");
       return;
     }
 
-    // Open the print destination immediately inside the user's click gesture.
-    // Some browsers block a new tab if it is opened after a large PDF packet is assembled.
-    const printWindow = window.open("", "_blank");
+    // Open the print destination during the click, before building the full packet.
+    let printWindow = null;
+    try { printWindow = window.open("", "_blank"); } catch (error) { printWindow = null; }
+
     let printFrame = null;
+    let previewShell = null;
     let printTarget = printWindow;
+
     if (!printTarget) {
-      // Keep export usable when pop-ups are disabled by printing a document in an iframe.
-      printFrame = document.createElement("iframe");
-      printFrame.title = "KaushalPath chapter PDF print view";
-      printFrame.setAttribute("aria-hidden", "true");
-      Object.assign(printFrame.style, {
-        position: "fixed", left: "0", top: "0", width: "1px", height: "1px",
-        border: "0", opacity: "0", pointerEvents: "none"
+      // If a popup is blocked, show a real preview instead of a hidden 1px iframe.
+      previewShell = document.createElement("section");
+      previewShell.className = "notes-pdf-preview-shell";
+      previewShell.setAttribute("role", "dialog");
+      previewShell.setAttribute("aria-modal", "true");
+      previewShell.setAttribute("aria-label", "Chapter PDF preview");
+      Object.assign(previewShell.style, {
+        position: "fixed", inset: "0", zIndex: "2147483647",
+        display: "flex", flexDirection: "column", gap: "10px",
+        padding: "max(12px, 2vw)", background: "rgba(25, 17, 42, .78)"
       });
-      document.body.appendChild(printFrame);
+
+      const toolbar = document.createElement("div");
+      Object.assign(toolbar.style, {
+        display: "flex", flexWrap: "wrap", alignItems: "center",
+        justifyContent: "space-between", gap: "12px", padding: "12px 16px",
+        borderRadius: "12px", background: "#fff", color: "#241536",
+        boxShadow: "0 8px 30px rgba(0,0,0,.18)"
+      });
+      const guidance = document.createElement("div");
+      const heading = document.createElement("strong");
+      heading.textContent = "Your chapter notes are ready";
+      heading.style.display = "block";
+      const help = document.createElement("span");
+      help.textContent = "Use Print / Save PDF in the preview, then choose Save as PDF.";
+      help.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
+      guidance.append(heading, help);
+
+      const closePreview = document.createElement("button");
+      closePreview.type = "button";
+      closePreview.className = "btn btn-light";
+      closePreview.textContent = "Close preview";
+      closePreview.addEventListener("click", () => {
+        if (previewShell && previewShell.isConnected) previewShell.remove();
+      });
+      toolbar.append(guidance, closePreview);
+
+      printFrame = document.createElement("iframe");
+      printFrame.title = "Print-ready chapter notes";
+      Object.assign(printFrame.style, {
+        display: "block", flex: "1 1 auto", minHeight: "0",
+        width: "100%", border: "0", borderRadius: "12px",
+        background: "#fff", boxShadow: "0 8px 30px rgba(0,0,0,.18)"
+      });
+      previewShell.append(toolbar, printFrame);
+      document.body.appendChild(previewShell);
       printTarget = printFrame.contentWindow;
     }
+
     if (!printTarget) {
-      if (printFrame) printFrame.remove();
-      toast("The PDF print view could not be opened. Allow pop-ups for this site and try again.");
+      if (previewShell) previewShell.remove();
+      toast("I couldn’t open the PDF preview. Refresh the page and try again.");
       return;
     }
 
@@ -1782,35 +1823,58 @@
         printTarget.focus();
         printTarget.print();
       } catch (error) {
-        toast("The print dialog could not be opened. Use Ctrl+P in the print view and choose Save as PDF.");
+        toast("Your notes are ready. Use Print / Save PDF in the preview to finish saving them.");
       }
     };
-    // Listen before writing the document, then keep a timed fallback for browsers with unusual load events.
-    printTarget.addEventListener("load", () => window.setTimeout(startPrint, 350), { once: true });
-    if (printFrame) {
-      printTarget.addEventListener("afterprint", () => {
-        if (printFrame && printFrame.isConnected) printFrame.remove();
-      }, { once: true });
+
+    // Only auto-open the native dialog for a real popup. The embedded fallback
+    // stays visible until the learner clicks its own Print / Save PDF button.
+    if (printWindow) {
+      printTarget.addEventListener("load", () => window.setTimeout(startPrint, 450), { once: true });
     }
-    const title = items.length === 1 ? items[0].chapter + " · Complete Chapter Notes" : "KaushalPath · Complete Chapter Notes";
-    // A single chapter always gets a 12-section packet with its mind map on page one.
-    // The bulk export keeps every chapter and its map without generating thousands of pages by default.
-    const sections = items.length === 1 ? fullChapterPacket(items[0]) : items.map((item) => renderMindMapPage(item) + compactChapterHtml(item)).join("");
-    const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
-      'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.compact-note-page{min-height:262mm}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.mindmap-topic,.mindmap-main-branch{break-inside:avoid}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}' +
-      '.note-page:nth-of-type(7n+1){--page-accent:#6875C8}.note-page:nth-of-type(7n+2){--page-accent:#3678E8}.note-page:nth-of-type(7n+3){--page-accent:#13A89E}.note-page:nth-of-type(7n+4){--page-accent:#F19A32}.note-page:nth-of-type(7n+5){--page-accent:#D94F8C}.note-page:nth-of-type(7n+6){--page-accent:#8359DA}.note-page:nth-of-type(7n+7){--page-accent:#2D9A66}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1{color:var(--page-accent,#3678E8)}h2{color:var(--page-accent,#3678E8);border-bottom:2px solid var(--page-accent,#3678E8);background:#F7F8FF;padding:4px 6px;border-radius:4px}li::marker{color:var(--page-accent,#8359DA);font-weight:bold}.content-block{border:1px solid #E4EAF7;border-left:4px solid var(--page-accent,#3678E8);border-radius:7px;padding:7px 9px;background:#F9FBFF}.content-block:nth-of-type(7n+2){border-left-color:#13A89E;background:#EFFBF8}.content-block:nth-of-type(7n+3){border-left-color:#F19A32;background:#FFF7EB}.content-block:nth-of-type(7n+4){border-left-color:#D94F8C;background:#FFF1F7}.content-block:nth-of-type(7n+5){border-left-color:#8359DA;background:#F6F1FF}.content-block:nth-of-type(7n+6){border-left-color:#2D9A66;background:#EFFAF3}.formula-card:nth-of-type(7n+1){border-color:#CDBEFF;border-left:4px solid #8359DA;background:#F6F1FF}.formula-card:nth-of-type(7n+2){border-color:#A9E5DB;border-left:4px solid #13A89E;background:#EFFBF8}.formula-card:nth-of-type(7n+3){border-color:#F6D09E;border-left:4px solid #F19A32;background:#FFF7EB}.formula-card:nth-of-type(7n+4){border-color:#F2BFD7;border-left:4px solid #D94F8C;background:#FFF1F7}.formula-card:nth-of-type(7n+5){border-color:#BFD2FF;border-left:4px solid #3678E8;background:#EFF5FF}.formula-trap{background:#FFF1D8;border-left:3px solid #F19A32;padding:6px 8px;border-radius:5px}.map-caption-kicker{color:#8359DA}.map-caption-label{color:#3678E8}.mindmap-svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-      '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections +
-      '</body></html>';
-    printTarget.document.open();
-    printTarget.document.write(page);
-    printTarget.document.close();
-    // The load listener handles normal browsers; this fallback handles cached/about:blank load timing differences.
-    window.setTimeout(startPrint, 1200);
-    toast(printFrame
-      ? "Pop-ups are blocked, so the chapter PDF will print from an embedded view. Choose Save as PDF in the print dialog."
-      : items.length === 1
-        ? "Complete chapter packet opened. Choose Save as PDF; the mind map is page 1 and the notes span at least 12 pages."
-        : "Complete filtered chapter notes opened. Choose Save as PDF in the print dialog.");
+
+    try {
+      const chapter = items.length === 1 ? items[0] : null;
+      const title = chapter
+        ? (chapter.chapter || "Chapter") + " · Complete Chapter Notes"
+        : "KaushalPath · Complete Chapter Notes";
+
+      // One chapter gets the concept map plus twelve revision sections. The
+      // bulk export keeps each chapter readable without building an enormous packet.
+      const sections = items.length === 1
+        ? fullChapterPacket(items[0])
+        : items.map((item) => renderMindMapPage(item) + compactChapterHtml(item)).join("");
+
+      const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
+        'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.print-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:800px;margin:0 auto 18px;padding:16px 18px;background:#fff;border:1px solid #e5def0;border-radius:12px;box-shadow:0 3px 18px #20123a12}.print-controls p{margin:5px 0 0;color:#675a78;font-size:10pt}.print-controls button{border:0;border-radius:9px;padding:11px 16px;background:#6740bd;color:#fff;font-weight:700;font-size:10pt;cursor:pointer}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}@media print{.print-controls{display:none!important}}' +
+        '.note-page:nth-of-type(7n+1){--page-accent:#6875C8}.note-page:nth-of-type(7n+2){--page-accent:#3678E8}.note-page:nth-of-type(7n+3){--page-accent:#13A89E}.note-page:nth-of-type(7n+4){--page-accent:#F19A32}.note-page:nth-of-type(7n+5){--page-accent:#D94F8C}.note-page:nth-of-type(7n+6){--page-accent:#8359DA}.note-page:nth-of-type(7n+7){--page-accent:#2D9A66}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1{color:var(--page-accent,#3678E8)}h2{color:var(--page-accent,#3678E8);border-bottom:2px solid var(--page-accent,#3678E8);background:#F7F8FF;padding:4px 6px;border-radius:4px}li::marker{color:var(--page-accent,#8359DA);font-weight:bold}.content-block{border:1px solid #E4EAF7;border-left:4px solid var(--page-accent,#3678E8);border-radius:7px;padding:7px 9px;background:#F9FBFF}.content-block:nth-of-type(7n+2){border-left-color:#13A89E;background:#EFFBF8}.content-block:nth-of-type(7n+3){border-left-color:#F19A32;background:#FFF7EB}.content-block:nth-of-type(7n+4){border-left-color:#D94F8C;background:#FFF1F7}.content-block:nth-of-type(7n+5){border-left-color:#8359DA;background:#F6F1FF}.content-block:nth-of-type(7n+6){border-left-color:#2D9A66;background:#EFFAF3}.formula-card:nth-of-type(7n+1){border-color:#CDBEFF;border-left:4px solid #8359DA;background:#F6F1FF}.formula-card:nth-of-type(7n+2){border-color:#A9E5DB;border-left:4px solid #13A89E;background:#EFFBF8}.formula-card:nth-of-type(7n+3){border-color:#F6D09E;border-left:4px solid #F19A32;background:#FFF7EB}.formula-card:nth-of-type(7n+4){border-color:#F2BFD7;border-left:4px solid #D94F8C;background:#FFF1F7}.formula-card:nth-of-type(7n+5){border-color:#BFD2FF;border-left:4px solid #3678E8;background:#EFF5FF}.formula-trap{background:#FFF1D8;border-left:3px solid #F19A32;padding:6px 8px;border-radius:5px}.map-caption-kicker{color:#8359DA}.map-caption-label{color:#3678E8}.mindmap-svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+        '</style></head><body><div class="print-controls" role="region" aria-label="PDF saving instructions"><div><strong>Your chapter notes are ready</strong><p>Choose <b>Print / Save PDF</b>, then select <b>Save as PDF</b> in your browser’s print dialog.</p></div><button type="button" id="printButton" onclick="window.focus();window.print()">Print / Save PDF</button></div><p class="eyebrow">KaushalPath · Chapter notes for revision</p>' + sections + '</body></html>';
+
+      printTarget.document.open();
+      printTarget.document.write(page);
+      printTarget.document.close();
+
+      if (printWindow) {
+        // If automatic printing is blocked, the visible page still has a working button.
+        window.setTimeout(startPrint, 1400);
+        toast("Your chapter notes are ready. If the print dialog doesn’t appear, use Print / Save PDF in the new window.");
+      } else {
+        toast("Your browser blocked the new window, so I opened your chapter here instead. Use Print / Save PDF in the preview.");
+      }
+    } catch (error) {
+      console.error("Chapter PDF export failed:", error);
+      const message = "I couldn’t prepare this chapter PDF. Refresh the Study Hub and try once more.";
+      try {
+        const errorPage = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chapter PDF preview</title><body style="font:16px/1.6 Arial,sans-serif;max-width:700px;margin:12vh auto;padding:24px;color:#241536"><h1>We couldn’t prepare these notes</h1><p>Something went wrong while putting this chapter packet together. Close this window, refresh the Study Hub and try again.</p></body></html>';
+        printTarget.document.open();
+        printTarget.document.write(errorPage);
+        printTarget.document.close();
+      } catch (secondaryError) {
+        if (previewShell) previewShell.remove();
+        if (printWindow && !printWindow.closed) printWindow.close();
+      }
+      toast(message);
+    }
   }
   function toast(message) {
     const root = $("toast");
