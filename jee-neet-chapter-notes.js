@@ -967,7 +967,7 @@
     [
       method("Photosynthesis pathway recall","For sequence/order questions.",["Separate light reactions from carbon-fixation reactions.","Track water oxidation, ATP/NADPH generation and oxygen release.","Track CO₂ fixation and the Calvin-cycle phases.","Check which inputs/outputs are being asked about."],"Do not claim released oxygen originates from CO₂ in oxygenic photosynthesis."),
       method("Source–sink identification","For phloem movement questions.",["Identify whether a tissue exports or uses/stores sugar at that moment.","Label sources and sinks rather than top/bottom of a plant.","Follow the relevant phloem path.","Allow the role to change with development."],"Phloem is not universally unidirectional in the plant as a whole."),
-      method("Plant-process comparison table","For photosynthesis vs respiration.","List location, principal inputs, outputs and energy direction.","Separate plant daytime photosynthesis from continuous cellular respiration.","Match the level of organisation (organelle, tissue, whole plant)."],"Avoid interpreting simplified global equations as every molecular intermediate.")
+      method("Plant-process comparison table","For photosynthesis vs respiration.",["List location, principal inputs, outputs and energy direction.","Separate plant daytime photosynthesis from continuous cellular respiration.","Match the level of organisation (organelle, tissue, whole plant)."],"Avoid interpreting simplified global equations as every molecular intermediate.")
     ],
     [
       problem("Where does oxygen released in oxygenic photosynthesis originate?","Water","Water splitting during the light reactions releases O₂."),
