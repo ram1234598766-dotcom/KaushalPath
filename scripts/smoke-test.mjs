@@ -348,4 +348,5 @@ assert.match(html, /id="clearProgress"/, "students should be able to clear saved
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 
-\nassert.ok(vercel.builds.some(b => b.src === "cbse-humanities-computer-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish humanities/computer detailed notes");\nassert.ok(serviceWorker.includes('"/cbse-humanities-computer-deep-notes.js"'), "PWA shell must cache humanities/computer detailed notes");
+assert.ok(vercel.builds.some(b => b.src === "cbse-humanities-computer-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish humanities/computer detailed notes");
+assert.ok(serviceWorker.includes('"/cbse-humanities-computer-deep-notes.js"'), "PWA shell must cache humanities/computer detailed notes");
