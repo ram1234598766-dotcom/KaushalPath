@@ -1855,7 +1855,7 @@
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
     const qualityHint = document.createElement("span");
-    qualityHint.textContent = "Click Download PDF, then choose “Save as PDF” as the destination in your browser’s print dialog and select Save. The complete landscape mind map stays crisp, followed by detailed portrait notes.";
+    qualityHint.textContent = "The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages. Click Download PDF, then choose “Save as PDF” as the destination in your browser’s print dialog and select Save. The map stays crisp and selectable.";
     qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
     guidance.append(heading, status, qualityHint);
 
