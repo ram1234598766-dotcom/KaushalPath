@@ -228,6 +228,296 @@ function needsRemoteTools(payload){
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(function(){el.classList.add("hidden");},3200);}
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
+
+const cbseCommonLanguages=[
+ "Arabic","Assamese","Bengali","Bhoti","Bhutia","Bodo","French","German","Gujarati","Japanese","Kannada","Kashmiri","Kokborok","Lepcha","Malayalam","Manipuri","Marathi","Mizo","Nepali","Odia","Persian","Punjabi","Russian","Sanskrit","Santhali","Sindhi","Spanish","Tamil","Telugu","Tibetan","Urdu"
+];
+const cbseClass10AnnualSubjects=[
+ "Mathematics (Standard)","Mathematics (Basic)","Science","Social Science","English Language & Literature","English Communicative","Hindi Course A","Hindi Course B","Sanskrit",
+ "Computer Applications","Information Technology","Artificial Intelligence","Home Science","Elements of Business","Elements of Book Keeping and Accountancy","National Cadet Corps (NCC)","Painting","Hindustani Music (Vocal)","Hindustani Music (Melodic Instruments)","Hindustani Music (Percussion)",
+ "Retail","Introduction to Financial Markets","Introduction to Tourism","Beauty & Wellness","Front Office Operations","Marketing and Sales",
+ ...cbseCommonLanguages.filter(function(subject){return subject!=="Sanskrit";}),
+ "Other approved subject / language"
+];
+const cbseSeniorAnnualSubjects=[
+ "Mathematics","Applied Mathematics","Physics","Chemistry","Biology","Biotechnology","English Core","English Elective","Hindi Core","Hindi Elective",
+ "Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education",
+ "Entrepreneurship","Legal Studies","Home Science","Engineering Graphics","Fine Arts — Painting","Fine Arts — Sculpture","Fine Arts — Graphics","Fine Arts — Applied Art",
+ "NCC","Agriculture","Artificial Intelligence","Data Science","Information Technology","Retail","Introduction to Financial Markets","Introduction to Tourism","Beauty & Wellness","Front Office Operations","Marketing and Sales",
+ "Hindustani Music (Vocal)","Hindustani Music (Melodic Instruments)","Hindustani Music (Percussion)","Carnatic Music (Vocal)","Carnatic Music (Melodic Instruments)","Carnatic Music (Percussion)",
+ "Dance — Bharatanatyam","Dance — Kathak","Dance — Odissi","Other approved subject / language",
+ ...cbseCommonLanguages
+];
+const cbseAnnualSubjectOptions={"Class 10":cbseClass10AnnualSubjects,"Class 11":cbseSeniorAnnualSubjects,"Class 12":cbseSeniorAnnualSubjects};
+function cbseAnnualNormalize(value){
+ return String(value||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+}
+function cbseAnnualCanonical(value){
+ const text=cbseAnnualNormalize(value);
+ const aliases={
+  "mathematics standard":"mathematics","mathematics basic":"mathematics","applied mathematics":"mathematics",
+  "science":"science","social science":"social science",
+  "english language literature":"english","english communicative":"english","english core":"english","english elective":"english",
+  "hindi course a":"hindi","hindi course b":"hindi","hindi core":"hindi","hindi elective":"hindi",
+  "sanskrit core":"sanskrit","sanskrit elective":"sanskrit",
+  "information technology":"information technology","computer applications":"computer applications",
+  "artificial intelligence":"artificial intelligence","biotechnology":"biology",
+  "elements of business":"business studies","elements of book keeping and accountancy":"accountancy",
+  "fine arts painting":"painting","fine arts sculpture":"sculpture","fine arts graphics":"graphic arts","fine arts applied art":"applied art",
+  "other approved subject language":"other approved subject","national cadet corps ncc":"ncc",
+  "hindustani music vocal":"hindustani music","hindustani music melodic instruments":"hindustani music","hindustani music percussion":"hindustani music",
+  "carnatic music vocal":"carnatic music","carnatic music melodic instruments":"carnatic music","carnatic music percussion":"carnatic music",
+  "dance bharatanatyam":"dance","dance kathak":"dance","dance odissi":"dance"
+ };
+ return aliases[text]||text;
+}
+function cbseAnnualFamily(subject){
+ const canonical=cbseAnnualCanonical(subject);
+ if(canonical==="science")return ["science","physics","chemistry","biology"];
+ if(canonical==="social science")return ["social science","history","geography","political science","economics","sociology"];
+ if(canonical==="computer science"||canonical==="computer applications"||canonical==="information technology"||canonical==="artificial intelligence"||canonical==="informatics practices")return [canonical,"computer science","computer applications","information technology","informatics practices","artificial intelligence"];
+ if(canonical==="other approved subject")return [];
+ return [canonical];
+}
+function cbseAnnualFallbackNotes(className, subject){
+ const canonical=cbseAnnualCanonical(subject);
+ let points, sections, chapter;
+ if(canonical==="english"||canonical==="hindi"||cbseCommonLanguages.map(cbseAnnualCanonical).includes(canonical)||canonical==="sanskrit"){
+  chapter="Reading, writing, grammar and interpretation";
+  points=["Identify a text's central idea and support the interpretation with specific evidence.","Infer the writer's or speaker's purpose, audience and tone from the language used.","Apply grammar and vocabulary rules in context rather than as isolated definitions.","Organise a coherent written response suited to its audience, purpose and required form."];
+  sections=[{heading:"Reading and interpretation",body:"A reader is given an unfamiliar text with a clear claim, supporting evidence and a particular audience. The reader must distinguish stated information from inference, explain tone, and cite evidence."},{heading:"Writing for a real audience",body:"A writing task specifies a reader, purpose and format. A strong response uses a clear structure, accurate language, relevant details and a tone suited to the audience."}];
+ }else if(["mathematics","physics","chemistry","biology","science"].includes(canonical)){
+  chapter="Concepts, evidence and application";
+  points=["Identify the quantities, conditions or observations that matter in a given problem.","Select a relevant principle, relation, representation or method before calculating or concluding.","Show working and connect each step to the information supplied in the question.","Check units, assumptions and whether the final result is consistent with the evidence."];
+  sections=[{heading:"Applying a concept to unfamiliar information",body:"A student receives a new data set or practical situation and must identify the relevant concept, choose a method, show the reasoning and evaluate whether the conclusion fits the data."},{heading:"Reasoning and verification",body:"A complete response explains why a method applies, shows intermediate reasoning and checks units, assumptions or boundary conditions instead of relying only on a final answer."}];
+ }else if(["accountancy","business studies","economics","entrepreneurship"].includes(canonical)){
+  chapter="Business, accounting and economic decision-making";
+  points=["Identify the relevant accounting, management or economic concept in a practical situation.","Use the given figures or case evidence accurately before reaching a conclusion.","Compare available choices using a stated criterion and justify the decision.","Explain one likely consequence, limitation or risk of the chosen course of action."];
+  sections=[{heading:"Decision-making from a case",body:"A small enterprise faces a decision using limited resources and data. The response should identify the relevant concept, use the case evidence and justify a practical decision."},{heading:"Interpretation and evaluation",body:"A business or economic conclusion must be supported by figures, assumptions or evidence. A good answer distinguishes a calculation from its interpretation and recognises a relevant limitation."}];
+ }else if(["history","geography","political science","sociology","psychology"].includes(canonical)){
+  chapter="Source analysis, evidence and interpretation";
+  points=["Distinguish a fact stated in a source from an inference drawn from it.","Explain a relationship using evidence and a relevant subject concept.","Compare two situations or viewpoints against a clear criterion.","Support a conclusion with evidence and acknowledge a limitation or alternative explanation."];
+  sections=[{heading:"Interpreting a source",body:"A learner is given a short source, set of observations or social situation. The response must separate evidence from assumption, identify a relevant concept and explain a defensible inference."},{heading:"Cause, context and consequence",body:"A strong response connects evidence to context, explains a causal or conceptual relationship and justifies its conclusion rather than listing unrelated facts."}];
+ }else if(["computer science","computer applications","information technology","informatics practices","artificial intelligence","data science"].includes(canonical)){
+  chapter="Computational thinking, data and digital responsibility";
+  points=["Trace the steps of a process or program before predicting its output.","Choose a data representation or digital tool that fits the task and explain why.","Test an answer with an example or boundary case and locate a possible error.","Protect data, privacy and digital access when applying a technology to a real situation."];
+  sections=[{heading:"Solving a practical digital task",body:"A user needs a small digital solution from supplied input data. The response should describe the steps, select a suitable representation or tool and test the result against the requirements."},{heading:"Responsible technology use",body:"A proposed digital solution handles information about people. A sound evaluation considers data minimisation, access, reliability and likely unintended consequences."}];
+ }else if(["physical education","ncc","retail","beauty wellness","front office operations","marketing and sales","introduction to financial markets","introduction to tourism","agriculture","home science"].includes(canonical)){
+  chapter="Practical skills, decisions and safety";
+  points=["Identify the goal and constraints in a realistic practical situation.","Choose a safe, suitable procedure and explain the reason for each major step.","Interpret observations or simple measurements before deciding what to do next.","Evaluate the result and name one improvement, safety check or ethical consideration."];
+  sections=[{heading:"Practical scenario",body:"A person or team must complete a task safely using limited time and resources. A complete response outlines a suitable procedure, explains the reason for the main choices and checks the outcome."},{heading:"Reviewing performance",body:"After a task, use observations and evidence to judge whether the goal was met, identify a risk or limitation and propose a practical improvement."}];
+ }else{
+  chapter="Subject knowledge, evidence and applied reasoning";
+  points=["Define the key idea and use the subject's terms accurately.","Apply a relevant concept to a new situation rather than repeating a definition alone.","Use evidence, examples or a stepwise method to support the response.","Check the conclusion against the task's conditions and explain one limitation."];
+  sections=[{heading:"Applying subject knowledge",body:"A learner is given a new situation related to the selected subject. The learner must identify the relevant idea, apply it with evidence and justify a clear conclusion."},{heading:"Evaluation and communication",body:"A high-quality answer explains the reasoning, uses accurate terminology, considers a relevant limitation and communicates the conclusion in a structured way."}];
+ }
+ return [{level:className,subject:subject,chapter:chapter,intro:"Subject-format competency practice scaffold. Confirm the final chapter scope and literature texts against the prescribed current syllabus.",points:points,sections:sections,formulas:[],example:"Use the details in the source, identify the relevant principle, show the reasoning and state a justified conclusion.",recall:["What evidence supports the main conclusion?","Which condition or assumption matters most?","How would the method change if one important detail changed?"]}];
+}
+function cbseAnnualSources(className, subject){
+ const catalog=Array.isArray(window.KP_ANNUAL_PAPER_CATALOG)?window.KP_ANNUAL_PAPER_CATALOG:[];
+ const family=cbseAnnualFamily(subject);
+ const requested=cbseAnnualCanonical(subject);
+ const classNotes=catalog.filter(function(item){return item&&item.level===className;});
+ const exact=classNotes.filter(function(item){return family.includes(cbseAnnualCanonical(item.subject));});
+ if(exact.length)return {notes:exact,scope:"class-specific",fallback:false};
+ const crossClass=catalog.filter(function(item){return item&&family.includes(cbseAnnualCanonical(item.subject));});
+ if(crossClass.length)return {notes:crossClass,scope:"available curated chapter content",fallback:false};
+ return {notes:cbseAnnualFallbackNotes(className,subject),scope:"subject-format scaffold",fallback:true};
+}
+function cbseAnnualPaperConfig(className, subject){
+ const text=cbseAnnualNormalize(subject);
+ let marks=80,duration=180;
+ if(className==="Class 10"&&/(computer applications|information technology|artificial intelligence|retail|financial markets|tourism|beauty wellness|front office|marketing and sales|ncc)/.test(text)){marks=50;duration=120;}
+ else if(className==="Class 10"&&text==="home science"){marks=70;duration=180;}
+ else if(className!=="Class 10"&&/(physics|chemistry|biology|biotechnology|computer science|informatics practices|physical education)/.test(text)){marks=70;duration=180;}
+ if(marks===80)return {marks:80,duration:180,mcq:20,veryShort:5,short:6,long:4,case:3};
+ if(marks===70)return {marks:70,duration:180,mcq:16,veryShort:4,short:5,long:3,case:4};
+ return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2};
+}
+function cbseAnnualRubric(marks){
+ const items={
+  2:["1 mark: correct concept, fact or conclusion.","1 mark: relevant reason, evidence or working."],
+  3:["1 mark: identifies the relevant concept or method.","1 mark: uses accurate evidence, a formula or an explained step.","1 mark: gives a justified conclusion and checks the result."],
+  4:["1 mark: interprets the source or identifies the key issue.","1 mark: selects and applies the relevant concept.","1 mark: explains the reasoning with evidence or working.","1 mark: justifies the conclusion and notes a relevant implication."],
+  5:["1 mark: states the relevant concept, definition or approach.","2 marks: explains the key steps, evidence or analysis accurately.","1 mark: applies the concept to the given context or example.","1 mark: reaches a justified conclusion and checks assumptions."]
+ };
+ return items[marks]||["Award marks for accurate subject terminology, evidence, reasoning and a clear conclusion."];
+}
+function cbseAnnualPaperSourceRows(noteSources){
+ const concepts=[],problems=[],recalls=[],sections=[];
+ noteSources.forEach(function(item){
+  const chapter=String(item.chapter||"Chapter revision"),subject=String(item.subject||"");
+  (Array.isArray(item.points)?item.points:[]).forEach(function(point){if(typeof point==="string"&&point.trim())concepts.push({text:point.trim(),chapter:chapter,item:item,subject:subject});});
+  (Array.isArray(item.sections)?item.sections:[]).forEach(function(section){
+   if(section&&String(section.body||"").trim())sections.push({heading:String(section.heading||chapter),body:String(section.body),points:Array.isArray(section.points)?section.points.filter(function(p){return typeof p==="string";}):[],chapter:chapter,item:item,subject:subject});
+   (section&&Array.isArray(section.points)?section.points:[]).forEach(function(point){if(typeof point==="string"&&point.trim())concepts.push({text:point.trim(),chapter:chapter,item:item,subject:subject});});
+  });
+  (Array.isArray(item.practiceProblems)?item.practiceProblems:[]).forEach(function(problem){if(problem&&String(problem.question||"").trim()&&String(problem.answer||"").trim())problems.push({question:String(problem.question),answer:String(problem.answer),solution:String(problem.solution||""),chapter:chapter,item:item,subject:subject});});
+  (Array.isArray(item.recall)?item.recall:[]).forEach(function(prompt){if(typeof prompt==="string"&&prompt.trim())recalls.push({text:prompt.trim(),chapter:chapter,item:item,subject:subject});});
+  if(String(item.example||"").trim())sections.push({heading:"Worked example · "+chapter,body:String(item.example),points:[],chapter:chapter,item:item,subject:subject});
+ });
+ if(!concepts.length){
+  noteSources.forEach(function(item){(Array.isArray(item.points)?item.points:[]).forEach(function(point){concepts.push({text:String(point),chapter:String(item.chapter||"Revision"),item:item,subject:String(item.subject||"")});});});
+ }
+ return {concepts:concepts,problems:problems,recalls:recalls,sections:sections};
+}
+function buildCbseAnnualPaper(className, subject){
+ const cfg=cbseAnnualPaperConfig(className,subject);
+ const source=cbseAnnualSources(className,subject);
+ const rows=cbseAnnualPaperSourceRows(source.notes);
+ const fallback=source.fallback;
+ const conceptRows=rows.concepts.length?rows.concepts:[{text:"Use the supplied information to identify the key concept, explain a relevant method and justify the conclusion.",chapter:subject,item:source.notes[0]||{},subject:subject}];
+ const problemRows=rows.problems;
+ const choiceDistractors=[];
+ problemRows.forEach(function(problem){choiceDistractors.push({text:problem.answer,chapter:problem.chapter});});
+ rows.concepts.forEach(function(concept){choiceDistractors.push({text:concept.text,chapter:concept.chapter});});
+ const genericDistractors=[
+  "The conclusion can be selected without using the information in the question.",
+  "The stated conditions can be ignored without changing the result.",
+  "The claim must be accepted even when the evidence contradicts it."
+ ];
+ function distinctText(pool, correct, index, chapter){
+  const out=[],seen=new Set([cbseAnnualNormalize(correct)]);
+  for(let step=0;step<pool.length&&out.length<3;step++){
+   const candidate=pool[(index*5+step)%pool.length],text=String(candidate&&candidate.text||"").trim(),key=cbseAnnualNormalize(text);
+   if(!text||text.length>1000||seen.has(key)||candidate.chapter===chapter)continue;
+   seen.add(key);out.push(text);
+  }
+  genericDistractors.forEach(function(text){if(out.length<3&&!seen.has(cbseAnnualNormalize(text))){seen.add(cbseAnnualNormalize(text));out.push(text);}});
+  return out.slice(0,3);
+ }
+ const qs=[];
+ const sectionTitles={A:"Section A · Objective questions",B:"Section B · Very short answer",C:"Section C · Short answer",D:"Section D · Long answer",E:"Section E · Case / source based questions"};
+ function sourceMeta(item){
+  return {subject:subject,chapter:String(item&&item.chapter||subject),topic:String(item&&item.chapter||"Mixed syllabus revision"),sourceType:"Competency",sourceLabel:fallback?"Original subject-format competency scaffold":"Original syllabus-mapped competency practice"};
+ }
+ function addMcq(index){
+  const problem=problemRows.length&&index<problemRows.length?problemRows[index%problemRows.length]:null;
+  const concept=conceptRows[index%conceptRows.length];
+  const chapter=problem?problem.chapter:concept.chapter;
+  const correct=problem?problem.answer:concept.text;
+  const stem=problem
+   ?"A student is working on "+chapter+": "+problem.question+" Which option is consistent with the worked answer?"
+   :"In the context of "+chapter+", which statement is most directly supported by the chapter's key ideas?";
+  const choices=[{text:correct,chapter:chapter}].concat(distinctText(choiceDistractors,correct,index,chapter).map(function(text){return {text:text,chapter:"Other chapter"};}));
+  while(choices.length<4)choices.push({text:genericDistractors[(index+choices.length)%genericDistractors.length],chapter:"Alternative"});
+  const answerPosition=index%4,options=[];
+  for(let slot=0;slot<4;slot++)options.push(String((slot===answerPosition?choices[0]:choices[slot<answerPosition?slot+1:slot]||choices[(slot+1)%choices.length]).text).slice(0,1000));
+  const explanation=problem
+   ?"Correct answer: "+correct+(problem.solution?"\nReasoning: "+problem.solution:"")
+   :"The chapter-aligned statement is: "+correct;
+  qs.push(Object.assign({q:stem,o:options,a:answerPosition,e:explanation.slice(0,4800),mark:1,negativeMark:0,sectionTitle:sectionTitles.A,questionFormat:"Competency MCQ"},sourceMeta(problem?problem.item:concept.item)));
+ }
+ function makeWritten(index,marks,kind,sectionTitle){
+  const item=source.notes[index%source.notes.length]||source.notes[0]||{};
+  const itemSections=Array.isArray(item.sections)?item.sections:[];
+  const section=rows.sections.length?rows.sections[index%rows.sections.length]:null;
+  const problem=problemRows.length?problemRows[index%problemRows.length]:null;
+  const recall=rows.recalls.length?rows.recalls[index%rows.recalls.length]:null;
+  const points=Array.isArray(item.points)?item.points.filter(function(p){return typeof p==="string"&&p.trim();}):[];
+  const chapter=String(item.chapter||subject);
+  let question="",modelAnswer="",context="";
+  if(kind==="case"){
+   context=String((section&&section.body)||(item.example)||(item.intro)||conceptRows[index%conceptRows.length].text);
+   question="CASE / SOURCE STUDY — "+(section&&section.heading||chapter)+"\nRead the information below:\n"+context+"\nUsing evidence from the source and your knowledge of "+chapter+", answer the task: "+(problem?problem.question:(recall?recall.text:"Explain the relevant concept, justify your reasoning and state one implication."));
+   modelAnswer=(section&&section.body?section.body+"\n":"")+(problem?"Answer: "+problem.answer+"\n"+(problem.solution?"Reasoning: "+problem.solution+"\n":""):"")+(points.length?"Key points: "+points.slice(0,4).join("; "):"");
+  }else if(kind==="long"){
+   question=recall?recall.text:(problem?problem.question:"Explain and analyse the key ideas in "+chapter+". Connect at least two ideas, give relevant evidence or an example, and justify your conclusion.");
+   if(!/explain|analyse|analyze|compare|justify|discuss|evaluate|derive|describe|why|how|what/i.test(question))question="Explain and analyse: "+question;
+   question+="\nStructure a complete "+marks+"-mark response with reasoning, supporting detail and a clear conclusion.";
+   modelAnswer=(section&&section.body?section.body+"\n":"")+(problem?"Answer: "+problem.answer+"\n"+(problem.solution?"Working / reasoning: "+problem.solution+"\n":""):"")+(points.length?"Important points: "+points.slice(0,Math.min(5,points.length)).join("; "):"");
+  }else{
+   question=problem?problem.question:(recall?recall.text:"Explain the key idea in "+chapter+" and show how it applies to a specific example.");
+   modelAnswer=problem?"Answer: "+problem.answer+(problem.solution?"\nReasoning: "+problem.solution:""):(section&&section.body?section.body:points.slice(0,3).join("\n"));
+   if(marks>=3)question+="\nShow the important reasoning or evidence; a final statement alone is not sufficient.";
+  }
+  if(!modelAnswer.trim())modelAnswer="Expected response: define the relevant concept, use evidence from the syllabus-aligned source and justify the conclusion.";
+  const metadata=sourceMeta(problem?problem.item:(section?section.item:item));
+  qs.push(Object.assign({
+   q:question.slice(0,3800),o:[],a:-1,e:modelAnswer.slice(0,4800),modelAnswer:modelAnswer.slice(0,4800),
+   rubric:cbseAnnualRubric(marks),mark:marks,negativeMark:0,responseType:"written",
+   sectionTitle:sectionTitle,questionFormat:kind==="case"?"Case / source based":kind==="long"?"Long answer":"Constructed response",
+   caseContext:kind==="case",topic:chapter
+  },metadata));
+ }
+ const sectionTitlesUnused=sectionTitles;
+ for(let i=0;i<cfg.mcq;i++)addMcq(i);
+ for(let i=0;i<cfg.veryShort;i++)makeWritten(i,2,"short",sectionTitles.B);
+ for(let i=0;i<cfg.short;i++)makeWritten(i+cfg.veryShort,3,"short",sectionTitles.C);
+ for(let i=0;i<cfg.long;i++)makeWritten(i+cfg.veryShort+cfg.short,5,"long",sectionTitles.D);
+ for(let i=0;i<cfg.case;i++)makeWritten(i+cfg.veryShort+cfg.short+cfg.long,4,"case",sectionTitles.E);
+ const total=qs.reduce(function(sum,q){return sum+Number(q.mark||1);},0);
+ if(total!==cfg.marks)throw new Error("The annual-paper blueprint does not sum to the required maximum marks.");
+ const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
+ const id="cbse-annual-"+className.toLowerCase().replace(/\s+/g,"-")+"-"+slug;
+ return {
+  id:id,title:"CBSE-Style Annual Exam · "+className+" · "+subject,exam:"CBSE Annual",subject:subject,level:className,
+  duration:cfg.duration,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
+  desc:"Original, competency-led model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
+  sourceScope:source.scope,subjectFormatFallback:fallback,qs:qs
+ };
+}
+function updateCbseAnnualPattern(){
+ const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject");
+ if(!classNode||!subjectNode)return;
+ const config=cbseAnnualPaperConfig(classNode.value,subjectNode.value);
+ const totalQuestions=config.mcq+config.veryShort+config.short+config.long+config.case;
+ const marks=$("cbseAnnualMarks"),duration=$("cbseAnnualDuration"),count=$("cbseAnnualQuestionCount"),competency=$("cbseAnnualCompetency");
+ if(marks)marks.textContent=config.marks+" marks";
+ if(duration)duration.textContent=(config.duration/60)+" hour"+(config.duration===60?"":"s");
+ if(count)count.textContent=totalQuestions+" questions";
+ if(competency)competency.textContent="Case + application";
+}
+function initCbseAnnualBuilder(){
+ const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject"),start=$("cbseAnnualStart"),downloadPaper=$("cbseAnnualDownloadPaper"),downloadKey=$("cbseAnnualDownloadKey"),status=$("cbseAnnualStatus");
+ if(!classNode||!subjectNode||!start||!downloadPaper||!downloadKey)return;
+ let currentPaper=null;
+ function loadSubjectOptions(){
+  const list=cbseAnnualSubjectOptions[classNode.value]||cbseClass10AnnualSubjects;
+  subjectNode.replaceChildren();
+  list.forEach(function(subject){const option=document.createElement("option");option.value=subject;option.textContent=subject;subjectNode.appendChild(option);});
+  if(list.includes("Mathematics (Standard)"))subjectNode.value="Mathematics (Standard)";
+  else subjectNode.selectedIndex=0;
+  currentPaper=null;
+  updateCbseAnnualPattern();
+ }
+ function getPaper(){
+  currentPaper=buildCbseAnnualPaper(classNode.value,subjectNode.value);
+  return currentPaper;
+ }
+ async function exportPaper(withKey){
+  const paper=getPaper();
+  const button=withKey?downloadKey:downloadPaper;
+  button.disabled=true;
+  button.textContent=withKey?"Preparing marking scheme…":"Preparing question paper…";
+  if(status)status.textContent="Generating a crisp, downloadable PDF locally. No student answers are uploaded.";
+  try{
+   await downloadCbseAnnualPaperPdf(paper,withKey);
+   if(status)status.textContent=(withKey?"Marking scheme":"Question paper")+" downloaded for "+paper.level+" · "+paper.subject+".";
+  }catch(error){
+   console.error("CBSE annual paper PDF failed:",error);
+   if(status)status.textContent="Could not generate the PDF. Check your internet connection and try again.";
+   toast("Annual paper PDF generation failed. Please retry.");
+  }finally{
+   button.disabled=false;
+   button.textContent=withKey?"Download marking scheme":"Download question paper PDF";
+  }
+ }
+ classNode.addEventListener("change",loadSubjectOptions);
+ subjectNode.addEventListener("change",function(){currentPaper=null;updateCbseAnnualPattern();});
+ start.addEventListener("click",function(){
+  let paper;
+  try{paper=getPaper();}catch(error){toast("Could not assemble this model paper. Please choose another subject.");return;}
+  const existing=questions.findIndex(function(test){return test.id===paper.id;});
+  if(existing>=0)questions[existing]=paper;else questions.push(paper);
+  if(status)status.textContent="Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
+  startTest(paper.id);
+ });
+ downloadPaper.addEventListener("click",function(){exportPaper(false);});
+ downloadKey.addEventListener("click",function(){exportPaper(true);});
+ loadSubjectOptions();
+}
+
 function renderTests(){
  const grid=$("testGrid");grid.innerHTML="";
  questions.forEach(function(t,index){
