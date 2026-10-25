@@ -1125,12 +1125,13 @@
     window.KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES,
     window.KP_REMAINING_CHAPTER_DEEP_NOTES,
     window.KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES,
-    window.KP_NCERT_CHAPTER_NOTES
+    window.KP_NCERT_CHAPTER_NOTES,
+    window.KP_JEE_NEET_CHAPTER_NOTES
   ].filter(Array.isArray);
   const chapterKey = (item) => [item.level, item.subject, item.chapter].map((x) => String(x || "").trim().toLowerCase()).join("::");
   const detailScore = (item) => (item.sections || []).length * 10 +
     (item.formulaCheatSheet || []).length * 5 + (item.workedExamples || []).length * 4 +
-    (item.practiceProblems || []).length * 4 + (item.commonMistakes || []).length;
+    (item.practiceProblems || []).length * 4 + (item.fastMethods || []).length * 6 + (item.commonMistakes || []).length;
   const chapterIndex = new Map();
   notes.forEach((item, index) => { if (!chapterIndex.has(chapterKey(item))) chapterIndex.set(chapterKey(item), index); });
   individualChapterSets.flat().forEach((item) => {
@@ -1161,6 +1162,9 @@
       formulaCheatSheet: combineUnique("formulaCheatSheet", (x) => String(x.formula || "")),
       workedExamples: combineUnique("workedExamples", (x) => String(x.title || (x.steps || []).join("|"))),
       practiceProblems: combineUnique("practiceProblems", (x) => String(x.question || "")),
+      fastMethods: combineUnique("fastMethods", (x) => String(x.title || (x.steps || []).join("|"))),
+      recall: combineUnique("recall", (x) => String(x)),
+      points: combineUnique("points", (x) => String(x)),
       commonMistakes: combineUnique("commonMistakes", (x) => String(x)),
       examFocus: combineUnique("examFocus", (x) => String(x)),
       glossary: combineUnique("glossary", (x) => String(x))
@@ -1217,6 +1221,7 @@
       formulaCards.length ? "EXPLAINED FORMULA CHEAT SHEET\n" + formulaCards.join("\n\n") : "",
       "WORKED EXAMPLE\n" + item.example,
       worked.length ? "ADDITIONAL WORKED METHODS\n" + worked.join("\n\n") : "",
+      item.fastMethods && item.fastMethods.length ? "FAST CALCULATION / QUESTION-SELECTION TRICKS\n" + item.fastMethods.map((m,i) => (i+1)+". "+String(m.title||"Method")+"\nWhen to use: "+String(m.when||"")+"\n"+(m.steps||[]).map((s,j)=>(j+1)+". "+s).join("\n")+"\nCaution: "+String(m.caution||"")).join("\n\n") : "",
       item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\n" + item.commonMistakes.map((x) => "- " + x).join("\n") : "",
       item.examFocus && item.examFocus.length ? "EXAM APPROACH\n" + item.examFocus.map((x) => "- " + x).join("\n") : "",
       item.glossary && item.glossary.length ? "GLOSSARY\n" + item.glossary.map((x) => "- " + x).join("\n") : "",
@@ -1232,7 +1237,7 @@
     const search = String($("notesSearch") && $("notesSearch").value || "").trim().toLowerCase();
     return notes.filter((item) => (level === "all" || item.level === level) &&
       (subject === "all" || item.subject === subject) &&
-      (!search || [item.chapter, item.subject, item.intro, ...item.points, ...(item.sections || []).flatMap((section) => [section.heading, section.body || ""]), ...(item.examFocus || []), ...(item.commonMistakes || [])].join(" ").toLowerCase().includes(search)));
+      (!search || [item.chapter, item.subject, item.intro, ...item.points, ...(item.sections || []).flatMap((section) => [section.heading, section.body || ""]), ...(item.examFocus || []), ...(item.commonMistakes || []), ...(item.fastMethods || []).flatMap(m => [m.title, m.when, m.caution, ...(m.steps || [])]), ...(item.formulaCheatSheet || []).flatMap(f => [f.formula, f.meaning, f.when, f.trap]), ...(item.practiceProblems || []).map(p => p.question)].join(" ").toLowerCase().includes(search)));
   }
   function renderNotes() {
     const root = $("notesResults");
@@ -1345,6 +1350,15 @@
       });
       detail.appendChild(practiceList);
     }
+    if (item.fastMethods && item.fastMethods.length) {
+      const fastHead = document.createElement("h3"); fastHead.textContent = "Fast calculation & question-selection tricks"; detail.appendChild(fastHead);
+      item.fastMethods.forEach((m, index) => {
+        const sub = document.createElement("h4"); sub.className = "notes-subhead"; sub.textContent = (index + 1) + ". " + String(m.title || "Method");
+        const when = document.createElement("p"); when.className = "formula-card-copy"; when.textContent = "Use when: " + String(m.when || ""); detail.append(sub, when);
+        const steps = document.createElement("ol"); (m.steps || []).forEach(text => { const li = document.createElement("li"); li.textContent = text; steps.appendChild(li); }); detail.appendChild(steps);
+        if (m.caution) { const caution = document.createElement("p"); caution.className = "formula-card-trap"; caution.textContent = "Caution: " + m.caution; detail.appendChild(caution); }
+      });
+    }
     if (item.commonMistakes && item.commonMistakes.length) {
       const mh = document.createElement("h3"); mh.textContent = "Common mistakes to avoid";
       const ml = document.createElement("ul");
@@ -1394,6 +1408,7 @@
         (example.steps || []).map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>'
       ).join("");
       const practice = item.practiceProblems && item.practiceProblems.length ? '<h2>Practice questions with worked answers</h2><ol class="practice-list">' + item.practiceProblems.map((p) => '<li><p><strong>' + esc(p.question || "") + '</strong></p><p><strong>Answer:</strong> ' + esc(p.answer || "") + '</p><p><strong>Reasoning:</strong> ' + esc(p.solution || "") + '</p></li>').join("") + '</ol>' : "";
+      const fastMethods = item.fastMethods && item.fastMethods.length ? '<h2>Fast calculation &amp; question-selection tricks</h2>' + item.fastMethods.map((m,idx) => '<h3>' + esc((idx+1)+". "+(m.title||"Method")) + '</h3><p><strong>Use when:</strong> ' + esc(m.when||"") + '</p><ol>' + (m.steps||[]).map(step => '<li>' + esc(step) + '</li>').join("") + '</ol>' + (m.caution ? '<p class="formula-trap"><strong>Caution:</strong> ' + esc(m.caution) + '</p>' : "")).join("") : "";
       const mistakes = item.commonMistakes && item.commonMistakes.length ? '<h2>Common mistakes to avoid</h2><ul>' + item.commonMistakes.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       const examFocus = item.examFocus && item.examFocus.length ? '<h2>Exam approach</h2><ul>' + item.examFocus.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       const glossary = item.glossary && item.glossary.length ? '<h2>Glossary</h2><ul>' + item.glossary.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
