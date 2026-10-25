@@ -602,9 +602,349 @@
       "A mood analysis should identify an image or word choice and explain how it shapes the reader's response.",
       ["What makes textual evidence relevant to a claim?","How does analysis differ from summary?"])
   ];
+  // Attach the expanded, chapter-relevant material to the existing individual chapter entries.
+  // Earlier versions merely listed large "master guides" separately, leaving the short chapter cards unchanged.
+  function chapterWords(value) {
+    const stop = new Set(["that","this","with","from","into","about","using","use","when","where","what","which","their","there","then","than","have","has","and","the","for","for","class","chapter","guide","notes","note","basic","main","common","review","connect","describe","understand","explain","identify","compare","relate","based","principles","applications","structure","function","some","more","less","across","during","through","between","every","other","also","only","into"]);
+    return String(value || "").toLowerCase().replace(/[^a-z0-9\s+-]/g," ").split(/\s+/).map((w) => w.replace(/s$/,"")).filter((w) => w.length > 2 && !stop.has(w));
+  }
+  const CHAPTER_ALIASES = {
+    "gravitation":["gravity","gravitation","satellite","orbital","escape speed","kepler","gravitational field","potential energy"],
+    "thermal properties of matter":["heat","temperature","expansion","calorimetry","latent heat","specific heat","conduction","radiation"],
+    "oscillations and waves":["oscillation","wave","simple harmonic motion","restoring force","frequency","wavelength","resonance"],
+    "equilibrium":["chemical equilibrium","ionic equilibrium","equilibrium constant","le chatelier","ph","buffer","solubility product"],
+    "redox reactions":["oxidation","reduction","oxidation number","electron transfer","balancing redox"],
+    "thermodynamics":["enthalpy","entropy","gibbs energy","heat","work","state function","hess law"],
+    "hydrocarbons":["alkane","alkene","alkyne","benzene","addition","substitution","aromatic","organic mechanism"],
+    "ray and wave optics":["ray optics","wave optics","lens","mirror","refraction","interference","diffraction","young double slit"],
+    "atoms nuclei and radioactivity":["atom","nucleus","radioactivity","half life","binding energy","photoelectric","bohr","de broglie"],
+    "semiconductor electronics":["semiconductor","diode","p-n junction","transistor","logic gate","doping","forward bias","reverse bias"],
+    "aldehydes ketones and carboxylic acids":["carbonyl","aldehyde","ketone","carboxylic acid","nucleophilic addition","oxidation","reduction"],
+    "amines":["amine","basicity","diazonium","aniline","nucleophilic substitution","nitrogen"],
+    "biomolecules":["carbohydrate","protein","amino acid","nucleic acid","enzyme","lipid","glucose","peptide"],
+    "polynomials":["polynomial","zeroes","zeros","roots","factor theorem","discriminant"],
+    "pair of linear equations":["linear equation","simultaneous equation","elimination","substitution","intersection"],
+    "electricity":["current","resistance","ohm law","potential difference","series circuit","parallel circuit","electric power"],
+    "current electricity":["current","resistance","kirchhoff","emf","internal resistance","resistivity","circuit"],
+    "electrostatics":["charge","electric field","potential","gauss law","capacitor","flux"],
+    "chemical reactions and equations":["balancing","chemical equation","precipitate","oxidation","reduction","decomposition","displacement"],
+    "acids bases and salts":["acid","base","ph","neutralisation","salt","indicator"],
+    "cell structure and function":["cell membrane","organelle","nucleus","mitochondria","ribosome","cell theory"],
+    "cell: structure and function":["cell membrane","organelle","nucleus","mitochondria","ribosome","cell theory"],
+    "cell cycle and cell division":["mitosis","meiosis","chromosome","cell cycle","crossing over"],
+    "principles of inheritance and variation":["mendel","inheritance","allele","genotype","phenotype","linkage","pedigree"],
+    "molecular basis of inheritance":["dna","rna","replication","transcription","translation","genetic code","operon"],
+    "human reproduction":["gamete","fertilisation","ovulation","spermatogenesis","pregnancy","menstrual cycle"],
+    "ecology and ecosystems":["ecosystem","trophic","energy flow","population","biodiversity","nutrient cycle","succession"]
+  };
+  function chapterAliasList(item) {
+    const key = String(item.chapter || "").toLowerCase();
+    const aliases = [];
+    Object.keys(CHAPTER_ALIASES).forEach((prefix) => { if (key.includes(prefix) || prefix.includes(key)) aliases.push(...CHAPTER_ALIASES[prefix]); });
+    return aliases;
+  }
+  function sectionScore(item, section) {
+    const heading = String(section && section.heading || "");
+    const body = String(section && section.body || "");
+    const all = (heading + " " + body).toLowerCase();
+    const chapterTokens = chapterWords(item.chapter);
+    const introTokens = chapterWords(item.intro);
+    const pointTokens = chapterWords((item.points || []).join(" "));
+    let score = 0;
+    chapterTokens.forEach((word) => { if (word.length > 3 && all.includes(word)) score += 8; });
+    introTokens.forEach((word) => { if (word.length > 3 && all.includes(word)) score += 1.5; });
+    pointTokens.forEach((word) => { if (word.length > 4 && all.includes(word)) score += 0.35; });
+    chapterAliasList(item).forEach((alias) => { if (all.includes(alias)) score += 5; });
+    return score;
+  }
+  function guideMatchScore(item, guide) {
+    let score = 0;
+    if (guide.level === item.level) score += 4;
+    if (guide.subject === item.subject) score += 4;
+    const terms = chapterWords(item.chapter);
+    const text = String(guide.chapter || "") + " " + String(guide.intro || "");
+    terms.forEach((word) => { if (word.length > 3 && text.toLowerCase().includes(word)) score += 5; });
+    chapterAliasList(item).forEach((alias) => { if (text.toLowerCase().includes(alias)) score += 2; });
+    return score;
+  }
+  function genericDeepSections(item) {
+    const points = Array.isArray(item.points) ? item.points : [];
+    const conceptBody = points.map((point, index) =>
+      "Core idea " + (index + 1) + ": " + point +
+      " Read this as a relationship, not an isolated sentence: identify the object, condition, quantity or process being described; explain why the statement is true; then connect it to the next concept in the chapter. When a question changes a condition, state which part of this idea changes and which assumptions remain fixed."
+    ).join("\n\n");
+    const isMath = /mathematics|applied mathematics/i.test(item.subject || "");
+    const isPhysics = /physics/i.test(item.subject || "");
+    const isChem = /chemistry/i.test(item.subject || "");
+    const isBio = /biology/i.test(item.subject || "");
+    const isCS = /computer science|computer applications|informatics/i.test(item.subject || "");
+    let workflow = "";
+    if (isMath) workflow = "Start by writing what is given and what must be found. Define symbols and the allowed domain. Select the theorem/formula only after confirming its conditions, transform the expression one operation at a time, and preserve equality by applying the same valid operation to both sides. Do not divide by an expression before checking whether it can be zero. For geometry, name the theorem and identify matching points/sides on a labelled sketch. For statistics/probability, identify the population/sample space and denominator before calculating. At the end, substitute the result back, check the domain, simplify units if applicable, and ask whether the sign or size is sensible.";
+    else if (isPhysics) workflow = "Make a small diagram and list the known quantities with units before selecting an equation. State the model assumptions (such as negligible air resistance, ideal component, uniform field, steady flow or constant acceleration) because an equation is only valid under its conditions. Choose a sign convention and keep it throughout. Substitute values with consistent SI units, keep symbolic steps visible, and distinguish scalar quantities from vectors. Check dimensions, direction/sign, limiting cases and significant figures. If energy or conservation can solve the problem more directly than force-by-force algebra, state the conserved quantity and why external work/force is negligible.";
+    else if (isChem) workflow = "First identify every species, its formula/charge, the reaction conditions and what the question asks for. For equations, balance atoms and total charge; for redox, identify oxidation-state changes and electron balance. For numerical problems, convert the given quantities to moles or the stated concentration unit before using a ratio. For equilibrium or thermodynamics, distinguish the current state from the standard state and use the given sign convention. For organic chemistry, identify the functional group, reagent and conditions before choosing a mechanism. Finish by checking atom/charge conservation, units, physical plausibility and whether the conditions really support the claimed product.";
+    else if (isBio) workflow = "Build the explanation as a sequence: structure or starting condition → mechanism/process → outcome → biological significance. Keep levels distinct (molecule, cell, tissue, organ, organism, population or ecosystem) and name the relevant location. When comparing two processes, use the same comparison criteria for both rather than writing two unrelated lists. For diagrams, learn labels and the function of each labelled part. In genetics, state the genotype assumptions before calculating a ratio; in ecology, distinguish matter cycling from energy flow. Use the prescribed NCERT terminology and avoid adding an exception unless the question or syllabus requires it.";
+    else if (isCS) workflow = "Translate the prompt into inputs, outputs, constraints and a sequence of operations. Trace a small example by hand before writing the solution. For Python, distinguish assignment from comparison, mutable from immutable objects, value from reference, and local from global names. For files and databases, specify the mode/schema, check boundary/empty cases, and release resources safely. Test normal, boundary and invalid inputs, and explain why the algorithm returns the requested result rather than only giving code.";
+    else workflow = "Identify the key term in the question and define it in the wording used by the prescribed course. Build the answer in a clear chain: context or cause → main event/feature → evidence or explanation → consequence or significance. Use specific details from the chapter instead of repeating the question. For a long answer, organise the response into short paragraphs or numbered points, explain the link between points, and conclude by answering the exact wording of the question. Distinguish fact, inference and evaluation; never invent a quotation, date or data point.";
+    const formulas = Array.isArray(item.formulas) ? item.formulas : [];
+    return [
+      {heading:"Chapter framework and connections",body:"This chapter is titled “" + item.chapter + "”. Its central scope is: " + String(item.intro || "") + " The main ideas below should be learnt as a connected model. First, define each term precisely; next, understand the condition under which it applies; then practise using it to explain a situation or solve a question. The links between ideas are often what distinguish a full-mark answer from a short definition."},
+      {heading:"Key ideas unpacked",body:conceptBody || String(item.intro || "")},
+      {heading:"How to solve questions step by step",body:workflow},
+      {heading:"Formula, process and result checks",body:(formulas.length ? "The chapter's listed relations/rules are: " + formulas.join("; ") + ". Before applying one, state what each symbol represents, keep units consistent, and check the condition under which it is valid. A relation gives a model; it is not a substitute for identifying the physical/chemical/mathematical situation." : "For this chapter, build a small glossary and a cause-and-effect/step sequence from the key ideas. If a process has stages, memorise the order and explain why each stage follows the previous one. If the topic compares categories, use consistent criteria and include one example for each category.") + " " + String(item.example || "")},
+      {heading:"How to write a complete exam answer",body:"Use precise terminology and show the reasoning that connects the starting information to the conclusion. For a numerical question, keep the equation, substitution, working and final unit visible. For a proof or derivation, state the theorem/assumption before using it and do not skip the crucial algebraic or logical link. For a process or theory, explain both what happens and why it matters. A correct final number or keyword without the requested explanation may not earn all available marks."}
+    ];
+  }
+  const deepChapterOverrides = [
+    {
+      level:"Class 11",subject:"Physics",chapter:"Gravitation",
+      sections:[
+        {heading:"1. Newton’s law of universal gravitation",body:"Every pair of masses attracts one another. The force acts along the line joining their centres, is proportional to the product of the masses, and is inversely proportional to the square of the centre-to-centre separation. The constant G is universal; it is not the same quantity as local gravitational acceleration g. For spherically symmetric bodies outside the body, the external field is equivalent to that of a point mass at its centre. In a multi-body situation, calculate each gravitational force/field separately and add vectors; attractions can reinforce or cancel depending on direction. For extended non-spherical bodies or locations inside a body, do not automatically use the point-mass shortcut without the relevant model."},
+        {heading:"2. Gravitational field strength and acceleration due to gravity",body:"Field strength at a point is gravitational force per unit test mass; near a planet of mass M and radius-distance r from its centre, its magnitude is GM/r² and its direction is toward the planet’s centre. At the surface, g=GM/R². Mass m in that field experiences weight mg, so weight can change with location even though the body's mass remains the same. At altitude h above a spherical planet, r=R+h and g(h)=GM/(R+h)²=g_surface[R/(R+h)]². If h is much smaller than R, a first-order approximation gives g(h)≈g_surface(1−2h/R). Inside an ideal uniform-density sphere, g decreases linearly with distance from the centre; real planets do not have uniform density, so that simple internal result has a stated assumption."},
+        {heading:"3. Gravitational potential and potential energy",body:"With potential defined as zero at infinity, gravitational potential due to a point/spherical mass is negative: V=−GM/r. A test mass m has potential energy U=mV=−GMm/r. Negative energy means the bound mass pair has lower energy than when infinitely separated; it does not mean the gravitational force is repulsive. Moving a mass from r1 to r2 changes potential energy by ΔU=GMm(1/r1−1/r2). Near Earth's surface, for small height change Δh≪R, this becomes approximately mgΔh. Use the exact expression for large changes in altitude, because g is not constant over large distances."},
+        {heading:"4. Circular orbits, orbital speed and time period",body:"An orbiting satellite is in continuous free fall: gravity provides the centripetal acceleration needed to bend its velocity vector around the planet. For a circular orbit of radius r measured from the planet’s centre, set GMm/r²=mv²/r. This gives v=√(GM/r), which is independent of the satellite's mass in the ideal two-body model. The period is T=2πr/v=2π√(r³/GM), so higher circular orbits have lower speed but longer periods. Radius means centre-to-centre orbital radius; using altitude h in place of r is a common error. The circular-orbit results assume the satellite’s mass is small relative to the central body and other bodies/drag are negligible."},
+        {heading:"5. Escape speed, orbital energy and Kepler’s laws",body:"Escape speed is the minimum launch speed that gives zero total mechanical energy at infinity in an ideal isolated gravitational field, ignoring atmosphere and propulsion after launch. At radius r, v_escape=√(2GM/r)=√2 times the circular-orbit speed at the same radius. For a circular orbit, kinetic energy is +GMm/(2r), potential energy is −GMm/r, and total energy is −GMm/(2r). Kepler’s laws describe elliptical planetary orbits: orbits are ellipses with the Sun at one focus; the radius vector sweeps equal areas in equal times; and the square of period is proportional to the cube of the semi-major axis for bodies orbiting the same central mass. State which orbital model is being used before substituting."},
+        {heading:"6. Satellite types and common reasoning",body:"A geostationary satellite must orbit in the equatorial plane in the same direction as Earth’s rotation and have an orbital period equal to one sidereal day; only then does it appear fixed relative to a ground observer. A low-Earth-orbit satellite has a shorter period and moves across the sky relative to the surface. Astronauts in orbit feel weightless not because gravity has vanished, but because the spacecraft and occupants are accelerating together in free fall. On a conceptual question, explain the acceleration and reference frame rather than just saying “there is no gravity”."}
+      ],
+      formulas:[
+        "F=Gm₁m₂/r²; force magnitude in N, masses in kg, r in m, G≈6.674×10⁻¹¹ N·m²·kg⁻²",
+        "g=GM/r²; acceleration due to gravity in m·s⁻²",
+        "V=−GM/r (gravitational potential in J·kg⁻¹); U=−GMm/r (potential energy in J)",
+        "g(h)=g₀[R/(R+h)]²; for h≪R, g(h)≈g₀(1−2h/R)",
+        "v_orbit=√(GM/r); T=2π√(r³/GM)",
+        "v_escape=√(2GM/r)=√2 v_orbit for the same r",
+        "Circular orbit: K=+GMm/(2r), U=−GMm/r, E_total=−GMm/(2r)",
+        "Near surface: ΔU≈mgΔh only when height change is small compared with planetary radius"
+      ],
+      formulaCheatSheet:[
+        {formula:"F=Gm₁m₂/r²",meaning:"Magnitude of the mutual attractive force between two point masses or spherical bodies treated as point masses externally.",when:"Use centre-to-centre distance, not surface gap; add force vectors for multiple masses.",units:"G in N·m²·kg⁻², m in kg, r in m, F in N.",trap:"Doubling r makes F one-quarter; doubling one mass doubles F."},
+        {formula:"g=GM/r²",meaning:"Field strength/acceleration due to gravity at distance r from the centre of a spherical body.",when:"Use r=R+h above the surface. At the surface use r=R.",units:"g in m·s⁻², M in kg, r in m.",trap:"g depends on the planet and location; weight mg also depends on the object's mass."},
+        {formula:"V=−GM/r; U=−GMm/r",meaning:"Potential is energy per unit mass; potential energy multiplies potential by the test mass.",when:"Use zero potential at infinity; exact equations are for the exterior point/spherical-mass model.",units:"V in J·kg⁻¹; U in J.",trap:"Potential and potential energy are negative under this reference choice, but gravitational force remains attractive."},
+        {formula:"v=√(GM/r); T=2π√(r³/GM)",meaning:"Circular-orbit speed and period around a dominant central mass.",when:"Use r from the central body's centre and assume a circular orbit.",units:"v in m·s⁻¹; T in s.",trap:"Higher orbit means slower speed and longer period; do not use altitude as the orbital radius."},
+        {formula:"v_escape=√(2GM/r)",meaning:"Minimum ideal speed for a body to reach infinity with zero residual speed.",when:"Use the starting distance from the centre; assume no drag or later propulsion.",units:"m·s⁻¹.",trap:"Escape speed is √2 times circular-orbit speed at the same radius."}
+      ],
+      workedExamples:[
+        {title:"Example 1 — compare gravitational forces",steps:["Two masses are separated by r and exert force F=Gm₁m₂/r².","Replace separation by 2r while keeping masses fixed.","New force is F′=Gm₁m₂/(2r)²=F/4.","State the inverse-square reason; it is not merely “the force gets smaller”." ]},
+        {title:"Example 2 — gravity at altitude equal to the planet's radius",steps:["Set h=R, so the distance from the centre is r=R+h=2R.","Use g(h)=GM/(2R)² and g₀=GM/R².","Therefore g(h)/g₀=R²/(2R)²=1/4.","At an altitude equal to Earth's radius, the ideal spherical model predicts one-quarter surface gravity." ]},
+        {title:"Example 3 — derive circular orbital speed",steps:["For a satellite in a circular orbit, gravity supplies centripetal force: GMm/r²=mv²/r.","Cancel satellite mass m and one factor of r.","Rearrange to v²=GM/r.","Take the positive magnitude v=√(GM/r); note that a more massive satellite does not have a different circular speed at the same r in this model." ]}
+      ],
+      commonMistakes:["Using altitude h instead of orbital radius R+h in satellite equations.","Confusing universal constant G with local acceleration g.","Treating negative gravitational potential energy as a negative force.","Claiming gravity is zero for orbiting astronauts.","Applying the near-surface approximation ΔU≈mgΔh to a very large height change.","Forgetting that orbital speed and orbital period move in opposite directions as circular-orbit radius increases."],
+      examFocus:["Derive g=GM/R² from Newton's law and weight.","Solve variation of g with altitude and, under stated uniform-density assumptions, depth.","Derive orbital velocity, time period and escape speed; state all assumptions.","Use conservation of energy to compare points in a gravitational field.","Explain weightlessness and geostationary conditions in words, not only formulas."],
+      recall:["What is the difference between G and g?","Why is gravitational potential negative when zero is chosen at infinity?","What is the orbital radius if altitude above the surface is h?","Why does orbital speed decrease when circular-orbit radius increases?","Why do astronauts feel weightless in orbit even though Earth's gravitational field remains significant?","State the three Kepler laws in order.","Derive v_escape=√2 v_orbit for the same radius.","When is ΔU≈mgΔh valid?"],
+      glossary:["Gravitational field strength: gravitational force per unit test mass at a point.","Gravitational potential: potential energy per unit mass with a chosen reference zero.","Orbital radius: distance from the central body's centre to the orbit.","Escape speed: minimum ideal speed needed to reach infinity with zero residual speed.","Geostationary orbit: equatorial prograde orbit whose period matches Earth's rotation."],
+      sourceNote:"Original detailed study aid based on standard Class 11 gravitation concepts. Confirm the exact syllabus scope and notation with the prescribed NCERT edition and school syllabus."
+    },
+    {
+      level:"Class 11",subject:"Physics",chapter:"Thermal Properties of Matter",
+      sections:[
+        {heading:"1. Temperature, thermal equilibrium and heat",body:"Temperature indicates the direction of spontaneous heat flow between systems in thermal contact; heat is energy transferred because of a temperature difference, not a substance stored in an object. The zeroth law supports temperature measurement: if A is in thermal equilibrium with C and B is also in thermal equilibrium with C, A and B share the same temperature. Always distinguish temperature change from heat transferred because the amount of material and its specific heat also matter."},
+        {heading:"2. Thermal expansion of solids and liquids",body:"Heating generally increases average atomic separation, producing expansion. Linear expansion is described by ΔL=αL₀ΔT for a small temperature range where α is treated as constant; area and volume expansion have corresponding coefficients, often approximately 2α and 3α for isotropic solids. Expansion depends on material and original dimensions. In composite rods or rails, different coefficients create relative expansion and thermal stress if movement is constrained. Water has anomalous expansion near 0–4 °C, a textbook exception important for aquatic life."},
+        {heading:"3. Calorimetry and change of state",body:"When no heat escapes, energy lost by hotter bodies equals energy gained by cooler bodies. For a temperature change without phase change use Q=mcΔT; the specific heat c is material-dependent. During melting or boiling at a fixed pressure, energy changes phase rather than raising temperature, so use Q=mL. A problem that contains warming, melting, further warming, boiling and steam heating must be split into stages, with a separate equation for each."},
+        {heading:"4. Heat transfer: conduction, convection and radiation",body:"Conduction transfers energy through microscopic interactions without bulk motion of the material; metals are usually good conductors while many gases and porous materials are insulators. Convection transports energy through bulk fluid motion and is important in liquids and gases. Thermal radiation is electromagnetic and can travel through vacuum; its net rate depends strongly on absolute temperature and surface properties. Do not mix Celsius with Kelvin in radiation laws."},
+        {heading:"5. Newton's cooling law and problem strategy",body:"For a small temperature difference between a body and its surroundings, the rate of cooling is approximately proportional to the excess temperature under suitable conditions. This approximation is not an exact law over arbitrarily large temperature differences. In calorimetry, first account for every component and phase, then solve energy balance. In expansion, keep the original length/area/volume distinct from the final dimension. In thermal-transfer questions, identify whether the process is conduction, convection, radiation or a combination."}
+      ],
+      formulas:["Q=mcΔT (no phase change)","Q=mL (phase change at the stated pressure)","ΔL=αL₀ΔT; ΔA≈2αA₀ΔT; ΔV≈3αV₀ΔT for isotropic solids and small changes","Conduction through a slab: rate of heat transfer ≈ kA(T_hot−T_cold)/L under steady one-dimensional conditions","Stefan-Boltzmann: P=εσAT⁴ for emitted radiation in the idealised model; net exchange uses T⁴−T_surroundings⁴"],
+      formulaCheatSheet:[
+        {formula:"Q=mcΔT",meaning:"Sensible heat for a body whose temperature changes without a phase change.",when:"Use c for the relevant material and valid temperature range.",units:"Q in J, m in kg, c in J·kg⁻¹·K⁻¹, ΔT in K or °C difference.",trap:"A temperature difference has the same numerical value in kelvin and Celsius; absolute radiation temperatures must use K."},
+        {formula:"Q=mL",meaning:"Latent heat absorbed/released during a phase change.",when:"Use while the phase changes at the specified pressure and phase-change temperature.",units:"L in J·kg⁻¹, Q in J.",trap:"Do not use mcΔT for the ideal phase-change plateau; temperature can remain constant."},
+        {formula:"ΔL=αL₀ΔT",meaning:"Small-change linear expansion.",when:"α is approximately constant and mechanical constraints are handled separately.",units:"α in K⁻¹; length units must match.",trap:"Use initial length L₀ in the simple formula and do not assume all solids have the same coefficient."}
+      ],
+      workedExamples:[
+        {title:"Heating followed by melting",steps:["Calculate energy to warm the solid to its melting point with Q₁=mcΔT.","Calculate the melting energy with Q₂=mL.","Add the two stages, Q_total=Q₁+Q₂.","If more heating or boiling is involved, add a separate stage for each process." ]},
+        {title:"Expansion percentage",steps:["Write ΔL=αL₀ΔT.","Divide by L₀ to obtain ΔL/L₀=αΔT.","Multiply by 100 for percentage change.","Check that ΔT is a temperature difference and that α uses inverse-temperature units." ]}
+      ],
+      commonMistakes:["Treating heat as the same thing as temperature.","Using sensible-heat and latent-heat formulas interchangeably.","Using Celsius absolute values in T⁴ radiation expressions.","Ignoring heat lost to the surroundings when the question specifies an ideal insulated calorimeter.","Assuming expansion coefficients are identical for all materials."],
+      examFocus:["Draw a heating curve and mark temperature-changing versus phase-changing segments.","Show energy balance explicitly in calorimetry.","Distinguish the three heat-transfer mechanisms and give a physical example.","State assumptions for conduction and Newton's cooling law."],
+      recall:["Why can temperature remain constant while a solid melts?","What is the difference between heat and internal energy?","How does a linear expansion coefficient enter the formula?","Which heat-transfer mode can occur through vacuum?","Why should a staged heating problem be split into multiple energy equations?"],
+      glossary:["Specific heat capacity: heat needed per unit mass per unit temperature rise.","Latent heat: energy per unit mass for a phase change at stated conditions.","Thermal conductivity: material parameter describing conduction efficiency.","Thermal equilibrium: no net heat flow between bodies in thermal contact."]
+    },
+    {
+      level:"Class 11",subject:"Physics",chapter:"Oscillations and Waves",
+      sections:[
+        {heading:"1. Periodic motion and simple harmonic motion",body:"Periodic motion repeats after a fixed interval T; frequency f=1/T counts cycles per second. Simple harmonic motion (SHM) is a special periodic motion where the restoring acceleration is proportional to displacement from equilibrium and opposite in direction: a=−ω²x. The minus sign is essential because the acceleration points back toward equilibrium. Not every oscillation is SHM; the linear restoring-force approximation is needed."},
+        {heading:"2. SHM position, velocity, acceleration and energy",body:"A convenient displacement model is x=A cos(ωt+φ), where A is amplitude and φ is phase. Differentiating gives velocity and acceleration; the maximum speed is ωA and maximum acceleration is ω²A. Speed is maximum at equilibrium while magnitude of acceleration is maximum at the turning points. For an ideal oscillator, kinetic and potential energy exchange while total mechanical energy stays constant: E=½mω²A²."},
+        {heading:"3. Spring and simple pendulum",body:"For a mass on an ideal spring, Hooke's law gives restoring force F=−kx, so ω=√(k/m) and T=2π√(m/k). Increasing mass increases period; increasing spring stiffness decreases it. A simple pendulum has T≈2π√(L/g) only for small oscillation angles, where sinθ≈θ. In that approximation, period is independent of bob mass and approximately independent of amplitude."},
+        {heading:"4. Wave propagation and wave parameters",body:"A wave transfers energy and a disturbance without net transport of matter over a cycle in the ideal travelling-wave picture. Wavelength λ is distance between points in the same phase, frequency f is set by the source, and speed v=fλ. Mechanical waves require a material medium while electromagnetic waves can travel in vacuum. When a wave enters a new medium, frequency normally stays fixed at the boundary but speed and wavelength can change."},
+        {heading:"5. Superposition, standing waves, sound and resonance",body:"When waves overlap, their displacements add according to superposition. Interference and standing-wave patterns depend on phase, boundary conditions and frequency. Resonance occurs when driving frequency is near a system's natural frequency and response can become large, subject to damping. Sound in air is longitudinal: pressure variations travel along the direction of propagation. For strings/open/closed pipes, identify which ends are nodes or antinodes before applying harmonic-frequency formulas."}
+      ],
+      formulas:["f=1/T; ω=2πf","SHM: a=−ω²x; x=A cos(ωt+φ)","v_max=ωA; a_max=ω²A","Spring: T=2π√(m/k)","Small-angle pendulum: T≈2π√(L/g)","Wave speed v=fλ"],
+      formulaCheatSheet:[
+        {formula:"a=−ω²x",meaning:"Restoring acceleration is proportional to displacement and opposite in sign in SHM.",when:"Use only for motion satisfying the SHM model.",units:"ω in rad·s⁻¹; x in m; a in m·s⁻².",trap:"At x=0 acceleration is zero but speed is maximum; at ±A speed is zero."},
+        {formula:"T=2π√(m/k)",meaning:"Period of a mass-spring oscillator under the ideal linear-spring model.",when:"Use for small oscillations around equilibrium with negligible damping.",units:"m in kg, k in N·m⁻¹, T in s.",trap:"A stiffer spring gives a shorter period; amplitude does not enter this ideal formula."},
+        {formula:"v=fλ",meaning:"Travelling-wave speed equals frequency times wavelength.",when:"Use a consistent wave and medium; at a stationary interface frequency stays fixed while λ may change.",units:"v in m·s⁻¹, f in Hz, λ in m.",trap:"Do not assume wavelength stays constant across two media."}
+      ],
+      workedExamples:[
+        {title:"Mass-spring period",steps:["Record mass m and spring constant k in SI units.","Substitute into T=2π√(m/k).","Check dimensional units: m/k has units s², so its square root is seconds.","Compare trends: multiplying mass by four doubles the period; multiplying k by four halves it." ]},
+        {title:"Wave-length from speed and frequency",steps:["Identify speed v and frequency f.","Use λ=v/f, derived from v=fλ.","Convert frequency to Hz and speed to m/s.","Check that wavelength is a length and explain whether the medium changed." ]}
+      ],
+      commonMistakes:["Dropping the minus sign in SHM acceleration.","Confusing amplitude with wavelength.","Assuming all periodic motion is SHM.","Using the simple-pendulum period for large angles without qualification.","Assuming both wave speed and frequency change at a stationary boundary."],
+      examFocus:["Derive the spring period from Newton's law and Hooke's law.","Draw x, v and a against time or displacement for SHM.","Apply energy conservation between equilibrium and turning points.","Use v=fλ with correct boundary-condition reasoning.","For standing waves, identify node/antinode constraints before counting harmonics."],
+      recall:["What defines SHM?","Where are speed and acceleration magnitude maximum?","How does spring stiffness affect period?","What remains unchanged when a wave crosses a stationary interface?","How do resonance and damping interact?"],
+      glossary:["Amplitude: largest displacement from equilibrium.","Angular frequency: rate of phase change, measured in rad/s.","Node: location of zero displacement in a standing wave.","Antinode: location of maximum standing-wave displacement.","Resonance: large response when driving frequency is near a natural frequency."]
+    },
+    {
+      level:"Class 11",subject:"Chemistry",chapter:"Equilibrium",
+      sections:[
+        {heading:"1. Dynamic equilibrium and equilibrium constant",body:"Chemical equilibrium in a closed system is dynamic: forward and reverse reactions continue, but their rates are equal, so macroscopic concentrations remain constant. For aA+bB ⇌ cC+dD, the concentration-based equilibrium expression is Kc=[C]^c[D]^d/([A]^a[B]^b), with activities approximated by concentrations in the textbook idealised model. Pure solids and liquids are omitted because their activity is treated as constant. K describes the equilibrium composition at a stated temperature; it is not a speed and does not say how quickly equilibrium is reached."},
+        {heading:"2. Reaction quotient and Le Chatelier's principle",body:"The reaction quotient Q has the same algebraic form as K but is evaluated using the current composition. If Q<K, net forward progress tends to form products; if Q>K, net reverse progress tends to form reactants. Changing concentration or pressure shifts the composition toward a new equilibrium, but K does not change at fixed temperature. A catalyst increases both forward and reverse rates and helps the system reach equilibrium sooner; it does not change equilibrium composition."},
+        {heading:"3. Temperature, pressure and Kp/Kc",body:"Temperature is the disturbance that changes the equilibrium constant. Heating an exothermic forward reaction favours the endothermic reverse direction; heating an endothermic forward reaction tends to favour products. For gaseous equilibria, pressure changes matter when the total gaseous stoichiometric amounts differ. Kp is expressed through partial pressures. Under the ideal-gas convention Kp=Kc(RT)^Δn, where Δn is gaseous product coefficient sum minus gaseous reactant coefficient sum."},
+        {heading:"4. Ionic equilibrium: acids, bases, buffers and solubility",body:"Weak acids and bases ionise only partially, so equilibrium expressions and approximations determine their ion concentrations. pH is −log₁₀[H⁺] in the common concentration convention; pOH uses hydroxide concentration and pH+pOH≈14 at 25 °C for dilute aqueous conditions. A buffer resists pH change because a weak acid/conjugate-base pair consumes added H⁺ or OH⁻. Solubility product Ksp describes an ionic solid's saturated equilibrium; precipitation is assessed by comparing the ionic product with Ksp."},
+        {heading:"5. Solve equilibrium problems systematically",body:"Write the balanced equation and the correct K expression first. Set up an ICE-style table (initial, change, equilibrium) where helpful; respect stoichiometric coefficients when changes are linked. Decide whether a small-x approximation is justified only after checking its size against the starting concentration. For pressure/concentration disturbances, reason about the new composition rather than changing K automatically. For acid-base questions, choose the relevant weak/strong model, then check whether water autoionisation or concentration assumptions matter."}
+      ],
+      formulas:["Kc=[products]^coefficients/[reactants]^coefficients, with pure solids/liquids omitted","Kp=Kc(RT)^Δn for ideal gaseous equilibria","Q<K: forward direction; Q>K: reverse direction","pH=−log₁₀[H⁺]; pH+pOH≈14 at 25 °C in dilute aqueous solution","For a weak acid HA, Ka=[H⁺][A⁻]/[HA] under the standard approximation","For an ideal buffer, pH≈pKa+log₁₀([A⁻]/[HA])"],
+      formulaCheatSheet:[
+        {formula:"Q compared with K",meaning:"Predicts the net direction needed to reach equilibrium.",when:"Calculate Q from the current composition using the balanced stoichiometric powers.",units:"Dimensionless in the thermodynamic-activity definition; school K expressions may carry apparent units under concentration conventions.",trap:"Q changes with composition; K remains fixed at the same temperature."},
+        {formula:"Kp=Kc(RT)^Δn",meaning:"Converts gaseous equilibrium expressions using ideal-gas partial pressures.",when:"Δn counts only gaseous product moles minus gaseous reactant moles.",units:"Use consistent gas constant, pressure and concentration units.",trap:"If Δn=0, Kp=Kc in the ideal relation."},
+        {formula:"pH=−log₁₀[H⁺]",meaning:"Logarithmic measure related to hydrogen-ion concentration.",when:"Use the concentration approximation appropriate to dilute aqueous solutions.",units:"pH is dimensionless.",trap:"A one-unit pH drop corresponds to ten-times higher [H⁺], not one additional unit of acidity."}
+      ],
+      workedExamples:[
+        {title:"Direction from Q and K",steps:["Write K from the balanced reaction.","Insert current concentrations/partial pressures to calculate Q.","Compare Q and K numerically.","If Q<K, the reaction proceeds net forward; if Q>K, net reverse; if equal, the composition is at equilibrium." ]},
+        {title:"Temperature versus catalyst",steps:["Identify whether the forward reaction is exothermic or endothermic.","For a temperature increase, reason which direction consumes the added heat.","Change K only in response to temperature.","If only a catalyst is added, expect faster approach but unchanged K and equilibrium composition." ]}
+      ],
+      commonMistakes:["Changing K when only concentrations or pressure are changed.","Including pure solids in the equilibrium expression.","Assuming a catalyst shifts equilibrium toward products.","Using Δn that includes pure liquids/solids.","Applying weak-acid approximations without checking their validity."],
+      examFocus:["Form Kc/Kp from a balanced reaction and simplify correctly.","Explain Q versus K and distinguish equilibrium position from rate.","Predict concentration, pressure and temperature effects separately.","Solve weak acid/base pH and buffer questions with stated assumptions.","Compare ionic product with Ksp to predict precipitation."],
+      recall:["Why is equilibrium called dynamic?","What does Q<K tell you?","Which disturbance changes K?","When are pure solids omitted from K?","What does a buffer do after a small acid addition?"],
+      glossary:["Equilibrium constant: expression characterising equilibrium composition at a stated temperature.","Reaction quotient: the equilibrium expression evaluated at the current state.","Buffer: solution that resists a substantial pH change after a small addition of acid/base.","Solubility product: equilibrium constant for dissolution of a sparingly soluble ionic solid."]
+    },
+    {
+      level:"Class 11",subject:"Chemistry",chapter:"Redox Reactions",
+      sections:[
+        {heading:"1. Oxidation numbers as electron bookkeeping",body:"Oxidation is loss of electrons and reduction is gain of electrons in the electron-transfer model. Oxidation number is a formal bookkeeping tool that helps identify which atom is oxidised or reduced, even when no free electron is visibly exchanged. In a neutral compound oxidation numbers sum to zero; in an ion they sum to the ion's charge. Common rules include elemental forms being zero, monatomic ions having their ionic charge, oxygen usually −2 with exceptions, and hydrogen usually +1 with non-metals or −1 in metal hydrides."},
+        {heading:"2. Oxidising agents and reducing agents",body:"The oxidising agent causes another species to be oxidised and is itself reduced (its oxidation number decreases). The reducing agent causes another species to be reduced and is itself oxidised (its oxidation number increases). This naming convention is a common trap: the agent's name describes what it does to the other species, not the change it undergoes. In every complete redox reaction, electron loss and gain must balance."},
+        {heading:"3. Balancing redox reactions",body:"In the oxidation-number method, assign oxidation numbers, identify increases/decreases, and choose coefficients so total increase equals total decrease; then balance remaining atoms and check charge. In the half-reaction method, split oxidation and reduction, balance atoms other than O and H, balance O with H₂O, H with H⁺ in acidic medium, and charge with electrons; combine and cancel common species. In basic medium, neutralise any introduced H⁺ using OH⁻ and simplify water. Follow the method and medium the question specifies."},
+        {heading:"4. Redox as a foundation for electrochemistry",body:"A galvanic cell uses a spontaneous redox reaction to drive electron flow through an external circuit. Electrons move from the oxidation half-cell (anode) to the reduction half-cell (cathode). Oxidation always occurs at the anode and reduction at the cathode, whether the cell is galvanic or electrolytic; the electrode signs differ between cell types. Balancing redox equations is therefore a prerequisite for correctly finding electron number n in electrochemical calculations."}
+      ],
+      formulas:["Oxidation: oxidation number increases / electrons lost","Reduction: oxidation number decreases / electrons gained","In a balanced redox process: total electrons lost = total electrons gained","For any species: sum of oxidation numbers = overall charge"],
+      workedExamples:[
+        {title:"Assign oxidation number",steps:["Write the known oxidation numbers for common elements.","Let the unknown oxidation number be x.","Set the sum equal to zero for a neutral compound or equal to the overall charge for an ion.","Solve for x and confirm the result is consistent with the chemical species." ]},
+        {title:"Balance in acidic medium",steps:["Split the equation into oxidation and reduction half-reactions.","Balance all atoms except O and H; balance O using water and H using H⁺.","Balance net charge with electrons.","Multiply half-reactions to equalise electron counts, add, cancel common species and check atoms/charge." ]}
+      ],
+      commonMistakes:["Calling the species reduced the reducing agent.","Failing to balance total charge after atom balance.","Using acidic-medium H⁺ steps in basic medium without neutralising them.","Assuming every oxygen atom has oxidation number −2 regardless of peroxide/superoxide or OF₂ exceptions."],
+      examFocus:["Assign oxidation number with the sum rule.","Identify oxidant/reductant from oxidation-number changes.","Balance redox equations in the specified medium and show electron equality.","Connect electron count n with electrochemical cell quantities when relevant."],
+      recall:["What happens to oxidation number during reduction?","Why are electrons multiplied before half-reactions are added?","How are H⁺ ions handled in a basic medium?","Which species is the oxidising agent in a given redox equation?"],
+      glossary:["Oxidation number: formal charge-like bookkeeping value assigned to an atom.","Oxidising agent: species that accepts electrons and is reduced.","Reducing agent: species that donates electrons and is oxidised.","Half-reaction: one part of a redox reaction showing oxidation or reduction separately."]
+    },
+    {
+      level:"Class 11",subject:"Chemistry",chapter:"Thermodynamics",
+      sections:[
+        {heading:"1. System, surroundings and state functions",body:"Choose a system (for example, the reacting chemicals) and treat everything else as surroundings. An open system exchanges matter and energy, a closed system exchanges energy but not matter, and an isolated system ideally exchanges neither. Internal energy U, enthalpy H, entropy S and Gibbs energy G are state functions: their changes depend on initial and final states, not the path. Heat q and work w are path-dependent energy-transfer modes, not state properties stored independently in the same way."},
+        {heading:"2. First law and sign convention",body:"Energy conservation requires the change in internal energy to equal energy transferred as heat plus work under a stated sign convention. A common chemistry convention writes ΔU=q+w, where q is positive for heat absorbed by the system and w is positive for work done on the system. Some physics presentations define work done by the system as positive and write ΔU=q−W_by; never mix the formula from one convention with signs from the other. Expansion work against constant external pressure is w=−P_extΔV in the chemistry convention."},
+        {heading:"3. Enthalpy, calorimetry and Hess's law",body:"Enthalpy is H=U+PV; at constant pressure, with only pressure-volume work and suitable conditions, heat transfer equals ΔH. Exothermic reactions have negative ΔH for the forward process; endothermic reactions have positive ΔH. Hess's law follows because enthalpy is a state function: reversing a reaction reverses the sign of ΔH, and multiplying its equation by a factor multiplies ΔH by that factor. Standard reaction enthalpy can be found from formation enthalpies as products minus reactants, each weighted by coefficient."},
+        {heading:"4. Entropy and Gibbs energy",body:"Entropy relates to the number of accessible microscopic arrangements and energy dispersal. For a process at constant temperature and pressure, ΔG=ΔH−TΔS gives a thermodynamic criterion: ΔG<0 favours the forward direction under the stated conditions, ΔG=0 corresponds to equilibrium, and ΔG>0 favours the reverse direction. A thermodynamically favourable process may still be slow because kinetics and activation energy are separate questions. Use kelvin in the TΔS term and convert entropy units consistently."},
+        {heading:"5. Thermodynamic problem workflow",body:"Write the system boundary, sign convention and process condition first. Decide whether the question asks ΔU, q, work, ΔH, ΔS or ΔG; they are related but not interchangeable. Convert all temperatures to kelvin for entropy/Gibbs relations, track joules versus kilojoules, and apply reaction coefficients to molar enthalpies. When combining equations with Hess's law, reverse/scale the reaction and ΔH together. State whether spontaneity is being judged at standard conditions or for the actual mixture."}
+      ],
+      formulas:["ΔU=q+w (chemistry sign convention: q into system positive, work on system positive)","w=−P_extΔV for expansion/compression against constant external pressure","H=U+PV; at constant pressure under usual conditions q_p=ΔH","ΔG=ΔH−TΔS, with T in K and consistent energy units","ΔG=ΔG°+RT ln Q; at equilibrium Q=K and ΔG=0","ΔH°_reaction=ΣνΔH°f(products)−ΣνΔH°f(reactants)"],
+      workedExamples:[
+        {title:"Use the first law",steps:["Write the selected system and sign convention.","Choose positive/negative q and w from their definitions.","Substitute in ΔU=q+w for the chemistry convention.","Check the meaning of the sign of ΔU after calculation." ]},
+        {title:"Hess's law combination",steps:["Write the target equation.","Reverse or multiply each supplied reaction so species match the target.","Reverse or multiply its ΔH by the same factor.","Add reactions and enthalpy changes, cancelling intermediates." ]}
+      ],
+      commonMistakes:["Confusing work done on the system with work done by the system.","Using Celsius in TΔS or RT ln Q.","Treating ΔG<0 as a statement about reaction speed.","Forgetting to reverse the sign of ΔH when reversing an equation.","Mixing J and kJ in a single equation."],
+      examFocus:["State the sign convention at the beginning of every first-law problem.","Use reaction stoichiometry correctly in formation-enthalpy sums.","Distinguish state functions from heat/work.","Explain why a spontaneous reaction can still be kinetically slow.","Connect ΔG and Q/K without asserting the standard state is always the actual state."],
+      recall:["Which are state functions: heat, work, internal energy, enthalpy?","What does negative ΔH mean for the system?","What is required to use q_p=ΔH?","Why must temperature be in kelvin in ΔG=ΔH−TΔS?"],
+      glossary:["State function: property depending on the state rather than the path.","Enthalpy: H=U+PV, useful for constant-pressure heat changes.","Entropy: state function associated with accessible microstates and energy dispersal.","Gibbs energy: criterion for thermodynamic favourability at constant temperature/pressure."]
+    },
+    {
+      level:"Class 11",subject:"Chemistry",chapter:"Hydrocarbons",
+      sections:[
+        {heading:"1. Structure and classification",body:"Hydrocarbons contain only carbon and hydrogen. Alkanes have only carbon-carbon single bonds and are saturated; alkenes contain a carbon-carbon double bond, alkynes a triple bond, and aromatic compounds contain a conjugated ring such as benzene with special delocalisation. The general formula CₙH₂ₙ₊₂ applies to open-chain alkanes, CₙH₂ₙ to open-chain monoalkenes or cycloalkanes under the simplest case, and CₙH₂ₙ₋₂ to open-chain monoalkynes. Rings and multiple unsaturations change hydrogen count, so always check the structure before applying a general formula."},
+        {heading:"2. Isomerism and nomenclature",body:"A structural isomer has the same molecular formula but different connectivity. Chain, position and functional-group isomerism may be relevant depending on the compound class; geometric isomerism requires restricted rotation and suitable substituents. Choose the longest appropriate parent chain, number it to give required substituents/multiple bonds the lowest possible locants, and use standard suffixes for unsaturation. Draw the structure from the name and verify the carbon count and valence."},
+        {heading:"3. Alkanes: substitution and stability",body:"Alkanes are relatively unreactive because C–C and C–H sigma bonds are strong and the molecules are nonpolar overall. Under suitable light/heat conditions, halogenation can proceed through a radical chain: initiation creates radicals, propagation consumes and regenerates radicals, and termination combines radicals. The number and stability of possible substitution products depend on carbon environment and reaction selectivity. Do not use electrophilic-addition mechanisms for a saturated alkane."},
+        {heading:"4. Alkenes and alkynes: addition",body:"The pi bond in an alkene/alkyne is electron-rich and can undergo addition reactions. In electrophilic additions, regioselectivity may follow stability of the carbocation-like intermediate under a given reagent/condition; peroxide effects are specific and should not be generalised to every reagent. Hydrogenation adds hydrogen, halogenation adds halogen, hydration adds water components, and oxidation products depend on reagent strength and conditions. For alkynes, multiple addition can occur depending on reagent equivalents."},
+        {heading:"5. Benzene and aromatic substitution",body:"Benzene's six pi electrons are delocalised around the ring; the molecule is represented by resonance forms rather than alternating localised double bonds that react as ordinary isolated alkenes. Addition typically disrupts aromaticity, so benzene commonly undergoes electrophilic aromatic substitution in which a ring hydrogen is replaced and aromaticity is restored. Reagents such as nitration or halogenation require the appropriate catalysts/conditions; do not write a product without them. Substituents already on the ring can affect both rate and orientation of further substitution."}
+      ],
+      formulas:["Open-chain alkane: CₙH₂ₙ₊₂","Open-chain monoalkene: CₙH₂ₙ; open-chain monoalkyne: CₙH₂ₙ₋₂","Degree of unsaturation (simple CHN formula): DBE=(2C+2+N−H−X)/2, where X is halogens; oxygen/sulfur do not enter this count in the basic formula"],
+      workedExamples:[
+        {title:"Identify a homologous series",steps:["Count carbon atoms and identify single, double or triple bonds/rings.","Compare the formula with the appropriate open-chain series only if its assumptions hold.","Check valence and unsaturation against the drawn structure.","Name the compound and verify numbering." ]},
+        {title:"Predict an alkene reaction",steps:["Identify the exact alkene and its possible nonequivalent carbon atoms.","Read the reagent, solvent, temperature and any peroxide/catalyst condition.","Choose the correct addition pathway and regioselectivity rule for those conditions.","Draw the product, check carbon count and bond valence, and mention stereochemistry if it is relevant." ]}
+      ],
+      commonMistakes:["Applying open-chain general formulas to cyclic compounds without adjustment.","Ignoring reagent conditions in organic reaction prediction.","Treating benzene as a normal alkene and forgetting aromatic stabilisation.","Using a rule such as Markovnikov's without checking whether the specified mechanism/conditions apply."],
+      examFocus:["Classify structures and identify homologous series/isomers.","Explain radical substitution using initiation, propagation and termination.","Predict alkene/alkyne products only after reading reagent conditions.","Explain why benzene commonly undergoes substitution rather than ordinary addition.","Use valence and molecular formula to verify the proposed structure."],
+      recall:["What is the difference between saturated and unsaturated hydrocarbons?","When does the alkane radical-halogenation chain start?","Why does benzene prefer electrophilic substitution?","What structural conditions are required for geometrical isomerism?"],
+      glossary:["Homologous series: compounds with the same functional pattern and successive members differing by a structural unit.","Radical: species with an unpaired electron.","Electrophilic addition: addition initiated by an electrophile to an electron-rich multiple bond.","Aromaticity: stabilisation associated with a suitable cyclic conjugated pi-electron system."]
+    }
+  ];
+  function getDeepChapterOverride(item) {
+    return deepChapterOverrides.find((x) => x.level === item.level && x.subject === item.subject && x.chapter === item.chapter) || null;
+  }
+  function enrichIndividualChapter(item) {
+    // Only expand the original, short individual chapter cards; deep guide and cheat-sheet records stay untouched.
+    if (item.depth === "detailed" || (item.sections && item.sections.length >= 4)) return item;
+    const candidates = schoolGuides.concat(humanitiesGuides).filter((guide) => guide.level === item.level && guide.subject === item.subject);
+    const topicSections = candidates.flatMap((guide) => (guide.sections || []).map((section) => ({ section, source: guide.chapter, score: sectionScore(item, section) }));
+    const ranked = topicSections.filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+    const linkedSections = [];
+    const seenHeadings = new Set();
+    ranked.forEach((x) => {
+      if (linkedSections.length < 4 && !seenHeadings.has(x.section.heading)) {
+        seenHeadings.add(x.section.heading);
+        linkedSections.push({heading:"Related topic · " + x.section.heading, body:x.section.body});
+      }
+    });
+    const formulaSheet = formulaSheets.filter((sheet) => sheet.level === item.level && sheet.subject === item.subject)
+      .sort((a,b) => guideMatchScore(item,b)-guideMatchScore(item,a))[0];
+    const currentAlias = chapterAliasList(item);
+    let cards = [];
+    if (formulaSheet && Array.isArray(formulaSheet.formulaCheatSheet)) {
+      cards = formulaSheet.formulaCheatSheet.map((card) => ({
+        card, score: sectionScore(item, {heading:card.formula + " " + card.meaning + " " + card.when, body:card.trap + " " + card.units})
+      })).filter((x) => x.score > 0).sort((a,b) => b.score-a.score).slice(0,6).map((x) => x.card);
+    }
+    if (!cards.length) {
+      cards = (item.formulas || []).slice(0,8).map((formula) => ({
+        formula:String(formula),
+        meaning:"This relation summarises a rule or relationship used in " + item.chapter + ". Identify each symbol and the assumptions behind the relation before substituting.",
+        when:"Use after classifying the question and checking that the stated conditions match the model.",
+        units:"Use the units or notation defined by the textbook/question; keep quantities dimensionally consistent.",
+        trap:"Do not apply the formula blindly: check domain, sign, units, boundary conditions and whether a related special case is required."
+      }));
+    }
+    const override = getDeepChapterOverride(item);
+    if (override) {
+      Object.assign(item, override, {depth:"detailed"});
+      return item;
+    }
+    const relatedExamples = candidates.flatMap((guide) => (guide.workedExamples || []).map((example) => ({
+      example, score: sectionScore(item, {heading:example.title, body:(example.steps || []).join(" ")})
+    }))).filter((x) => x.score > 0).sort((a,b) => b.score-a.score).slice(0,2).map((x) => x.example);
+    const genericSections = genericDeepSections(item);
+    item.sections = genericSections.slice(0,2).concat(linkedSections, genericSections.slice(2));
+    item.formulaCheatSheet = cards;
+    item.depth = "detailed";
+    item.workedExamples = (relatedExamples.length ? relatedExamples : []).concat([
+      {title:"Chapter example — full working and reasoning",steps:[
+        "Read the worked example: " + String(item.example || "the example shown above"),
+        "Identify the relevant definition, formula, process or evidence from the preceding sections.",
+        "Show the intermediate reasoning explicitly; do not skip the step that links the given information to the selected method.",
+        "Check the result against units, signs, conservation/consistency rules or the exact wording of the question."
+      ]},
+      {title:"Self-check after solving",steps:[
+        "State the conclusion with the correct quantity, term or process name.",
+        "Check that all stated conditions and assumptions are satisfied.",
+        "Use a second method, a limiting case, a diagram or the source data to verify the answer where appropriate."
+      ]}
+    ]).slice(0,4);
+    item.commonMistakes = (item.commonMistakes || []).concat([
+      "Memorising a final statement/formula without its conditions or reason.",
+      "Skipping a definition, intermediate step, unit, label or link in the reasoning.",
+      "Answering a related topic instead of the exact command word and scope of the question."
+    ]);
+    item.examFocus = (item.examFocus || []).concat([
+      "Start with the precise definition/model and state any needed assumption.",
+      "Show the important reasoning or working, not only the final result.",
+      "Use a labelled diagram, equation, comparison table or evidence chain when it makes the explanation clearer."
+    ]);
+    item.glossary = item.glossary || [];
+    item.recall = (item.recall || []).concat([
+      "Explain the chapter's central idea in your own words, including why it is true.",
+      "Which assumption or condition would make the main rule invalid?",
+      "Work one example without looking at the displayed solution, then check each step."
+    ]);
+    return item;
+  }
+
   const schoolGuides = Array.isArray(window.KP_SCHOOL_CHAPTER_GUIDES) ? window.KP_SCHOOL_CHAPTER_GUIDES : [];
   const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
   const humanitiesGuides = Array.isArray(window.KP_HUMANITIES_GUIDES) ? window.KP_HUMANITIES_GUIDES : [];
+  notes.forEach(enrichIndividualChapter);
   if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
   notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
