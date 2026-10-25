@@ -1,9 +1,11 @@
-const CACHE_NAME = "kaushalpath-shell-v6";
+const CACHE_NAME = "kaushalpath-shell-v7";
 const SHELL_FILES = [
   "/",
   "/index.html",
   "/app.js",
   "/school-chapter-guides.js",
+  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-mathematics-chapter-notes.js",
   "/school-humanities-commerce-guides.js",
   "/ncert-chemistry-chapter-notes.js",
   "/ncert-chemistry-chapter-notes.js",
