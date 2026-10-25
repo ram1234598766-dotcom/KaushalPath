@@ -606,6 +606,53 @@
   const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
   const humanitiesGuides = Array.isArray(window.KP_HUMANITIES_GUIDES) ? window.KP_HUMANITIES_GUIDES : [];
   if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
+  // Detailed chapter packs replace compact starter summaries sharing the same key.
+  // The older add-only de-duplication silently discarded richer content.
+  const individualChapterSets = [
+    window.KP_MATHS_INDIVIDUAL_DEEP_NOTES,
+    window.KP_SCIENCE_INDIVIDUAL_DEEP_NOTES,
+    window.KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES,
+    window.KP_REMAINING_CHAPTER_DEEP_NOTES
+  ].filter(Array.isArray);
+  const chapterKey = (item) => [item.level, item.subject, item.chapter].map((x) => String(x || "").trim().toLowerCase()).join("::");
+  const detailScore = (item) => (item.sections || []).length * 10 +
+    (item.formulaCheatSheet || []).length * 5 + (item.workedExamples || []).length * 4 +
+    (item.practiceProblems || []).length * 4 + (item.commonMistakes || []).length;
+  const chapterIndex = new Map();
+  notes.forEach((item, index) => { if (!chapterIndex.has(chapterKey(item))) chapterIndex.set(chapterKey(item), index); });
+  individualChapterSets.flat().forEach((item) => {
+    const key = chapterKey(item);
+    const existingIndex = chapterIndex.get(key);
+    if (existingIndex == null) {
+      item.depth = "detailed";
+      chapterIndex.set(key, notes.length);
+      notes.push(item);
+      return;
+    }
+    const existing = notes[existingIndex];
+    const chosen = detailScore(item) >= detailScore(existing) ? item : existing;
+    const other = chosen === item ? existing : item;
+    const combineUnique = (field, identity) => {
+      const list = [...(chosen[field] || [])];
+      const seen = new Set(list.map(identity));
+      (other[field] || []).forEach((value) => {
+        const id = identity(value);
+        if (!seen.has(id)) { seen.add(id); list.push(value); }
+      });
+      return list;
+    };
+    notes[existingIndex] = Object.assign({}, other, chosen, {
+      depth: "detailed",
+      sections: combineUnique("sections", (x) => String(x.heading || x.body || "")),
+      formulas: combineUnique("formulas", (x) => String(x)),
+      formulaCheatSheet: combineUnique("formulaCheatSheet", (x) => String(x.formula || "")),
+      workedExamples: combineUnique("workedExamples", (x) => String(x.title || (x.steps || []).join("|"))),
+      practiceProblems: combineUnique("practiceProblems", (x) => String(x.question || "")),
+      commonMistakes: combineUnique("commonMistakes", (x) => String(x)),
+      examFocus: combineUnique("examFocus", (x) => String(x)),
+      glossary: combineUnique("glossary", (x) => String(x))
+    });
+  });
   notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...humanitiesGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
@@ -660,6 +707,7 @@
       item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\n" + item.commonMistakes.map((x) => "- " + x).join("\n") : "",
       item.examFocus && item.examFocus.length ? "EXAM APPROACH\n" + item.examFocus.map((x) => "- " + x).join("\n") : "",
       item.glossary && item.glossary.length ? "GLOSSARY\n" + item.glossary.map((x) => "- " + x).join("\n") : "",
+      item.practiceProblems && item.practiceProblems.length ? "PRACTICE QUESTIONS WITH WORKED ANSWERS\n" + item.practiceProblems.map((p, i) => (i + 1) + ". " + p.question + "\nAnswer: " + p.answer + "\nReasoning: " + p.solution).join("\n\n") : "",
       "QUICK SELF-CHECK\n" + item.recall.map((x, i) => (i + 1) + ". " + x).join("\n"),
       "Source note: " + String(item.sourceNote || NOTE_SOURCE)
     ].filter(Boolean).join("\n\n");
@@ -771,6 +819,19 @@
         detail.append(sub, steps);
       });
     }
+    if (item.practiceProblems && item.practiceProblems.length) {
+      const practiceHead = document.createElement("h3"); practiceHead.textContent = "Practice questions with worked answers";
+      detail.appendChild(practiceHead);
+      const practiceList = document.createElement("ol"); practiceList.className = "notes-practice-list";
+      item.practiceProblems.forEach((problem) => {
+        const li = document.createElement("li");
+        const question = document.createElement("p"); question.className = "practice-question"; question.textContent = problem.question || "";
+        const answer = document.createElement("p"); answer.className = "practice-answer"; answer.textContent = "Answer: " + String(problem.answer || "");
+        const solution = document.createElement("p"); solution.className = "practice-solution"; solution.textContent = "Reasoning: " + String(problem.solution || "");
+        li.append(question, answer, solution); practiceList.appendChild(li);
+      });
+      detail.appendChild(practiceList);
+    }
     if (item.commonMistakes && item.commonMistakes.length) {
       const mh = document.createElement("h3"); mh.textContent = "Common mistakes to avoid";
       const ml = document.createElement("ul");
@@ -819,6 +880,7 @@
         '<h3>' + esc((idx + 1) + ". " + (example.title || "Worked method")) + '</h3><ol>' +
         (example.steps || []).map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>'
       ).join("");
+      const practice = item.practiceProblems && item.practiceProblems.length ? '<h2>Practice questions with worked answers</h2><ol class="practice-list">' + item.practiceProblems.map((p) => '<li><p><strong>' + esc(p.question || "") + '</strong></p><p><strong>Answer:</strong> ' + esc(p.answer || "") + '</p><p><strong>Reasoning:</strong> ' + esc(p.solution || "") + '</p></li>').join("") + '</ol>' : "";
       const mistakes = item.commonMistakes && item.commonMistakes.length ? '<h2>Common mistakes to avoid</h2><ul>' + item.commonMistakes.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       const examFocus = item.examFocus && item.examFocus.length ? '<h2>Exam approach</h2><ul>' + item.examFocus.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       const glossary = item.glossary && item.glossary.length ? '<h2>Glossary</h2><ul>' + item.glossary.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
@@ -826,7 +888,7 @@
         '<h2>Key ideas</h2><ul>' + item.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' +
         (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") + formulaCards +
         '<h2>Worked example</h2><p>' + esc(item.example) + '</p>' + worked + mistakes + examFocus + glossary +
-        '<h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol><p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
+        '<h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>' + practice + '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
     }).join("");
     const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
       'body{font:11pt/1.62 Arial,sans-serif;color:#211735;max-width:800px;margin:28px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin:10px 0}h2{font-size:14pt;margin:21px 0 8px;border-bottom:1px solid #e2d8f2;padding-bottom:4px;break-after:avoid}h3{font-size:12pt;margin:16px 0 6px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:9pt;font-weight:bold}.intro{font-size:12pt;color:#594b6f}.note-page{page-break-after:always;break-after:page}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 7px;page-break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line}.source{border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#6e6678}@page{size:A4;margin:17mm} @media screen{body{padding:26px;box-shadow:0 3px 24px #20123a14;border-radius:12px}}' +
