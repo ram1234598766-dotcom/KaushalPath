@@ -74,6 +74,7 @@ globalThis.__label = mapSvgLabel(
 globalThis.__highlightedPhrase = importantTextHtml("Definition: field strength is defined as force per unit mass.");
 globalThis.__importantList = noteListHtml(["Remember: use the centre-to-centre distance.", "Exam tip: verify units before substituting."], false, "kp-key-ideas");
 globalThis.__formulaMarkup = formulaContentHtml({"level":"Class 11","subject":"Physics","chapter":"Audit","intro":"Definition: force is defined as mass times acceleration.","formulas":["F = ma"],"points":["Remember: always check units."],"formulaCheatSheet":[{"formula":"F = ma","meaning":"The net force is equal to mass times acceleration.","when":"Use if the mass is known.","units":"newtons","trap":"Never omit units."}]});
+globalThis.__practiceMarkup = practiceContentHtml({"practiceProblems":[{"question":"What if distance doubles?","answer":"Force becomes one-quarter.","solution":"Because force is inversely proportional to distance squared."}]});
 
 `;
 runInNewContext(harness, sandbox, { timeout: 10000 });
@@ -82,6 +83,7 @@ assert.ok(sandbox.__highlightedPhrase.includes('<mark class="kp-important-mark">
 assert.ok(sandbox.__highlightedPhrase.includes('<mark class="kp-important-mark">defined as</mark>'), "definition phrases should be highlighted");
 assert.ok(sandbox.__importantList.includes('class="kp-key-ideas"') && sandbox.__importantList.includes('<mark class="kp-important-mark">Remember</mark>'), "key ideas should be highlighted and semantically styled");
 assert.ok(sandbox.__formulaMarkup.includes('class="kp-formula-list"') && sandbox.__formulaMarkup.includes("kp-formula-card"), "formula cards should have distinct emphasis");
+assert.ok(sandbox.__practiceMarkup.includes("kp-practice-question") && sandbox.__practiceMarkup.includes("kp-practice-answer") && sandbox.__practiceMarkup.includes("kp-practice-reasoning"), "practice questions, answers and reasoning must be emphasized");
 assert.ok(source.includes("highlightImportantPhrases(detail)"), "the on-screen notes reader should highlight important phrases");
 assert.ok(source.includes('className = "notes-common-mistakes kp-common-mistakes"'), "common mistakes should be emphasized on screen");
 assert.ok(source.includes('printTarget.print()'), "chapter export should use native print, preserving vector text");
