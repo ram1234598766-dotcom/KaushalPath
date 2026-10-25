@@ -1,9 +1,29 @@
-import { cp, mkdir, rm, access } from "node:fs/promises";
+import { cp, mkdir, rm, access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const output = resolve(root, "dist");
+const configPath = resolve(root, "wrangler.toml");
+const config = await readFile(configPath, "utf8");
+if (!/^name = "kaushalpath"$/m.test(config)) {
+  throw new Error('Cloudflare build must target the existing "kaushalpath" Worker.');
+}
+if (!/^main = "cloudflare-worker\\.mjs"$/m.test(config)) {
+  throw new Error('wrangler.toml must declare cloudflare-worker.mjs as the Worker entry point.');
+}
+if (/^\\[assets\\]/m.test(config)) {
+  throw new Error('Do not enable Wrangler static-asset uploads for this Worker: KaushalPath serves its allowlisted public files through the existing Worker, avoiding the previous unauthorized /workers/assets/upload failure.');
+}
+const deploymentFiles = [
+  "cloudflare-worker.mjs",
+  "functions/api/study-guide.js",
+  "smart-system/worker.js"
+];
+for (const file of deploymentFiles) {
+  try { await access(resolve(root, file)); }
+  catch { throw new Error("Cloudflare deployment is missing required Worker module: " + file); }
+}
 const staticFiles = [
   "index.html",
   "app.js",
