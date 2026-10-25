@@ -1644,35 +1644,35 @@
     ).join("");
   }
   function formulaContentHtml(item) {
-    const rules = (item.formulas || []).map((formula) => String(formula));
-    const cards = (item.formulaCheatSheet || []).map((card, index) =>
+    const rules = (Array.isArray(item.formulas) ? item.formulas : []).map((formula) => String(formula));
+    const cards = (Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : []).map((card, index) =>
       '<section class="formula-card"><h2>' + esc((index + 1) + ". " + (card.formula || "Rule")) + '</h2>' +
-      '<p><strong>Meaning:</strong> ' + esc(card.meaning || "See the stated rule and its chapter context.") + '</p>' +
-      '<p><strong>When to use:</strong> ' + esc(card.when || "Use only after confirming the question matches the rule’s assumptions.") + '</p>' +
-      '<p><strong>Units / notation:</strong> ' + esc(card.units || "Follow the units and notation used in the prescribed text/question.") + '</p>' +
-      '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "Check assumptions, signs, units and the valid domain before applying the rule.") + '</p></section>'
+      '<p><strong>Meaning:</strong> ' + esc(card.meaning || "Read the rule in context before using it.") + '</p>' +
+      '<p><strong>When to use:</strong> ' + esc(card.when || "Use it when the question meets the conditions described here.") + '</p>' +
+      '<p><strong>Units / notation:</strong> ' + esc(card.units || "Keep the symbols and units consistent with the question.") + '</p>' +
+      '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "Before you start, check the signs, units and conditions.") + '</p></section>'
     ).join("");
     return (rules.length ? '<h2>Chapter formulas and rules</h2>' + noteListHtml(rules, false) : '<h2>Key relationships and rules</h2>' + noteListHtml(item.points || [], false)) + cards;
   }
   function workedContentHtml(item) {
     const primary = '<section class="content-block"><h2>Primary worked example</h2><p>' + esc(item.example || "Use the chapter concepts to build a complete answer.") + '</p></section>';
-    const extra = (item.workedExamples || []).map((example, index) =>
+    const extra = (Array.isArray(item.workedExamples) ? item.workedExamples : []).map((example, index) =>
       '<section class="content-block"><h2>' + esc((index + 1) + ". " + (example.title || "Worked method")) + '</h2>' +
       noteListHtml(example.steps || [], true) + '</section>'
     ).join("");
     return primary + extra;
   }
   function methodsContentHtml(item) {
-    const methods = (item.fastMethods || []).map((method, index) =>
+    const methods = (Array.isArray(item.fastMethods) ? item.fastMethods : []).map((method, index) =>
       '<section class="content-block"><h2>' + esc((index + 1) + ". " + (method.title || "Problem-solving path")) + '</h2>' +
       (method.when ? '<p><strong>Use when:</strong> ' + esc(method.when) + '</p>' : "") +
       noteListHtml(method.steps || [], true) + (method.caution ? '<p class="formula-trap"><strong>Caution:</strong> ' + esc(method.caution) + '</p>' : "") + '</section>'
     ).join("");
-    const defaultMethod = '<h2>A reliable answer workflow</h2>' + noteListHtml([
-      "Identify the exact concept, event, process, quantity or claim the question asks about.",
-      "Select the chapter definition, relation, evidence or method that directly supports the answer.",
-      "Write each reasoning step clearly; state assumptions and units where the subject requires them.",
-      "Connect the final result or explanation back to the question, then verify it against the chapter notes."
+    const defaultMethod = '<h2>How to build a clear answer</h2>' + noteListHtml([
+      "Start by checking exactly what the question wants you to find or explain.",
+      "Choose the definition, formula, evidence or method that fits the question.",
+      "Show your reasoning one step at a time, including units or assumptions where they matter.",
+      "Finish by answering the question directly and checking your result against the chapter notes."
     ], true);
     return methods + defaultMethod;
   }
@@ -1681,53 +1681,53 @@
     if (problems.length) {
       return '<ol class="practice-list">' + problems.map((problem) =>
         '<li><p><strong>' + esc(problem.question || "Practice prompt") + '</strong></p>' +
-        '<p><strong>Answer:</strong> ' + esc(problem.answer || "Construct the answer using the relevant definition, rule or worked method above.") + '</p>' +
-        '<p><strong>Reasoning:</strong> ' + esc(problem.solution || "Explain why the selected concept or method applies, then check each step against the chapter notes.") + '</p></li>'
+        '<p><strong>Answer:</strong> ' + esc(problem.answer || "Use the idea or method explained above to build your answer.") + '</p>' +
+        '<p><strong>Reasoning:</strong> ' + esc(problem.solution || "Explain in your own words why this answer fits the question, then check your reasoning.") + '</p></li>'
       ).join("") + '</ol>';
     }
     return '<h2>Recall questions</h2>' + noteListHtml(item.recall || [], true) +
-      '<p>For each prompt, write an answer from memory and verify it against the concept explanations on the preceding pages.</p>';
+      '<p>Try each question before checking your notes. Mark anything you had to guess, then revisit that part of the chapter.</p>';
   }
   function fullChapterPacket(item) {
-    const glossary = item.glossary && item.glossary.length ? noteListHtml(item.glossary, false) : noteListHtml((item.sections || []).map((section) => section.heading), false);
-    const conceptLinks = (item.sections || []).map((section) => (section.heading || "Concept") + " — " + (section.body || ""));
-    const exam = item.examFocus && item.examFocus.length ? noteListHtml(item.examFocus, false) : noteListHtml(item.points || [], false);
-    const traps = (item.commonMistakes || []).concat((item.formulaCheatSheet || []).map((card) => card.trap ? card.trap : "").filter(Boolean));
+    const chapterSections = Array.isArray(item.sections) ? item.sections : []; const glossary = Array.isArray(item.glossary) && item.glossary.length ? noteListHtml(item.glossary, false) : noteListHtml(chapterSections.map((section) => section.heading), false);
+    const conceptLinks = chapterSections.map((section) => (section.heading || "Concept") + " — " + (section.body || ""));
+    const exam = Array.isArray(item.examFocus) && item.examFocus.length ? noteListHtml(item.examFocus, false) : noteListHtml(Array.isArray(item.points) ? item.points : [], false);
+    const traps = (Array.isArray(item.commonMistakes) ? item.commonMistakes : []).concat((Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : []).map((card) => card.trap ? card.trap : "").filter(Boolean));
     const revisionChecklist = [
-      "I can explain the chapter’s main ideas without copying a paragraph.",
-      "I can state each important definition and explain where it applies.",
-      "I can choose and justify the relevant formula, rule, evidence or process.",
-      "I can complete a worked example and explain every step.",
-      "I can identify common traps and correct my own mistakes.",
-      "I have checked the lesson’s scope against the current official textbook and curriculum."
+      "I can explain the main ideas without looking at the notes.",
+      "I know the key definitions and when to use them.",
+      "I can choose a suitable formula or method and explain why it fits.",
+      "I can solve an example and show how I reached the answer.",
+      "I can spot common mistakes and put them right.",
+      "I have checked these notes against the prescribed textbook and current syllabus."
     ];
     const pages = [
-      notePage(item, 2, "Chapter overview & learning outcomes", item.intro,
+      notePage(item, 2, "Chapter overview & learning outcomes", "Start here to see how the main ideas fit together and what you should be able to explain by the end.",
         '<h2>What this chapter covers</h2>' + noteListHtml((item.sections || []).map((section) => section.heading).concat(item.points || []), false) +
-        '<h2>Learning outcomes</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false) +
-        '<h2>Recommended study order</h2>' + noteListHtml(["Read the concept explanations before memorising terms or formulas.", "Work through the example and show the missing reasoning steps yourself.", "Review conditions, traps and exam focus before attempting practice.", "Finish with closed-book recall and correct gaps from the source text."], true)),
-      notePage(item, 3, "Core concept explanations", "Read each topic with its meaning, conditions and connections in mind.",
+        '<h2>What you should be able to do</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false) +
+        '<h2>A good way to study this chapter</h2>' + noteListHtml(["Understand the idea before trying to memorise a definition or formula.", "Work through the examples on paper, then try one without looking.", "Check the conditions and common mistakes before you begin the practice questions.", "Finish by explaining the main points in your own words and revisiting anything unclear."], true)),
+      notePage(item, 3, "Core concept explanations", "Build your understanding one idea at a time. Notice how each concept connects to the next.",
         sectionContentHtml(item.sections) + '<h2>Chapter key ideas</h2>' + noteListHtml(item.points || [], false)),
-      notePage(item, 4, "Definitions, vocabulary & concept links", "A useful answer defines terms precisely and connects them to the lesson’s main ideas.",
+      notePage(item, 4, "Key terms and how they connect", "Learn the important terms, then practise explaining them in your own words.",
         '<h2>Important terms</h2>' + glossary + '<h2>Connections between concepts</h2>' + noteListHtml(conceptLinks, false)),
-      notePage(item, 5, "Formulas, rules & relationships", "Use the exact relations and definitions included in the chapter pack; check the conditions before applying them.",
+      notePage(item, 5, "Formulas, rules & relationships", "Before using a formula or rule, check that its conditions match the question.",
         formulaContentHtml(item)),
-      notePage(item, 6, "How to choose and apply a rule", "This page links the chapter’s rules to their conditions, notation and common errors.",
+      notePage(item, 6, "Choosing the right formula or rule", "Here is what the rules mean, when they help, and what to check before using them.",
         noteListHtml((item.formulaCheatSheet || []).map((card) => (card.formula || "Rule") + " — Meaning: " + (card.meaning || "") + " — Use when: " + (card.when || "") + " — Units/notation: " + (card.units || "") + " — Trap: " + (card.trap || "")), false) +
-        '<h2>Check before using a formula or rule</h2>' + noteListHtml(["Does the question match the stated assumptions and domain?", "Are symbols, signs, units and reference conditions consistent?", "Does the result make sense in the original context?", "Can I explain why this method is more suitable than an alternative?"], true)),
-      notePage(item, 7, "Worked examples & full reasoning", "Follow the reasoning, then close the page and solve the same problem independently.",
+        '<h2>Before you use it</h2>' + noteListHtml(["Do the conditions in the question match the formula or rule?", "Have you checked the signs, symbols and units?", "Does the answer make sense in the context of the question?", "Can you explain why this method fits better than another one?"], true)),
+      notePage(item, 7, "Worked examples & full reasoning", "Follow each step, then cover the solution and try the example again on your own.",
         workedContentHtml(item)),
-      notePage(item, 8, "Methods, strategies & answer construction", "Choose a method because the conditions fit—not because a question looks familiar.",
+      notePage(item, 8, "Methods and exam strategies", "Choose your method based on what the question gives you and what it asks you to find.",
         methodsContentHtml(item)),
-      notePage(item, 9, "Applications & exam focus", "Use this page to translate chapter knowledge into clear, relevant answers.",
+      notePage(item, 9, "Applications and exam focus", "Practise using what you know to answer exam-style questions clearly and directly.",
         '<h2>Exam approach</h2>' + exam + '<h2>Transfer the idea to a new question</h2>' +
-        noteListHtml(["Identify which chapter concept the question tests and quote the relevant definition or relation.", "List the given facts and the information that must be found or explained.", "Show a clear sequence from evidence/givens to reasoning and conclusion.", "Check whether the answer includes the requested units, comparison, diagram, condition or explanation."], true)),
-      notePage(item, 10, "Common mistakes & how to correct them", "Use errors as a checklist: identify the cause, correct the method and retry without notes.",
+        noteListHtml(["Work out which concept the question is testing and choose the definition or relation that fits.", "Write down what you know and what you still need to find or explain.", "Show how you move from the given information to your conclusion.", "Check that you included any units, comparison, diagram or explanation the question asks for."], true)),
+      notePage(item, 10, "Common mistakes and how to avoid them", "Use these points to check your work. When you find a mistake, fix it and try the question again.",
         '<h2>Chapter-specific mistakes</h2>' + noteListHtml(traps, false) +
-        '<h2>Final verification checks</h2>' + noteListHtml(["Definitions match the meaning used by the lesson.", "Every step follows from a stated fact, rule or observation.", "Units, signs, notation, dates, names or classifications are checked where relevant.", "The final statement answers the question directly rather than repeating the prompt."], true)),
-      notePage(item, 11, "Practice questions with worked answers", "Try each question before revealing or reading the answer. Mark the step that was hardest.",
+        '<h2>Final verification checks</h2>' + noteListHtml(["Have you used each definition in the right way?", "Can you explain why every step follows from the information given?", "Have you checked the units, signs, names or dates where needed?", "Does your final sentence actually answer the question?"], true)),
+      notePage(item, 11, "Practice questions with worked answers", "Give each question a real attempt before reading the solution. Pay attention to the step that felt hardest.",
         practiceContentHtml(item)),
-      notePage(item, 12, "Final revision sheet & retrieval practice", "The final page is a closed-book checklist. Revisit any item you cannot explain confidently.",
+      notePage(item, 12, "Final revision and self-check", "Close your notes and see what you remember. Revisit anything you cannot explain confidently.",
         '<h2>Chapter at a glance</h2>' + noteListHtml(item.points || [], false) +
         '<h2>Recall prompts</h2>' + noteListHtml(item.recall || [], true) +
         '<h2>Revision checklist</h2>' + noteListHtml(revisionChecklist, true) +
