@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaushalpath-shell-v8";
+const CACHE_NAME = "kaushalpath-shell-v9";
 const SHELL_FILES = [
   "/",
   "/index.html",
@@ -32,6 +32,7 @@ const STATIC_FILES = new Set([
   "/question-bank.js",
   "/manifest.webmanifest",
   "/app-icon.svg"
+  "/ncert-other-chapter-notes.js",
 ]);
 
 self.addEventListener("install", (event) => {
