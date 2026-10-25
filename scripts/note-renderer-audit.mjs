@@ -73,6 +73,13 @@ assert.ok(sandbox.__map.includes("mindmap-svg"), "the mind map must be a real sc
 assert.ok(sandbox.__map.includes('stroke="#3678E8"') && sandbox.__map.includes('stroke="#13A89E"') &&
   sandbox.__map.includes('stroke="#F19A32"'), "the map needs several distinct branch colours");
 assert.match(sandbox.__map, / C /, "main and sub-branches must use smooth curved connector lines");
+assert.ok(sandbox.__map.includes("The gravitational force varies with both masses"), "the concept branches must visibly explain the chapter topics, not only list their headings");
+assert.ok(sandbox.__map.includes("Key ideas &amp; applications"), "the concept map should include a separate explanatory key-ideas branch");
+assert.ok(sandbox.__map.includes("Mutual gravitational force"), "formula branches should explain what each important rule means");
+assert.ok(sandbox.__map.includes("Distance doubled") && sandbox.__map.includes("one-quarter"), "worked-example branches should explain both the example and its outcome");
+assert.ok(sandbox.__map.includes("Use for") || sandbox.__map.includes("Masses are unchanged"), "methods branches should explain when an approach applies");
+assert.ok(sandbox.__map.includes("The gravitational force varies"), "the map must expose explanation text directly in visible SVG, not only hidden SVG title metadata");
+
 for (const section of fixture.sections) {
   assert.ok(sandbox.__map.includes(section.heading), "the map must include the full heading: " + section.heading);
 }

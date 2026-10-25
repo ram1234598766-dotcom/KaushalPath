@@ -1404,6 +1404,18 @@
       if (!text) return "";
       return /[.!?]$/.test(text) ? text : text + ".";
     };
+    const shortExplanation = (value, maxWords = 11) => {
+      const sentence = firstSentence(value);
+      if (!sentence) return "";
+      const words = sentence.split(/\s+/).filter(Boolean);
+      if (words.length <= maxWords) return sentence;
+      return words.slice(0, maxWords).join(" ").replace(/[,:;—-]+$/, "") + "…";
+    };
+    const explain = (heading, body, maxWords = 9) => {
+      const title = String(heading == null ? "" : heading).replace(/\s+/g, " ").trim();
+      const description = shortExplanation(body, maxWords);
+      return title && description ? title + " — " + description : title || description;
+    };
     const avoidSentence = (value) => {
       const text = endSentence(value).replace(/[.!?]+$/, "").trim();
       if (!text) return "";
@@ -1414,10 +1426,9 @@
       const heading = String(section.heading || "").trim();
       return heading && !genericHeading.test(heading) && !/^related topic\s*[·:]/i.test(heading);
     });
-    // Keep the map comprehensive without letting any single branch become unreadable.
-    // When a chapter has many entries, combine adjacent labels into a small set of
-    // fully represented leaves instead of silently dropping topics.
-    const packMapItems = (values, maxLeaves = 8) => {
+    // Six explanation cards per branch fit the landscape page; group overflow
+    // without silently omitting recorded ideas from the source chapter.
+    const packMapItems = (values, maxLeaves = 6) => {
       const clean = uniqueNoteText((Array.isArray(values) ? values : []).map(mapKeyword).filter(Boolean));
       if (clean.length <= maxLeaves) return clean;
       const buckets = Array.from({ length: maxLeaves }, () => []);
@@ -1425,26 +1436,38 @@
       return buckets.filter((bucket) => bucket.length).map((bucket) => bucket.join(" · "));
     };
     const conceptItems = realSections.length
-      ? realSections.map((section) => section.heading).concat((item.points || []).map(endSentence))
-      : (item.points || []).map(endSentence);
-    const ruleItems = (item.formulas || []).concat(formulas.map((card) => card.formula || ""));
-    const workedItems = worked.map((example) => example.title || firstSentence((example.steps || [])[0] || "Worked example"))
-      .concat(item.example ? ["Primary example: " + (firstSentence(item.example) || endSentence(item.example))] : []);
-    const methodItems = methods.map((method) => (method.title || "Problem-solving method") +
-      (method.when ? " — " + firstSentence(method.when) : ""))
-      .concat((item.examFocus || []).map(firstSentence));
+      ? realSections.map((section) => explain(section.heading, section.body, 9))
+      : (item.points || []).map((point) => shortExplanation(point, 13));
+    const keyIdeaItems = (item.points || []).map((point) => shortExplanation(point, 13));
+    const ruleItems = formulas.length
+      ? formulas.map((card) => explain(card.formula || "Key rule", (card.meaning || "") + (card.when ? " " + card.when : ""), 11))
+      : (item.formulas || []).map((formula) => String(formula));
+    const workedItems = worked.map((example) =>
+      explain(example.title || "Worked example", (example.steps || []).slice(-1)[0] || (example.steps || [])[0] || "", 10))
+      .concat(item.example ? ["Main example — " + shortExplanation(item.example, 12)] : []);
+    const methodItems = methods.map((method) =>
+      explain(method.title || "Problem-solving method", method.when || (method.steps || []).slice(0, 2).join(" "), 10))
+      .concat((item.examFocus || []).map((focus) => "Exam focus — " + shortExplanation(focus, 12)));
     const trapItems = (item.commonMistakes || []).map(avoidSentence)
-      .concat(formulas.map((card) => card.trap ? endSentence(card.trap) : ""));
-    const vocabularyItems = item.glossary || [];
-    const practiceItems = (item.practiceProblems || []).map((problem) => problem.question || "")
-      .concat((item.recall || []).map(endSentence));
+      .concat(formulas.map((card) => card.trap ? "Formula check — " + shortExplanation(card.trap, 10) : ""));
+    const vocabularyItems = (item.glossary || []).map((term) => {
+      const termText = String(term == null ? "" : term).trim();
+      const matching = realSections.find((section) =>
+        String(section.body || "").toLowerCase().includes(termText.toLowerCase()) ||
+        String(section.heading || "").toLowerCase().includes(termText.toLowerCase()));
+      return matching ? explain(termText, matching.body, 10) : termText;
+    });
+    const practiceItems = (item.practiceProblems || []).map((problem) =>
+      explain(problem.question || "Practice question", problem.answer || problem.solution || "", 10))
+      .concat((item.recall || []).map((question) => "Recall — " + shortExplanation(question, 11)));
     return [
-      { title: "Concepts & chapter structure", items: packMapItems(conceptItems) },
-      { title: "Formulas, rules & conditions", items: packMapItems(ruleItems) },
+      { title: "Topic explanations", items: packMapItems(conceptItems) },
+      { title: "Key ideas & applications", items: packMapItems(keyIdeaItems) },
+      { title: "Formulas & what they mean", items: packMapItems(ruleItems) },
       { title: "Worked reasoning", items: packMapItems(workedItems) },
       { title: "Methods & exam approach", items: packMapItems(methodItems) },
-      { title: "Common traps", items: packMapItems(trapItems) },
-      { title: "Vocabulary", items: packMapItems(vocabularyItems) },
+      { title: "Common traps & checks", items: packMapItems(trapItems) },
+      { title: "Vocabulary in context", items: packMapItems(vocabularyItems) },
       { title: "Practice & retrieval", items: packMapItems(practiceItems) }
     ].filter((group) => group.items.length);
   }
