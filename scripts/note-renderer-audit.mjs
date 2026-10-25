@@ -61,7 +61,7 @@ ${helpers}
 globalThis.__map = renderMindMapPage(${JSON.stringify(fixture)});
 globalThis.__packet = fullChapterPacket(${JSON.stringify(fixture)});
 globalThis.__label = mapSvgLabel(
-  "A gravitational field changes with altitude and must use centre-to-centre distance",
+  "Universal gravitational field strength changes with altitude and must use centre-to-centre distance",
   80, 20, 160, 38, 8.2, 28
 );
 `;
