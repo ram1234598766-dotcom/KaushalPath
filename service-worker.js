@@ -16,9 +16,9 @@ const SHELL_FILES = [
   "/local-ai.js",
   "/manifest.webmanifest",
   "/app-icon.svg",
-  "/offline.html"
-
-  "/cbse-humanities-computer-deep-notes.js",];
+  "/offline.html",
+  "/cbse-humanities-computer-deep-notes.js"
+];
 const STATIC_FILES = new Set([
   "/app.js",
   "/school-chapter-guides.js",
@@ -32,9 +32,9 @@ const STATIC_FILES = new Set([
   "/study-library.js",
   "/question-bank.js",
   "/manifest.webmanifest",
-  "/app-icon.svg"
-
-  "/cbse-humanities-computer-deep-notes.js",]);;
+  "/app-icon.svg",
+  "/cbse-humanities-computer-deep-notes.js"
+]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
