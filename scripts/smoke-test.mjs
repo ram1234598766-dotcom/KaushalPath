@@ -83,7 +83,7 @@ assert.ok(humanitiesComputerDeepNotes.split('chapter("Class ').length - 1 >= 30,
 assert.ok(physicsChemistryDeepNotes.includes('chapter("Class 11","Physics","Gravitation"'), "Gravitation must have a dedicated detailed chapter");
 assert.ok(mathsDeepNotes.split('chapter("Class 10","Mathematics"').length - 1 >= 12, "Class 10 maths should cover individual chapters");
 assert.ok(mathsDeepNotes.split('chapter("Class 11","Mathematics"').length - 1 >= 7, "Class 11 maths should cover individual chapters");
-assert.ok(mathsDeepNotes.split('chapter("Class 12","Mathematics"').length - 1 >= 6, "Class 12 maths should cover individual chapters");
+assert.ok(mathsDeepNotes.split('chapter("Class 12","Mathematics"').length - 1 >= 6, "the original deep maths notes should retain their Class 12 entries");
 assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "Physics/Chemistry should cover individual chapters");
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
