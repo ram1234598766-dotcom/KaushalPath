@@ -525,7 +525,7 @@ assert.match(app, /node\.classList\.add\("kp-view-enter"\)/, "navigation should 
 assert.match(app, /reducedMotion\?"auto":"smooth"/, "navigation scrolling should respect reduced-motion settings");
 assert.match(app, /card\.style\.setProperty\("--kp-card-index"/, "test cards should use bounded staggered entry");
 assert.match(studyLibrary, /createAndDownloadChapterPdf\(/, "the Download PDF action should invoke the direct file generator");
-assert.match(studyLibrary, /await engine\\.svg2pdf\\(vectorSvg, pdf, options\\)/, "the PDF map must remain vector-rendered");
+assert.match(studyLibrary, /await engine\.svg2pdf\(vectorSvg, pdf, options\)/, "the PDF map must remain vector-rendered");
 assert.ok(!studyLibrary.includes("printTarget.print()"), "Download PDF must not invoke the browser print dialog");
 assert.match(studyLibrary, /downloadButton\.addEventListener\("click", startDownload\)/, "the Download PDF button should launch the real file-generation path");
 assert.match(studyLibrary, /previewShell\.addEventListener\("keydown", \(event\) => \{\s*if \(event\.key === "Escape"\)/, "the PDF preview should close on Escape");
