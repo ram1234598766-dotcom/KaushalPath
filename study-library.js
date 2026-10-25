@@ -1040,7 +1040,7 @@
     // Only expand the original, short individual chapter cards; deep guide and cheat-sheet records stay untouched.
     if (item.depth === "detailed" || (item.sections && item.sections.length >= 4)) return item;
     const candidates = schoolGuides.concat(humanitiesGuides).filter((guide) => guide.level === item.level && guide.subject === item.subject);
-    const topicSections = candidates.flatMap((guide) => (guide.sections || []).map((section) => ({ section, source: guide.chapter, score: sectionScore(item, section) }));
+    const topicSections = candidates.flatMap((guide) => (guide.sections || []).map((section) => ({ section, source: guide.chapter, score: sectionScore(item, section) })));
     const ranked = topicSections.filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
     const linkedSections = [];
     const seenHeadings = new Set();
