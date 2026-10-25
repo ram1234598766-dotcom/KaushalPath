@@ -100,15 +100,14 @@
       }
       const adapter = await navigator.gpu.requestAdapter({ powerPreference: caps.mobile ? "low-power" : "high-performance" });
       if (!adapter) throw new Error("The browser could not obtain a WebGPU adapter. Close GPU-heavy tabs, update the browser, or choose cloud AI.");
-      const modelCandidates = candidatesFor(caps);
+      let modelCandidates = candidatesFor(caps);
       const storage = await requestStorageEstimate();
       if (storage) {
-        const required = requiredStorageBytes(modelCandidates[0]);
-        // Do not block when quota is unknown/inaccurate, but stop an obvious low-storage failure before a gigabyte download.
-        if (storage.available < required * 0.7) {
+        // Keep only candidates with a reasonable storage margin; storage APIs are approximate, so this is a guardrail, not a guarantee.
+        modelCandidates = modelCandidates.filter((model) => storage.available >= requiredStorageBytes(model) * 0.7);
+        if (!modelCandidates.length) {
           const freeGB = (storage.available / (1024 * 1024 * 1024)).toFixed(2);
-          const needGB = (required / (1024 * 1024 * 1024)).toFixed(1);
-          throw new Error("This browser reports about " + freeGB + " GB of storage available, while the selected model may need around " + needGB + " GB plus temporary download space. Free device/browser storage, then retry, or use cloud AI.");
+          throw new Error("This browser reports about " + freeGB + " GB of storage available, which is too little for the smallest supported model plus temporary download space. Free device/browser storage, then retry, or use cloud AI.");
         }
         if (navigator.storage && typeof navigator.storage.persist === "function") {
           try { await navigator.storage.persist(); } catch (error) {}
