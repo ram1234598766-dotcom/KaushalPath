@@ -1,6 +1,6 @@
 # KaushalPath Smart System
 
-This is a separately deployed Cloudflare Worker API. It does not replace the existing `kaushalpath` frontend Worker.
+This API is integrated into the existing `kaushalpath` Worker. `/api/study-guide` remains on its original handler; `/api/v2/*` routes to `smart-system/worker.js`. Do not deploy a second Worker for this feature.
 
 ## Privacy split
 - IndexedDB/localStorage: raw progress, wrong answers, notes, planner entries, Pomodoro state, and local weakness calculations.
@@ -16,7 +16,7 @@ Benchmarks describe **recorded attempts**, not unique students. The Worker hides
 - `GET /api/v2/analytics/benchmarks?subject=Physics&chapter=...&topic=...`
 
 ## Deploy
-The production D1 database and KV namespace are pre-created and wired in `wrangler.toml`. Install Wrangler 4, then run:
+The D1 database and KV namespace are bound to the existing `kaushalpath` Worker. The config in this folder targets that same Worker. Install Wrangler 4, then run:
 ```sh
 npm install
 npm run typecheck
