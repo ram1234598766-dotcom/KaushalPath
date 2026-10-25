@@ -1339,7 +1339,7 @@ $("resumeSavedTest").addEventListener("click",function(){
  const saved=getSavedTest();if(!saved){refreshResumeBanner();return;}
  const test=questions.find(function(t){return t.id===saved.testId;});if(!test)return;
  clearInterval(tick);active={test:test,answers:saved.answers,index:saved.index,endAt:saved.endAt};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
- if(active.endAt<=Date.now()){finishTest(true);return;}
+ if(active.test.timed!==false&&active.endAt<=Date.now()){finishTest(true);return;}
  renderQuestion();saveActiveTest();tick=setInterval(function(){if(!active)return;updateTimer();},1000);
 });
 $("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
