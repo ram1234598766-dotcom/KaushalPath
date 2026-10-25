@@ -101,6 +101,24 @@ const gravitationSupplement = supplementalNotes.find(note => note.level === "Cla
 assert.ok(gravitationSupplement && gravitationSupplement.formulaCheatSheet.length >= 3, "supplemental Gravitation note must contain explained formula cards");
 
 const examNotes = loadExport("exam-prep-notes.js", "KP_DEEP_NOTES");
+const deepExamNotes = loadExport("jee-neet-chapter-notes.js", "KP_JEE_NEET_CHAPTER_NOTES");
+assert.ok(deepExamNotes.length >= 54, "JEE/NEET deep chapter library should include the JEE chapters plus NEET Physics/Chemistry adaptations");
+for (const note of deepExamNotes) {
+  assert.ok(note.level && note.subject && note.chapter, "JEE/NEET note missing exam/subject/chapter metadata");
+  assert.ok(Array.isArray(note.sections) && note.sections.length >= 4, note.chapter + " needs at least four topic explanations");
+  const words = note.sections.reduce((sum, section) => sum + String(section.body || "").trim().split(/\s+/).filter(Boolean).length, 0);
+  assert.ok(words >= 200, note.level + " " + note.subject + " " + note.chapter + " has only " + words + " explanatory words");
+  assert.ok(Array.isArray(note.workedExamples) && note.workedExamples.length >= 2, note.chapter + " needs multiple worked examples");
+  assert.ok(Array.isArray(note.fastMethods) && note.fastMethods.length >= 3, note.chapter + " needs at least three timed-exam methods");
+  assert.ok(Array.isArray(note.practiceProblems) && note.practiceProblems.length >= 3, note.chapter + " needs solved practice questions");
+  assert.ok(Array.isArray(note.commonMistakes) && note.commonMistakes.length >= 3, note.chapter + " needs common traps");
+  assert.ok(Array.isArray(note.recall) && note.recall.length >= 3, note.chapter + " needs active recall questions");
+  if (["Mathematics","Physics","Chemistry"].includes(note.subject)) {
+    assert.ok(Array.isArray(note.formulaCheatSheet) && note.formulaCheatSheet.length >= 3, note.chapter + " needs an explained formula cheat sheet");
+    assert.ok(note.formulaCheatSheet.every(card => card.formula && card.meaning && card.when && card.units && card.trap), note.chapter + " has an incomplete formula card");
+  }
+}
+
 assert.ok(examNotes.length >= 42, "JEE/NEET preparation needs at least 42 detailed exam-prep entries");
 assert.ok(examNotes.some(note => note.level === "JEE Main" && note.subject === "Mathematics"), "JEE Main Mathematics notes must exist");
 assert.ok(examNotes.some(note => note.level === "JEE Main" && note.subject === "Physics"), "JEE Main Physics notes must exist");
