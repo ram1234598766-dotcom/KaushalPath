@@ -466,7 +466,7 @@ function buildCbseAnnualPaper(className, subject){
  return {
   id:id,title:"CBSE-Style Annual Exam · "+className+" · "+subject,exam:"CBSE Annual",subject:subject,level:className,
   duration:cfg.duration,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
-  desc:"Original, competency-led model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
+  desc:fallback?"Original subject-format competency scaffold because class-specific curated chapters were not available. Check coverage against the current official curriculum.":"Original syllabus-mapped competency model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
   sourceScope:source.scope,subjectFormatFallback:fallback,qs:qs
  };
 }
@@ -479,7 +479,9 @@ function updateCbseAnnualPattern(){
  if(marks)marks.textContent=config.marks+" marks";
  if(duration)duration.textContent=(config.duration/60)+" hour"+(config.duration===60?"":"s");
  if(count)count.textContent=totalQuestions+" questions";
- if(competency)competency.textContent="Case + application";
+ if(competency)competency.textContent=config.profile==="class-x-science"?"Science · 39-question model":config.profile==="class-x-mathematics"?"Maths · 38-question model":config.profile==="class-xii-computer-science"?"CS · 37-question model":config.profile==="senior-science"?"Science · 33-question model":config.profile==="language-paper"?"Reading + language application":"Case + application";
+ const status=$("cbseAnnualStatus");
+ if(status){const source=cbseAnnualSources(classNode.value,subjectNode.value);status.textContent=source.fallback?"This subject will use an original subject-format competency scaffold. Verify chapter coverage against the current CBSE curriculum and your school syllabus.":"Class-specific curated chapter content is available for this selection. The paper will be an original practice model, not an official CBSE paper.";}
 }
 function initCbseAnnualBuilder(){
  const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject"),start=$("cbseAnnualStart"),downloadPaper=$("cbseAnnualDownloadPaper"),downloadKey=$("cbseAnnualDownloadKey"),status=$("cbseAnnualStatus");
