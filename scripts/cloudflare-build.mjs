@@ -30,8 +30,7 @@ const staticFiles = [
   "study-library.js",
   "local-ai.js",
   "question-bank.js",
-  "_headers",
-  "_routes.json"
+  "_headers"
 ];
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
