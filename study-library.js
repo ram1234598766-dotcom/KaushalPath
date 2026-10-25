@@ -1897,8 +1897,8 @@
         printTarget.focus();
         printTarget.print();
       } catch (error) {
-        status.textContent = "The PDF dialog didn’t open. Use your browser menu and choose Print, then Save as PDF.";
-        toast("The PDF dialog didn’t open. Use your browser’s Print menu, then choose Save as PDF.");
+        status.textContent = "The print dialog didn’t open. Use your browser menu, choose Print, then Save as PDF.";
+        toast("The print dialog didn’t open. Use your browser’s Print menu, then choose Save as PDF.");
       }
     };
     downloadButton.addEventListener("click", startPrint);
