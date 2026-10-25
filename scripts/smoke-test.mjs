@@ -136,7 +136,7 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v5/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v8/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
