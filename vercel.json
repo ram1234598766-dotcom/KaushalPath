@@ -54,6 +54,14 @@
       "use": "@vercel/static"
     },
     {
+      "src": "cbse-commerce-computing-hindi-chapters.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-english-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "jee-neet-chapter-notes.js",
       "use": "@vercel/static"
     },
