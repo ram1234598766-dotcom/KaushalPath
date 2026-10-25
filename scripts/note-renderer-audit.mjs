@@ -87,7 +87,7 @@ assert.ok(sandbox.__practiceMarkup.includes("kp-practice-question") && sandbox._
 assert.ok(source.includes("highlightImportantPhrases(detail)"), "the on-screen notes reader should highlight important phrases");
 assert.ok(source.includes('className = "notes-common-mistakes kp-common-mistakes"'), "common mistakes should be emphasized on screen");
 assert.ok(source.includes("await engine.svg2pdf(svg, pdf, options)") && source.includes('pdf.output("blob")'), "chapter export should create a real PDF blob and render the concept map as vector graphics");
-assert.doesNotMatch(source, /printTarget\\.print\\(\\)/, "chapter Download PDF must not open the browser print dialog");
+assert.ok(!source.includes("printTarget.print()"), "chapter Download PDF must not open the browser print dialog");
 assert.ok(source.includes("@page chapter-map{size:A4 landscape"), "the mind map should use a landscape first page");
 assert.ok(source.includes("@page chapter-notes{size:A4 portrait"), "remaining note pages should remain portrait");
 assert.ok(source.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;") && source.includes("min-height:0!important;overflow:visible!important"), "the landscape map should use full print width without clipping");
