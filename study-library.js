@@ -1252,7 +1252,7 @@
       head.append(meta, pill); card.append(head, h3, summary);
       const actions = document.createElement("div"); actions.className = "notes-card-actions";
       const read = document.createElement("button"); read.type = "button"; read.className = "btn btn-light"; read.textContent = "Read notes"; read.addEventListener("click", () => showNote(item));
-      const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Print / Save 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
+      const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Download PDF"; pdf.addEventListener("click", () => printNotes([item]));
       const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
         if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
         else {
@@ -2113,7 +2113,7 @@ function printNotes(items) {
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
     const qualityHint = document.createElement("span");
-    qualityHint.textContent = "The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages. Click Download PDF, then choose “Save as PDF” as the destination in your browser’s print dialog and select Save. The map stays crisp and selectable.";
+    qualityHint.textContent = "Download PDF saves a real .pdf file directly — no print dialog. The complete concept map stays vector-sharp, followed by detailed portrait notes with selectable text.";
     qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
     guidance.append(heading, status, qualityHint);
 
@@ -2150,16 +2150,35 @@ function printNotes(items) {
       return;
     }
 
-    const startPrint = () => {
+    const startDownload = async () => {
+      if (downloadButton.dataset.generating === "true") return;
+      downloadButton.dataset.generating = "true";
+      downloadButton.disabled = true;
+      downloadButton.textContent = "Generating PDF…";
+      status.textContent = "Building your downloadable PDF file. The chapter content stays on this device.";
       try {
-        printTarget.focus();
-        printTarget.print();
+        const result = await createAndDownloadChapterPdf(
+          printTarget.document,
+          items,
+          fileStem + ".pdf",
+          status,
+          downloadButton
+        );
+        status.textContent = "Downloaded " + result.filename + " · " + result.pages + " pages · " +
+          (Math.max(1, Math.round(result.size / 1024))) + " KB. Check your Downloads folder.";
+        qualityHint.textContent = "Your PDF was downloaded directly. It contains the vector concept map and selectable chapter text.";
+        toast("Downloaded " + result.filename + ".");
       } catch (error) {
-        status.textContent = "The print dialog didn’t open. Use your browser menu, choose Print, then Save as PDF.";
-        toast("The print dialog didn’t open. Use your browser’s Print menu, then choose Save as PDF.");
+        console.error("Direct chapter PDF download failed:", error);
+        status.textContent = "The PDF could not be generated. Check your internet connection, then try Download PDF again.";
+        toast("PDF generation failed. Connect to the internet and retry.");
+      } finally {
+        downloadButton.dataset.generating = "false";
+        downloadButton.disabled = false;
+        downloadButton.textContent = "Download PDF";
       }
     };
-    downloadButton.addEventListener("click", startPrint);
+    downloadButton.addEventListener("click", startDownload);
 
     const chapter = items.length === 1 && items[0] && typeof items[0] === "object" ? items[0] : null;
     const fileStemSource = String((chapter && chapter.chapter) || (chapter && chapter.title) || "KaushalPath-Chapter-Notes");
@@ -2168,7 +2187,7 @@ function printNotes(items) {
       .replace(/[^a-zA-Z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 90) || "KaushalPath-Chapter-Notes";
-    // Native print-to-PDF uses the page title as the suggested downloaded filename.
+    // The chapter title is used for the actual downloaded PDF filename.
     const pageTitle = fileStem;
 
     try {
@@ -2213,7 +2232,7 @@ function printNotes(items) {
             return fallbackChapterPage(source);
           } catch (fallbackError) {
             console.error("Fallback chapter rendering failed.", fallbackError);
-            return '<article class="note-page compact-note-page"><h1>Chapter notes</h1><p>Some formatting could not be prepared. Return to the Study Hub and use Print / Save PDF to try a simpler export.</p></article>';
+            return '<article class="note-page compact-note-page"><h1>Chapter notes</h1><p>Some formatting could not be prepared. Return to the Study Hub and use Download PDF to try a simpler export.</p></article>';
           }
         }
       };
@@ -2236,8 +2255,8 @@ function printNotes(items) {
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
       downloadButton.disabled = false;
       downloadButton.textContent = "Download PDF";
-      status.textContent = "Preview ready. Click Download PDF, then choose “Save as PDF” in the print dialog and click Save. Your map and notes remain crisp and selectable.";
-      toast("Chapter notes are ready. Click Download PDF, then choose Save as PDF in the print dialog.");
+      status.textContent = "Preview ready. Click Download PDF to save the .pdf file directly — no print dialog needed. The map and notes remain crisp and selectable.";
+      toast("Chapter notes are ready. Click Download PDF to save the actual file.");
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
       status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
