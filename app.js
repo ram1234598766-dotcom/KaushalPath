@@ -867,10 +867,22 @@ function refreshMomentum(){
  let streak=0,cursor=new Date();cursor.setHours(0,0,0,0);if(!days.has(localDayKey(cursor)))cursor.setDate(cursor.getDate()-1);
  while(days.has(localDayKey(cursor))&&streak<3650){streak++;cursor.setDate(cursor.getDate()-1);}
  const attempts=$("momentumAttempts"),accuracy=$("momentumAccuracy"),focus=$("momentumFocus"),streakNode=$("momentumStreak");
+ const percentage=attempted?Math.round(correct/attempted*100):0;
+ const focusLabel=minutes>=60?Math.floor(minutes/60)+"h "+(minutes%60)+"m":minutes+"m";
+ const streakLabel=String(streak)+" "+(streak===1?"day":"days");
  if(attempts)attempts.textContent=String(history.length);
- if(accuracy)accuracy.textContent=(attempted?Math.round(correct/attempted*100):0)+"%";
- if(focus)focus.textContent=minutes>=60?Math.floor(minutes/60)+"h "+(minutes%60)+"m":minutes+"m";
- if(streakNode)streakNode.textContent=String(streak)+" "+(streak===1?"day":"days");
+ if(accuracy)accuracy.textContent=percentage+"%";
+ if(focus)focus.textContent=focusLabel;
+ if(streakNode)streakNode.textContent=streakLabel;
+ const dashTests=$("dashboardTestsCompleted"),dashAccuracy=$("dashboardAccuracyStat"),dashFocus=$("dashboardFocusTime"),dashStreak=$("dashboardStreak"),dashScore=$("dashboardAccuracy"),dashCount=$("dashboardTestsCount"),dashCaption=$("dashboardProgressCaption"),dashBar=$("dashboardAccuracyBar");
+ if(dashTests)dashTests.textContent=String(history.length);
+ if(dashAccuracy)dashAccuracy.textContent=percentage+"%";
+ if(dashFocus)dashFocus.textContent=focusLabel;
+ if(dashStreak)dashStreak.textContent=streakLabel;
+ if(dashScore)dashScore.textContent=attempted?percentage+"%":"—";
+ if(dashCount)dashCount.textContent=String(history.length);
+ if(dashCaption)dashCaption.textContent=attempted?correct+" correct answers across "+attempted+" attempted. Your progress stays on this device.":"Complete a practice set to start tracking your personal accuracy here.";
+ if(dashBar){dashBar.style.width=attempted?percentage+"%":"0%";const progress=dashBar.closest('[role="progressbar"]');if(progress)progress.setAttribute("aria-valuenow",String(percentage));}
 }
 let focusInterval=null,focusState={mode:"focus",duration:1500,remaining:1500,running:false,endsAt:null};
 function saveFocusState(){writeLocalJSON(FOCUS_STATE_KEY,focusState);}
@@ -1235,6 +1247,7 @@ function activateWorkspaceView(view,clicked){
  overviewNodes.forEach(function(node){if(node)node.classList.toggle("view-hidden",target!=="overview");});
  ["learn","ai-guide","tests","resources","history","library","planner"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
+ document.querySelectorAll(".mobile-dock [data-view]").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
  const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library",planner:"Study Planner"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
@@ -1245,6 +1258,88 @@ function activateWorkspaceView(view,clicked){
  if(location.hash!=="#"+target)history.replaceState(null,"","#"+target);
  window.scrollTo({top:0,behavior:"smooth"});
 }
+
+function initCommandPalette(){
+ const dialog=$("commandPalette"),input=$("commandSearch"),results=$("commandResults"),status=$("commandStatus"),trigger=$("openCommandPalette"),close=$("closeCommandPalette");
+ if(!dialog||!input||!results||!trigger)return;
+ const commands=[
+  {kind:"page",title:"Overview",detail:"Your dashboard and live progress",keywords:"home dashboard start",icon:"◈",run:function(){activateWorkspaceView("overview");}},
+  {kind:"page",title:"CBSE Study Hub",detail:"Search chapter notes, formulas and worked examples",keywords:"notes chapters ncert class 10 11 12 textbook",icon:"▤",run:function(){activateWorkspaceView("learn");}},
+  {kind:"page",title:"JEE Main Preparation",detail:"Physics, Chemistry and Mathematics practice",keywords:"jee engineering entrance mock questions",icon:"∑",run:function(){activateWorkspaceView("tests",{dataset:{showExam:"JEE Main"}});}},
+  {kind:"page",title:"NEET UG Preparation",detail:"Biology, Physics and Chemistry practice",keywords:"neet medical entrance mock biology",icon:"✳",run:function(){activateWorkspaceView("tests",{dataset:{showExam:"NEET UG"}});}},
+  {kind:"page",title:"Test Series",detail:"Browse all practice sets and timed mocks",keywords:"test quiz exam practice questions",icon:"◷",run:function(){activateWorkspaceView("tests",{dataset:{showExam:"all"}});}},
+  {kind:"page",title:"AI Study Guide",detail:"Ask a question, explain an image or explore a source",keywords:"ai explain ask chat image file pdf research",icon:"✦",run:function(){activateWorkspaceView("ai-guide");}},
+  {kind:"page",title:"Study Planner",detail:"Turn revision into realistic, trackable tasks",keywords:"plan schedule tasks weekly timetable",icon:"◷",run:function(){activateWorkspaceView("planner");}},
+  {kind:"page",title:"Saved Library",detail:"Open notes and answers you saved on this device",keywords:"library saved bookmarks answers",icon:"▣",run:function(){activateWorkspaceView("library");}},
+  {kind:"page",title:"My Results",detail:"Review test attempts and focus sessions",keywords:"results history score accuracy timer focus",icon:"▥",run:function(){activateWorkspaceView("history");}},
+  {kind:"page",title:"Official Resources",detail:"Open CBSE, NCERT, JEE and NEET sources",keywords:"official curriculum syllabus textbook resources papers",icon:"↗",run:function(){activateWorkspaceView("resources");}},
+  {kind:"action",title:"Find a chapter",detail:"Jump straight to the chapter search field",keywords:"search topic chapter notes formula",icon:"⌕",run:function(){activateWorkspaceView("learn");const field=$("notesSearch");if(field){field.focus();field.scrollIntoView({behavior:"smooth",block:"center"});}}},
+  {kind:"action",title:"Focus timer",detail:"Open the 25-minute timer and short break presets",keywords:"pomodoro concentration stopwatch study",icon:"◴",run:function(){activateWorkspaceView("history");const target=document.querySelector(".focus-panel");if(target)target.scrollIntoView({behavior:"smooth",block:"center"});}},
+  {kind:"action",title:"Start guided tour",detail:"Get a short walkthrough of the workspace",keywords:"help tour walkthrough guide",icon:"✧",run:function(){const tour=$("startTour");if(tour)tour.click();}},
+  {kind:"action",title:"Download progress backup",detail:"Export saved results, planner tasks and local progress",keywords:"export backup json download progress",icon:"↓",run:function(){const button=$("exportBackup");if(button)button.click();else activateWorkspaceView("history");}}
+ ];
+ let lastTrigger=null;
+ function normalize(value){return String(value||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();}
+ function navigateToChapter(item){
+  activateWorkspaceView("learn");
+  const classSelect=$("notesClass"),subjectSelect=$("notesSubject"),search=$("notesSearch");
+  if(classSelect)classSelect.value=Array.from(classSelect.options).some(function(option){return option.value===item.level;})?item.level:"all";
+  if(subjectSelect)subjectSelect.value=Array.from(subjectSelect.options).some(function(option){return option.value===item.subject;})?item.subject:"all";
+  if(search){search.value=item.chapter;search.dispatchEvent(new Event("input",{bubbles:true}));}
+  const card=Array.from(document.querySelectorAll(".notes-card")).find(function(node){const title=node.querySelector("h3"),meta=node.querySelector(".notes-meta");return title&&title.textContent===item.chapter&&meta&&meta.textContent===item.level+" · "+item.subject;});
+  if(card){const read=Array.from(card.querySelectorAll("button")).find(function(button){return button.textContent.trim()==="Read notes";});if(read)read.click();card.scrollIntoView({behavior:"smooth",block:"start"});}
+  else if(search)search.focus();
+ }
+ function navigateToTest(test){
+  activateWorkspaceView("tests",{dataset:{showExam:test.exam==="CBSE"?"all":test.exam}});
+  const card=Array.from(document.querySelectorAll(".test-card")).find(function(node){const button=node.querySelector("[data-start]");return button&&button.dataset.start===test.id;});
+  if(card){card.classList.add("command-highlight");card.scrollIntoView({behavior:"smooth",block:"center"});window.setTimeout(function(){card.classList.remove("command-highlight");},1800);}
+ }
+ function render(){
+  const query=normalize(input.value),entries=[];
+  const base=commands.filter(function(command){return !query||normalize(command.title+" "+command.detail+" "+command.keywords).includes(query);});
+  base.slice(0,query?5:commands.length).forEach(function(command){entries.push({group:"Quick actions",title:command.title,detail:command.detail,type:command.kind==="page"?"Open page":"Action",icon:command.icon,run:command.run});});
+  if(query.length>=2){
+   const index=Array.isArray(window.KP_STUDY_NOTE_INDEX)?window.KP_STUDY_NOTE_INDEX:[];
+   index.filter(function(item){return normalize(item.searchText||[item.level,item.subject,item.chapter,item.intro].join(" ")).includes(query);}).slice(0,6).forEach(function(item){entries.push({group:"Chapter notes",title:item.chapter,detail:item.level+" · "+item.subject+" — "+item.intro,type:"Open notes",icon:"▤",run:function(){navigateToChapter(item);}});});
+   questions.filter(function(test){return normalize([test.title,test.exam,test.level,test.desc].join(" ")).includes(query);}).slice(0,5).forEach(function(test){entries.push({group:"Practice sets",title:test.title,detail:test.exam+" · "+test.level+" · "+test.qs.length+" questions",type:"Open test",icon:"◷",run:function(){navigateToTest(test);}});});
+  }
+  results.replaceChildren();
+  if(!entries.length){const empty=document.createElement("div");empty.className="command-empty";empty.textContent=query.length<2?"Type at least two characters to search chapter notes and tests.":"No matching page, chapter or practice set. Try a subject name or a shorter search.";results.appendChild(empty);}
+  else{
+   let currentGroup="";
+   entries.forEach(function(entry){
+    if(entry.group!==currentGroup){currentGroup=entry.group;const group=document.createElement("div");group.className="command-group-label";group.textContent=currentGroup;results.appendChild(group);}
+    const button=document.createElement("button");button.type="button";button.className="command-result";button.setAttribute("aria-label",entry.title+" — "+entry.type);
+    const icon=document.createElement("span");icon.className="command-result-icon";icon.setAttribute("aria-hidden","true");icon.textContent=entry.icon;
+    const textWrap=document.createElement("span");textWrap.className="command-result-text";
+    const title=document.createElement("strong");title.textContent=entry.title;
+    const detail=document.createElement("small");detail.textContent=entry.detail;
+    const type=document.createElement("span");type.className="command-result-type";type.textContent=entry.type;
+    textWrap.append(title,detail);button.append(icon,textWrap,type);button.addEventListener("click",function(){dialog.close();entry.run();});results.appendChild(button);
+   });
+  }
+  status.textContent=entries.length+" result"+(entries.length===1?"":"s")+" · Use ↑ ↓ to move, Enter to open, Esc to close.";
+ }
+ function open(){lastTrigger=document.activeElement;if(!dialog.open){if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");}input.value="";render();window.setTimeout(function(){input.focus();},0);}
+ trigger.addEventListener("click",open);
+ if(close)close.addEventListener("click",function(){if(typeof dialog.close==="function")dialog.close();else dialog.removeAttribute("open");});
+ dialog.addEventListener("close",function(){if(lastTrigger&&typeof lastTrigger.focus==="function")lastTrigger.focus();});
+ dialog.addEventListener("click",function(event){if(event.target===dialog){if(typeof dialog.close==="function")dialog.close();else dialog.removeAttribute("open");}});
+ input.addEventListener("input",render);
+ dialog.addEventListener("keydown",function(event){
+  const buttons=Array.from(results.querySelectorAll(".command-result")),current=buttons.indexOf(document.activeElement);
+  if(event.key==="ArrowDown"&&buttons.length&&current>=0){event.preventDefault();buttons[Math.min(buttons.length-1,current+1)].focus();}
+  else if(event.key==="ArrowUp"&&buttons.length&&current>=0){event.preventDefault();if(current===0)input.focus();else buttons[current-1].focus();}
+ });
+ input.addEventListener("keydown",function(event){const buttons=Array.from(results.querySelectorAll(".command-result"));if(event.key==="ArrowDown"&&buttons.length){event.preventDefault();buttons[0].focus();}else if(event.key==="Enter"&&buttons.length){event.preventDefault();buttons[0].click();}});
+ document.addEventListener("keydown",function(event){
+  const target=event.target,typing=target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+  if((event.ctrlKey||event.metaKey)&&String(event.key).toLowerCase()==="k"){event.preventDefault();if(!dialog.open)open();else input.focus();}
+  else if(event.key==="/"&&!typing&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!dialog.open){event.preventDefault();open();}
+ });
+}
+
 document.querySelectorAll("[data-view]").forEach(function(link){
  link.addEventListener("click",function(ev){
   const view=link.dataset.view;if(!view)return;ev.preventDefault();activateWorkspaceView(view,link);
@@ -1257,6 +1352,7 @@ fillSubjects($("subject"),$("classLevel").value,$("subject").value);
 fillSubjects($("chatSubject"),$("chatClass").value,$("chatSubject").value);
 updateHubTopics();updateChatTopics();
 initPWA();
+initCommandPalette();
 activateWorkspaceView("overview");
 const requestedMockTest=new URLSearchParams(window.location.search).get("kpMockTest");
 if(requestedMockTest){const requestedTest=questions.find(function(test){return test.id===requestedMockTest&&test.fullLength;});if(requestedTest){document.body.classList.add("mock-test-window");document.title=requestedTest.title+" | KaushalPath Mock Test";activateWorkspaceView("tests");startTest(requestedTest.id);}else{toast("This mock test could not be loaded. Return to the test series and try again.");}}
