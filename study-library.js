@@ -1287,18 +1287,18 @@
         const body = document.createElement("p"); body.className = "notes-deep-body"; body.textContent = section.body || "";
         detail.append(sh, body);
         if (Array.isArray(section.points) && section.points.length) {
-          const list = document.createElement("ul");
+          const list = document.createElement("ul"); list.className = "notes-section-points-list kp-key-ideas";
           section.points.forEach((text) => { const li = document.createElement("li"); li.textContent = text; list.appendChild(li); });
           detail.appendChild(list);
         }
       });
     }
     const pointHead = document.createElement("h3"); pointHead.textContent = "Key ideas";
-    const pointList = document.createElement("ul"); item.points.forEach((text) => { const li = document.createElement("li"); li.textContent = text; pointList.appendChild(li); });
+    const pointList = document.createElement("ul"); pointList.className = "notes-key-ideas-list kp-key-ideas"; item.points.forEach((text) => { const li = document.createElement("li"); li.textContent = text; pointList.appendChild(li); });
     detail.append(pointHead, pointList);
     if (item.formulas.length) {
       const fh = document.createElement("h3"); fh.textContent = "Formulas and rules";
-      const fl = document.createElement("ul"); item.formulas.forEach((text) => { const li = document.createElement("li"); li.textContent = text; fl.appendChild(li); });
+      const fl = document.createElement("ul"); fl.className = "notes-formula-list kp-formula-list"; item.formulas.forEach((text) => { const li = document.createElement("li"); li.textContent = text; fl.appendChild(li); });
       detail.append(fh, fl);
     }
     if (item.formulaCheatSheet && item.formulaCheatSheet.length) {
@@ -1351,32 +1351,62 @@
     }
     if (item.commonMistakes && item.commonMistakes.length) {
       const mh = document.createElement("h3"); mh.textContent = "Common mistakes to avoid";
-      const ml = document.createElement("ul");
+      const ml = document.createElement("ul"); ml.className = "notes-common-mistakes kp-common-mistakes";
       item.commonMistakes.forEach((text) => { const li = document.createElement("li"); li.textContent = text; ml.appendChild(li); });
       detail.append(mh, ml);
     }
     if (item.examFocus && item.examFocus.length) {
       const fh = document.createElement("h3"); fh.textContent = "Exam approach";
-      const fl = document.createElement("ul");
+      const fl = document.createElement("ul"); fl.className = "notes-exam-focus kp-exam-focus";
       item.examFocus.forEach((text) => { const li = document.createElement("li"); li.textContent = text; fl.appendChild(li); });
       detail.append(fh, fl);
     }
     if (item.glossary && item.glossary.length) {
       const gh = document.createElement("h3"); gh.textContent = "Glossary";
-      const gl = document.createElement("ul");
+      const gl = document.createElement("ul"); gl.className = "notes-glossary kp-glossary";
       item.glossary.forEach((text) => { const li = document.createElement("li"); li.textContent = text; gl.appendChild(li); });
       detail.append(gh, gl);
     }
     const rh = document.createElement("h3"); rh.textContent = "Quick self-check";
-    const rl = document.createElement("ol"); item.recall.forEach((text) => { const li = document.createElement("li"); li.textContent = text; rl.appendChild(li); });
+    const rl = document.createElement("ol"); rl.className = "notes-recall-list kp-recall-prompts"; item.recall.forEach((text) => { const li = document.createElement("li"); li.textContent = text; rl.appendChild(li); });
     const actions = document.createElement("div"); actions.className = "notes-card-actions";
     const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Print / Save 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
     const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
       if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
     });
     actions.append(pdf, save); detail.append(rh, rl, actions);
+    highlightImportantPhrases(detail);
     detail.classList.remove("hidden");
     detail.scrollIntoView({ behavior: profile.reduceMotion ? "auto" : "smooth", block: "start" });
+  }
+  function highlightImportantPhrases(root) {
+    if (!root || typeof document.createTreeWalker !== "function") return;
+    const cuePattern = /\b(?:directly proportional|inversely proportional|is the process of|is equal to|defined as|key idea|exam tip|must know|common mistake|note that|important|remember|definition|principle|theorem|formula|warning|never|always|only if|is called|are called|equals)\b/gi;
+    const walker = document.createTreeWalker(root, 4);
+    const textNodes = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const parent = node.parentElement;
+      if (!node.nodeValue || !node.nodeValue.trim() || !parent || parent.closest("button, script, style, mark, .notes-meta")) continue;
+      cuePattern.lastIndex = 0;
+      if (cuePattern.test(node.nodeValue)) textNodes.push(node);
+    }
+    textNodes.forEach((node) => {
+      const value = node.nodeValue;
+      cuePattern.lastIndex = 0;
+      const fragment = document.createDocumentFragment();
+      let cursor = 0;
+      for (const match of value.matchAll(cuePattern)) {
+        if (match.index > cursor) fragment.appendChild(document.createTextNode(value.slice(cursor, match.index)));
+        const mark = document.createElement("mark");
+        mark.className = "notes-important-mark";
+        mark.textContent = match[0];
+        fragment.appendChild(mark);
+        cursor = match.index + match[0].length;
+      }
+      if (cursor < value.length) fragment.appendChild(document.createTextNode(value.slice(cursor)));
+      if (node.parentNode) node.parentNode.replaceChild(fragment, node);
+    });
   }
   function uniqueNoteText(values) {
     const seen = new Set();
@@ -1471,16 +1501,21 @@
       { title: "Practice & retrieval", items: packMapItems(practiceItems) }
     ].filter((group) => group.items.length);
   }
-  function noteListHtml(values, ordered) {
+  function importantTextHtml(value) {
+    const cues = /\b(directly proportional|inversely proportional|is the process of|is equal to|defined as|key idea|exam tip|must know|common mistake|note that|important|remember|definition|principle|theorem|formula|warning|never|always|only if|is called|are called|equals)\b/gi;
+    return esc(value).replace(cues, '<mark class="kp-important-mark">$1</mark>');
+  }
+  function noteListHtml(values, ordered, className) {
     const list = Array.isArray(values) ? values : [];
     if (!list.length) return '<p class="empty-note">No separate entries are provided in this subsection. Use the detailed explanations and source note in this chapter pack.</p>';
     const tag = ordered ? "ol" : "ul";
-    return "<" + tag + ">" + list.map((value) => "<li>" + esc(value) + "</li>").join("") + "</" + tag + ">";
+    const classAttribute = className ? ' class="' + esc(className) + '"' : "";
+    return "<" + tag + classAttribute + ">" + list.map((value) => "<li>" + importantTextHtml(value) + "</li>").join("") + "</" + tag + ">";
   }
   function notePage(item, pageNumber, heading, intro, body) {
     return '<article class="note-page packet-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) +
       ' · PAGE ' + esc(pageNumber) + ' OF 12</div><h1>' + esc(heading) + '</h1>' +
-      (intro ? '<p class="intro">' + esc(intro) + '</p>' : "") + body +
+      (intro ? '<p class="intro">' + importantTextHtml(intro) + '</p>' : "") + body +
       '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
   }
   function mapPalette(index) {
@@ -1679,34 +1714,34 @@
   }
   function sectionContentHtml(sections) {
     return (Array.isArray(sections) ? sections : []).map((section, index) =>
-      '<section class="content-block"><h2>' + esc((index + 1) + ". " + (section.heading || "Concept")) + '</h2>' +
-      '<p>' + esc(section.body || "") + '</p>' + (section.points && section.points.length ? noteListHtml(section.points, false) : "") + '</section>'
+      '<section class="content-block kp-concept-block"><h2>' + importantTextHtml((index + 1) + ". " + (section.heading || "Concept")) + '</h2>' +
+      '<p>' + importantTextHtml(section.body || "") + '</p>' + (section.points && section.points.length ? noteListHtml(section.points, false, "kp-section-points-list kp-key-ideas") : "") + '</section>'
     ).join("");
   }
   function formulaContentHtml(item) {
     const rules = (Array.isArray(item.formulas) ? item.formulas : []).map((formula) => String(formula));
     const cards = (Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : []).map((card, index) =>
-      '<section class="formula-card"><h2>' + esc((index + 1) + ". " + (card.formula || "Rule")) + '</h2>' +
-      '<p><strong>Meaning:</strong> ' + esc(card.meaning || "Read the rule in context before using it.") + '</p>' +
-      '<p><strong>When to use:</strong> ' + esc(card.when || "Use it when the question meets the conditions described here.") + '</p>' +
-      '<p><strong>Units / notation:</strong> ' + esc(card.units || "Keep the symbols and units consistent with the question.") + '</p>' +
-      '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "Before you start, check the signs, units and conditions.") + '</p></section>'
+      '<section class="formula-card kp-formula-card"><h2>' + importantTextHtml((index + 1) + ". " + (card.formula || "Rule")) + '</h2>' +
+      '<p><strong>Meaning:</strong> ' + importantTextHtml(card.meaning || "Read the rule in context before using it.") + '</p>' +
+      '<p><strong>When to use:</strong> ' + importantTextHtml(card.when || "Use it when the question meets the conditions described here.") + '</p>' +
+      '<p><strong>Units / notation:</strong> ' + importantTextHtml(card.units || "Keep the symbols and units consistent with the question.") + '</p>' +
+      '<p class="formula-trap kp-common-mistake-callout"><strong>Common trap:</strong> ' + importantTextHtml(card.trap || "Before you start, check the signs, units and conditions.") + '</p></section>'
     ).join("");
-    return (rules.length ? '<h2>Chapter formulas and rules</h2>' + noteListHtml(rules, false) : '<h2>Key relationships and rules</h2>' + noteListHtml(item.points || [], false)) + cards;
+    return (rules.length ? '<h2>Chapter formulas and rules</h2>' + noteListHtml(rules, false, "kp-formula-list") : '<h2>Key relationships and rules</h2>' + noteListHtml(item.points || [], false, "kp-key-ideas")) + cards;
   }
   function workedContentHtml(item) {
-    const primary = '<section class="content-block"><h2>Primary worked example</h2><p>' + esc(item.example || "Use the chapter concepts to build a complete answer.") + '</p></section>';
+    const primary = '<section class="content-block kp-worked-example"><h2>Primary worked example</h2><p>' + importantTextHtml(item.example || "Use the chapter concepts to build a complete answer.") + '</p></section>';
     const extra = (Array.isArray(item.workedExamples) ? item.workedExamples : []).map((example, index) =>
-      '<section class="content-block"><h2>' + esc((index + 1) + ". " + (example.title || "Worked method")) + '</h2>' +
-      noteListHtml(example.steps || [], true) + '</section>'
+      '<section class="content-block kp-worked-example"><h2>' + importantTextHtml((index + 1) + ". " + (example.title || "Worked method")) + '</h2>' +
+      noteListHtml(example.steps || [], true, "kp-worked-steps") + '</section>'
     ).join("");
     return primary + extra;
   }
   function methodsContentHtml(item) {
     const methods = (Array.isArray(item.fastMethods) ? item.fastMethods : []).map((method, index) =>
-      '<section class="content-block"><h2>' + esc((index + 1) + ". " + (method.title || "Problem-solving path")) + '</h2>' +
-      (method.when ? '<p><strong>Use when:</strong> ' + esc(method.when) + '</p>' : "") +
-      noteListHtml(method.steps || [], true) + (method.caution ? '<p class="formula-trap"><strong>Caution:</strong> ' + esc(method.caution) + '</p>' : "") + '</section>'
+      '<section class="content-block kp-method-block"><h2>' + importantTextHtml((index + 1) + ". " + (method.title || "Problem-solving path")) + '</h2>' +
+      (method.when ? '<p><strong>Use when:</strong> ' + importantTextHtml(method.when) + '</p>' : "") +
+      noteListHtml(method.steps || [], true, "kp-method-steps") + (method.caution ? '<p class="formula-trap kp-common-mistake-callout"><strong>Caution:</strong> ' + importantTextHtml(method.caution) + '</p>' : "") + '</section>'
     ).join("");
     const defaultMethod = '<h2>How to build a clear answer</h2>' + noteListHtml([
       "Start by checking exactly what the question wants you to find or explain.",
@@ -1729,9 +1764,9 @@
       '<p>Try each question before checking your notes. Mark anything you had to guess, then revisit that part of the chapter.</p>';
   }
   function fullChapterPacket(item) {
-    const chapterSections = Array.isArray(item.sections) ? item.sections : []; const glossary = Array.isArray(item.glossary) && item.glossary.length ? noteListHtml(item.glossary, false) : noteListHtml(chapterSections.map((section) => section.heading), false);
+    const chapterSections = Array.isArray(item.sections) ? item.sections : []; const glossary = Array.isArray(item.glossary) && item.glossary.length ? noteListHtml(item.glossary, false, "kp-glossary") : noteListHtml(chapterSections.map((section) => section.heading), false, "kp-glossary");
     const conceptLinks = chapterSections.map((section) => (section.heading || "Concept") + " — " + (section.body || ""));
-    const exam = Array.isArray(item.examFocus) && item.examFocus.length ? noteListHtml(item.examFocus, false) : noteListHtml(Array.isArray(item.points) ? item.points : [], false);
+    const exam = Array.isArray(item.examFocus) && item.examFocus.length ? noteListHtml(item.examFocus, false, "kp-exam-focus") : noteListHtml(Array.isArray(item.points) ? item.points : [], false, "kp-exam-focus");
     const traps = (Array.isArray(item.commonMistakes) ? item.commonMistakes : []).concat((Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : []).map((card) => card.trap ? card.trap : "").filter(Boolean));
     const revisionChecklist = [
       "I can explain the main ideas without looking at the notes.",
@@ -1743,17 +1778,17 @@
     ];
     const pages = [
       notePage(item, 2, "Chapter overview & learning outcomes", "Start here to see how the main ideas fit together and what you should be able to explain by the end.",
-        '<h2>What this chapter covers</h2>' + noteListHtml((item.sections || []).map((section) => section.heading).concat(item.points || []), false) +
-        '<h2>What you should be able to do</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false) +
+        '<h2>What this chapter covers</h2>' + noteListHtml((item.sections || []).map((section) => section.heading).concat(item.points || []), false, "kp-priority-list") +
+        '<h2>What you should be able to do</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false, "kp-key-ideas") +
         '<h2>A good way to study this chapter</h2>' + noteListHtml(["Understand the idea before trying to memorise a definition or formula.", "Work through the examples on paper, then try one without looking.", "Check the conditions and common mistakes before you begin the practice questions.", "Finish by explaining the main points in your own words and revisiting anything unclear."], true)),
       notePage(item, 3, "Core concept explanations", "Build your understanding one idea at a time. Notice how each concept connects to the next.",
-        sectionContentHtml(item.sections) + '<h2>Chapter key ideas</h2>' + noteListHtml(item.points || [], false)),
+        sectionContentHtml(item.sections) + '<h2>Chapter key ideas</h2>' + noteListHtml(item.points || [], false, "kp-key-ideas")),
       notePage(item, 4, "Key terms and how they connect", "Learn the important terms, then practise explaining them in your own words.",
         '<h2>Important terms</h2>' + glossary + '<h2>Connections between concepts</h2>' + noteListHtml(conceptLinks, false)),
       notePage(item, 5, "Formulas, rules & relationships", "Before using a formula or rule, check that its conditions match the question.",
         formulaContentHtml(item)),
       notePage(item, 6, "Choosing the right formula or rule", "Here is what the rules mean, when they help, and what to check before using them.",
-        noteListHtml((item.formulaCheatSheet || []).map((card) => (card.formula || "Rule") + " — Meaning: " + (card.meaning || "") + " — Use when: " + (card.when || "") + " — Units/notation: " + (card.units || "") + " — Trap: " + (card.trap || "")), false) +
+        noteListHtml((item.formulaCheatSheet || []).map((card) => (card.formula || "Rule") + " — Meaning: " + (card.meaning || "") + " — Use when: " + (card.when || "") + " — Units/notation: " + (card.units || "") + " — Trap: " + (card.trap || "")), false, "kp-formula-reference") +
         '<h2>Before you use it</h2>' + noteListHtml(["Do the conditions in the question match the formula or rule?", "Have you checked the signs, symbols and units?", "Does the answer make sense in the context of the question?", "Can you explain why this method fits better than another one?"], true)),
       notePage(item, 7, "Worked examples & full reasoning", "Follow each step, then cover the solution and try the example again on your own.",
         workedContentHtml(item)),
@@ -1763,12 +1798,12 @@
         '<h2>Exam approach</h2>' + exam + '<h2>Transfer the idea to a new question</h2>' +
         noteListHtml(["Work out which concept the question is testing and choose the definition or relation that fits.", "Write down what you know and what you still need to find or explain.", "Show how you move from the given information to your conclusion.", "Check that you included any units, comparison, diagram or explanation the question asks for."], true)),
       notePage(item, 10, "Common mistakes and how to avoid them", "Use these points to check your work. When you find a mistake, fix it and try the question again.",
-        '<h2>Chapter-specific mistakes</h2>' + noteListHtml(traps, false) +
+        '<h2>Chapter-specific mistakes</h2>' + noteListHtml(traps, false, "kp-common-mistakes") +
         '<h2>Final verification checks</h2>' + noteListHtml(["Have you used each definition in the right way?", "Can you explain why every step follows from the information given?", "Have you checked the units, signs, names or dates where needed?", "Does your final sentence actually answer the question?"], true)),
       notePage(item, 11, "Practice questions with worked answers", "Give each question a real attempt before reading the solution. Pay attention to the step that felt hardest.",
         practiceContentHtml(item)),
       notePage(item, 12, "Final revision and self-check", "Close your notes and see what you remember. Revisit anything you cannot explain confidently.",
-        '<h2>Chapter at a glance</h2>' + noteListHtml(item.points || [], false) +
+        '<h2>Chapter at a glance</h2>' + noteListHtml(item.points || [], false, "kp-key-ideas") +
         '<h2>Recall prompts</h2>' + noteListHtml(item.recall || [], true) +
         '<h2>Revision checklist</h2>' + noteListHtml(revisionChecklist, true) +
         '<h2>Exam focus</h2>' + exam)
@@ -1779,8 +1814,8 @@
     const concepts = sectionContentHtml(item.sections);
     return '<article class="note-page compact-note-page"><p class="eyebrow">' + esc(item.level + " · " + item.subject) + '</p>' +
       '<h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p>' + concepts +
-      '<h2>Key ideas</h2>' + noteListHtml(item.points || [], false) +
-      '<h2>Formulas & rules</h2>' + noteListHtml(item.formulas || [], false) +
+      '<h2>Key ideas</h2>' + noteListHtml(item.points || [], false, "kp-key-ideas") +
+      '<h2>Formulas & rules</h2>' + noteListHtml(item.formulas || [], false, "kp-formula-list") +
       '<h2>Worked example</h2><p>' + esc(item.example || "") + '</p>' +
       '<h2>Worked practice</h2>' + practiceContentHtml(item) +
       '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
@@ -1820,7 +1855,7 @@
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
     const qualityHint = document.createElement("span");
-    qualityHint.textContent = "Download PDF uses high-resolution, lossless rendering. For the sharpest selectable text and vector graphics, choose Print / Save PDF and select “Save as PDF” in the browser dialog.";
+    qualityHint.textContent = "The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages. Choose “Save as PDF” in the browser print dialog for crisp text and vector graphics.";
     qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
     guidance.append(heading, status, qualityHint);
 
@@ -1829,7 +1864,7 @@
     const downloadButton = document.createElement("button");
     downloadButton.type = "button";
     downloadButton.className = "btn btn-purple";
-    downloadButton.textContent = "Preparing PDF…";
+    downloadButton.textContent = "Preparing preview…";
     downloadButton.disabled = true;
     const printButton = document.createElement("button");
     printButton.type = "button";
@@ -1842,7 +1877,7 @@
     closeButton.addEventListener("click", () => {
       if (previewShell.isConnected) previewShell.remove();
     });
-    controls.append(downloadButton, printButton, closeButton);
+    controls.append(downloadButton, closeButton);
     toolbar.append(guidance, controls);
 
     const printFrame = document.createElement("iframe");
@@ -1870,72 +1905,7 @@
         toast("The print dialog didn’t open. Use Download PDF in the preview.");
       }
     };
-    printButton.addEventListener("click", startPrint);
-
-    const loadPdfEngine = () => new Promise((resolve, reject) => {
-      if (typeof window.html2pdf === "function") {
-        resolve(window.html2pdf);
-        return;
-      }
-
-      let script = document.querySelector('script[data-kp-html2pdf="true"]');
-      if (script && script.dataset.failed === "true") {
-        script.remove();
-        script = null;
-      }
-
-      let settled = false;
-      let timeoutId = 0;
-      const cleanup = () => {
-        if (!script) return;
-        script.removeEventListener("load", onLoad);
-        script.removeEventListener("error", onError);
-      };
-      const finish = (callback, value) => {
-        if (settled) return;
-        settled = true;
-        if (timeoutId) window.clearTimeout(timeoutId);
-        cleanup();
-        callback(value);
-      };
-      const onLoad = () => {
-        if (typeof window.html2pdf === "function") {
-          if (script) script.dataset.loaded = "true";
-          finish(resolve, window.html2pdf);
-        } else {
-          if (script) script.dataset.failed = "true";
-          finish(reject, new Error("The PDF library loaded without its export function."));
-        }
-      };
-      const onError = () => {
-        if (script) script.dataset.failed = "true";
-        finish(reject, new Error("The PDF library could not be loaded."));
-      };
-
-      let shouldAppend = false;
-      if (!script) {
-        script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js";
-        script.async = true;
-        script.dataset.kpHtml2pdf = "true";
-        shouldAppend = true;
-      }
-
-      if (script.dataset.loaded === "true") {
-        onLoad();
-        return;
-      }
-
-      script.addEventListener("load", onLoad);
-      script.addEventListener("error", onError);
-      timeoutId = window.setTimeout(() => {
-        if (script) script.dataset.failed = "true";
-        finish(reject, new Error("Timed out while loading the PDF library."));
-      }, 12000);
-
-      if (shouldAppend) document.head.appendChild(script);
-      else if (script.readyState === "complete") onLoad();
-    });
+    downloadButton.addEventListener("click", startPrint);
 
     const chapter = items.length === 1 && items[0] && typeof items[0] === "object" ? items[0] : null;
     const fileStemSource = String((chapter && chapter.chapter) || (chapter && chapter.title) || "KaushalPath-Chapter-Notes");
@@ -2002,7 +1972,7 @@
       const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(pageTitle) + '</title><style>' +
         'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.print-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:800px;margin:0 auto 18px;padding:16px 18px;background:#fff;border:1px solid #e5def0;border-radius:12px;box-shadow:0 3px 18px #20123a12}.print-controls p{margin:5px 0 0;color:#675a78;font-size:10pt}.print-controls button{border:0;border-radius:9px;padding:11px 16px;background:#6740bd;color:#fff;font-weight:700;font-size:10pt;cursor:pointer}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}@media print{.print-controls{display:none!important}}' +
         '.note-page:nth-of-type(7n+1){--page-accent:#6875C8}.note-page:nth-of-type(7n+2){--page-accent:#3678E8}.note-page:nth-of-type(7n+3){--page-accent:#13A89E}.note-page:nth-of-type(7n+4){--page-accent:#F19A32}.note-page:nth-of-type(7n+5){--page-accent:#D94F8C}.note-page:nth-of-type(7n+6){--page-accent:#8359DA}.note-page:nth-of-type(7n+7){--page-accent:#2D9A66}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1{color:var(--page-accent,#3678E8)}h2{color:var(--page-accent,#3678E8);border-bottom:2px solid var(--page-accent,#3678E8);background:#F7F8FF;padding:4px 6px;border-radius:4px}li::marker{color:var(--page-accent,#8359DA);font-weight:bold}.content-block{border:1px solid #E4EAF7;border-left:4px solid var(--page-accent,#3678E8);border-radius:7px;padding:7px 9px;background:#F9FBFF}.content-block:nth-of-type(7n+2){border-left-color:#13A89E;background:#EFFBF8}.content-block:nth-of-type(7n+3){border-left-color:#F19A32;background:#FFF7EB}.content-block:nth-of-type(7n+4){border-left-color:#D94F8C;background:#FFF1F7}.content-block:nth-of-type(7n+5){border-left-color:#8359DA;background:#F6F1FF}.content-block:nth-of-type(7n+6){border-left-color:#2D9A66;background:#EFFAF3}.formula-card:nth-of-type(7n+1){border-color:#CDBEFF;border-left:4px solid #8359DA;background:#F6F1FF}.formula-card:nth-of-type(7n+2){border-color:#A9E5DB;border-left:4px solid #13A89E;background:#EFFBF8}.formula-card:nth-of-type(7n+3){border-color:#F6D09E;border-left:4px solid #F19A32;background:#FFF7EB}.formula-card:nth-of-type(7n+4){border-color:#F2BFD7;border-left:4px solid #D94F8C;background:#FFF1F7}.formula-card:nth-of-type(7n+5){border-color:#BFD2FF;border-left:4px solid #3678E8;background:#EFF5FF}.formula-trap{background:#FFF1D8;border-left:3px solid #F19A32;padding:6px 8px;border-radius:5px}.map-caption-kicker{color:#8359DA}.map-caption-label{color:#3678E8}.mindmap-svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-        '</style></head><body><main id="chapterPdfContent">' + sections + '</main></body></html>';
+        '@media print{html,body{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}#chapterPdfContent{width:100%!important;max-width:none!important}.mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;margin:0 auto!important;padding:0!important;min-height:0!important;overflow:visible!important}.mindmap-svg{display:block;width:100%!important;height:auto!important;max-height:180mm!important;overflow:visible!important}.packet-page,.compact-note-page{page:chapter-notes;max-width:none!important}svg{overflow:visible}}' +\n        '</style></head><body><main id="chapterPdfContent">' + sections + '</main></body></html>';
 
       printTarget.document.open();
       printTarget.document.write(page);
@@ -2011,53 +1981,13 @@
       const chapterContent = printTarget.document.getElementById("chapterPdfContent");
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
       downloadButton.disabled = false;
-      downloadButton.textContent = "Download PDF";
-      status.textContent = "Preview ready. Download PDF or use Print / Save PDF.";
-
-      const runDownload = async () => {
-        downloadButton.disabled = true;
-        downloadButton.textContent = "Preparing PDF…";
-        status.textContent = "Rendering your notes in high-resolution, lossless format. This can take a moment.";
-        try {
-          const html2pdf = await loadPdfEngine();
-          await html2pdf().set({
-            margin: [9, 10, 9, 10],
-            filename: fileName,
-            image: { type: "png" },
-            html2canvas: {
-              // Keep small-print chapter text crisp while bounding peak memory for large multi-chapter exports.
-              scale: Math.min(2, Math.max(1, Math.sqrt(32000000 / (
-                Math.max(1, chapterContent.scrollWidth || chapterContent.offsetWidth || 800) *
-                Math.max(1, chapterContent.scrollHeight || chapterContent.offsetHeight || 12000)
-              )))),
-              useCORS: true, allowTaint: false,
-              backgroundColor: "#ffffff", logging: false, scrollY: 0
-            },
-            jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
-            pagebreak: { mode: ["css", "legacy"] },
-            enableLinks: true
-          }).from(chapterContent).save();
-          status.textContent = "Your high-resolution PDF is ready. Check your Downloads folder.";
-          toast("Your chapter PDF has been downloaded. Check your Downloads folder.");
-        } catch (error) {
-          console.error("Direct chapter PDF download failed:", error);
-          status.textContent = "The automatic download didn’t finish. Use Print / Save PDF or try Download PDF again.";
-          toast("The PDF download didn’t finish. The print option is still available in the preview.");
-        } finally {
-          downloadButton.disabled = false;
-          downloadButton.textContent = "Download PDF";
-        }
-      };
-      downloadButton.addEventListener("click", runDownload);
-
-      // Create the PDF only after the student chooses Download PDF. Avoid
-      // competing with preview construction on phones and memory-limited devices.
-      toast("Your chapter notes are ready. Choose Download PDF or Print / Save PDF.");
+      downloadButton.textContent = "Print / Save PDF";
+      status.textContent = "Preview ready. Print or save the chapter with the complete landscape map and crisp, selectable text.";
+      toast("Chapter notes are ready. Choose Print / Save PDF, then select Save as PDF.");
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
       status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
       downloadButton.disabled = true;
-      printButton.disabled = true;
       const errorBox = document.createElement("p");
       errorBox.textContent = "The chapter preview could not be prepared. Any chapter with a formatting issue now falls back to a simpler layout; if this message persists, refresh the Study Hub and try again.";
       errorBox.style.cssText = "padding:12px;color:#932a42;background:#fff2f4;border-radius:8px";
