@@ -509,9 +509,8 @@ assert.ok(vercel.builds.some(b => b.src === "smart-system-client.js" && b.use ==
 
 assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF export should fall back to a simpler per-chapter layout if rich rendering fails");
 assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
-assert.ok(studyLibrary.includes("Timed out while loading the PDF library."), "the PDF library loader must have a bounded timeout");
-assert.ok(studyLibrary.includes('script.dataset.loaded === "true"'), "the PDF library loader must handle a script that already finished loading");
-assert.ok(studyLibrary.includes('scale: 1, useCORS: true'), "PDF generation should use a memory-conscious canvas scale");
-assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Download PDF or use Print / Save PDF."'), "preview readiness should be separate from PDF generation");
-assert.doesNotMatch(studyLibrary, /window\.setTimeout\(runDownload,\s*0\)/, "PDF generation must wait for an explicit download action instead of automatically consuming memory");
+assert.ok(studyLibrary.includes("printTarget.print()"), "native browser printing should preserve vector text and mind-map graphics");
+assert.ok(studyLibrary.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;"), "the landscape map should not inherit a portrait width constraint");
+assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Print or save the chapter with the complete landscape map and crisp, selectable text."'), "the chapter preview should describe the native high-quality print flow");
+assert.doesNotMatch(studyLibrary, /html2pdf|html2canvas|runDownload/, "the chapter export must not retain its old raster download implementation");
 assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter filename construction must tolerate incomplete chapter metadata");
