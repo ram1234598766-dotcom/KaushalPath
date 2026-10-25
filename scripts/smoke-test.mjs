@@ -76,6 +76,8 @@ assert.ok(studyLibrary.includes("Practice questions with worked answers"), "read
 assert.ok(studyLibrary.includes("PRACTICE QUESTIONS WITH WORKED ANSWERS"), "saved note export must retain solved practice");
 assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLibrary.includes("problem.question ||") && studyLibrary.includes("problem.answer ||") && studyLibrary.includes("problem.solution ||"), "PDF export must retain solved practice with answers and reasoning");
 assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
+assert.ok(studyLibrary.includes("function mapPalette(index)") && studyLibrary.includes("stroke-width=\"7\"") && studyLibrary.includes("stroke-width=\"2.1\""), "mind maps should use distinct colorful curved main and sub-branches");
+assert.ok(studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("mindmap-svg"), "the chapter mind map should print as a landscape SVG cover page");
 assert.ok(mathsDeepNotes.includes("KP_MATHS_INDIVIDUAL_DEEP_NOTES = notes"), "maths collection must be exported");
 assert.ok(physicsChemistryDeepNotes.includes("KP_SCIENCE_INDIVIDUAL_DEEP_NOTES = notes"), "Physics/Chemistry collection must be exported");
 assert.ok(biologyDeepNotes.includes("KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES = notes"), "Biology collection must be exported");
