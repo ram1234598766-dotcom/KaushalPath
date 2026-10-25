@@ -242,7 +242,7 @@
       [card("W=Fs cosθ","Work from constant force and displacement.","Use when force angle relative to displacement is known.","Joule (J).","Use θ between force and displacement."),
        card("K=½mv²","Translational kinetic energy.","Use for moving mass and energy change.","J.","Speed is squared, so sign of velocity does not matter."),
        card("P=F·v","Instantaneous power delivered by a force.","Use when force and velocity are known.","Watt (W).","Only the parallel force component contributes.")],
-      [worked("Work by 10 N force over 5 m at 60°",["W=Fs cosθ=10×5×0.5=25 J."]),
+      [worked("Work by 10 N force over 5 m at 60°",["Identify F=10 N, s=5 m and θ=60° between force and displacement.","Use W=Fs cosθ=10×5×0.5=25 J.","The work is positive because the force component is along the displacement."]),
        worked("Speed from a net-work calculation",["A 2 kg object starts at rest and receives 36 J net work.","K_f−0=36=½(2)v²=v².","v=6 m/s."])],
       [problem("Work when force is perpendicular to displacement?","0 J.","cos90°=0."),
        problem("A 3 kg object moves at 4 m/s. Find kinetic energy.","24 J.","K=½×3×16=24."),
