@@ -230,9 +230,10 @@ function subjectName(){return $("subject").value==="other"?$("otherSubject").val
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
 function renderTests(){
  const grid=$("testGrid");grid.innerHTML="";
- questions.forEach(function(t){
+ questions.forEach(function(t,index){
   const card=document.createElement("article");
   card.className="test-card"+(t.fullLength?" full-length-test-card":"");
+  card.style.setProperty("--kp-card-index",String(Math.min(index,12)));
   card.dataset.exam=t.exam;
   const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";
   const kind=t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
@@ -1248,6 +1249,16 @@ function activateWorkspaceView(view,clicked){
  ["learn","ai-guide","tests","resources","history","library","planner"].forEach(function(id){const node=$(id);if(node)node.classList.toggle("view-hidden",target!==id);});
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
  document.querySelectorAll(".mobile-dock [data-view]").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
+ const visibleNodes=target==="overview"?overviewNodes:[$(target)];
+ const shouldReduceMotion=Boolean(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+ visibleNodes.forEach(function(node){
+  if(!node||node.classList.contains("view-hidden"))return;
+  node.classList.remove("kp-view-enter");
+  if(shouldReduceMotion)return;
+  void node.offsetWidth;
+  node.classList.add("kp-view-enter");
+ });
+
  const labels={overview:"Overview",learn:"CBSE Study Hub","ai-guide":"AI Study Guide",tests:"Test Series",history:"My Results",resources:"Official Resources",library:"Saved Library",planner:"Study Planner"};
  if(target==="tests"&&clicked&&clicked.dataset.showExam){
   const exam=clicked.dataset.showExam;
@@ -1256,7 +1267,8 @@ function activateWorkspaceView(view,clicked){
  }else if(target==="tests"){document.querySelectorAll(".test-card").forEach(function(card){card.classList.remove("hidden");});}
  $("breadcrumbPage").textContent=labels[target]||"Workspace";
  if(location.hash!=="#"+target)history.replaceState(null,"","#"+target);
- window.scrollTo({top:0,behavior:"smooth"});
+ const reducedMotion=Boolean(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+ window.scrollTo({top:0,behavior:reducedMotion?"auto":"smooth"});
 }
 
 function initCommandPalette(){
