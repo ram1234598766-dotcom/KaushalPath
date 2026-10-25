@@ -55,6 +55,9 @@ for (const asset of ["school-chapter-guides.js","school-humanities-commerce-guid
 }
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
 assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
+assert.ok((examPrepNotes.match(/const mathematics[A-Za-z0-9_]+ = pack\("JEE Main", "Mathematics"/g) || []).length >= 18, "JEE Mathematics should have dedicated individual deep-dive chapter packs");
+assert.match(examPrepNotes, /Conditional Probability, Bayes Theorem and Independence/, "JEE probability notes should cover conditional probability and Bayes theorem");
+assert.match(examPrepNotes, /Three-Dimensional Geometry: Lines, Planes and Shortest Distance/, "JEE 3D notes should explain shortest-distance methods");
 assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/, "deep-dive notes should include dedicated JEE and NEET views");
 assert.match(examPrepNotes, /workedExamples/, "exam notes should include stepwise examples and problem methods");
 assert.equal((formulaSheets.match(/const .* = sheet\(/g) || []).length, 14, "formula cheat sheets should cover CBSE classes and JEE/NEET");
