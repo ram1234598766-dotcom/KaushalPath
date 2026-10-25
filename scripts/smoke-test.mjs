@@ -49,6 +49,7 @@ assert.match(examPrepNotes, /workedExamples/, "exam notes should include stepwis
 assert.match(examPrepNotes, /commonMistakes/, "exam notes should cover common mistakes");
 assert.match(studyLibrary, /Detailed concept explanations/, "the note reader should render expanded concept sections");
 assert.match(studyLibrary, /ADDITIONAL WORKED METHODS/, "the PDF export should include detailed worked methods");
+assert.match(localAI, /web-llm@0\.2\.86/, "local inference should use the current pinned WebLLM release");
 assert.match(localAI, /navigator\.deviceMemory/, "local model recommendation should use browser RAM hints when available");
 assert.match(localAI, /navigator\.gpu\.requestAdapter/, "local model installation should verify WebGPU adapter availability");
 assert.match(localAI, /requiredStorageBytes/, "local model installation should check estimated browser storage before downloading");
@@ -57,7 +58,7 @@ assert.match(localAI, /getModelLabel/, "the app should report which model actual
 assert.match(localAI, /kp-local-ai-consent-v1/, "first-time local model downloads should be consent gated");
 assert.match(app, /localApi\.respond/, "text-only Study Guide prompts should be routable to local inference");
 assert.match(app, /needsCloudForThisRequest=Boolean\(attachmentForRequest\|\|webSearch\)/, "file and web-research prompts should use cloud support rather than claim local support");
-assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /https:\/\/esm\.sh/);
+assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /https:\/\/esm\.run/);
 assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /wasm-unsafe-eval/);
 assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /worker-src 'self' blob:/);
 assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "Vercel should publish the local inference controller");
