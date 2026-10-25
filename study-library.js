@@ -1426,18 +1426,198 @@
       (intro ? '<p class="intro">' + esc(intro) + '</p>' : "") + body +
       '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
   }
+  function mapPalette(index) {
+    return [
+      { color: "#3678E8", pale: "#EAF2FF" },
+      { color: "#13A89E", pale: "#E4F8F4" },
+      { color: "#F19A32", pale: "#FFF2DF" },
+      { color: "#D94F8C", pale: "#FCE9F2" },
+      { color: "#8359DA", pale: "#F0EAFE" },
+      { color: "#2D9A66", pale: "#E5F7EC" },
+      { color: "#6875C8", pale: "#ECEEFF" }
+    ][index % 7];
+  }
+  function mapKeyword(value) {
+    const full = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    // Keep a useful keyword phrase on the map; the following pages retain the complete explanation.
+    const firstClause = full.split(/;\s+|:\s+| — | – /)[0].trim();
+    const chosen = firstClause.length >= 12 && full.length > 58 ? firstClause : full;
+    return chosen.length > 72 ? chosen.slice(0, 69).trimEnd() + "…" : chosen;
+  }
+  function mapTextLines(value, maxChars, maxLines) {
+    const words = String(value || "").split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const next = line ? line + " " + word : word;
+      if (next.length > maxChars && line) {
+        lines.push(line);
+        line = word;
+      } else line = next;
+    }
+    if (line) lines.push(line);
+    if (lines.length > maxLines) {
+      const kept = lines.slice(0, maxLines);
+      const last = kept[maxLines - 1];
+      kept[maxLines - 1] = last.length > maxChars - 2 ? last.slice(0, maxChars - 2).trimEnd() + "…" : last + "…";
+      return kept;
+    }
+    return lines;
+  }
+  function mapSvgLabel(value, x, y, width, height, fontSize, maxChars, maxLines) {
+    const lines = mapTextLines(value, maxChars, maxLines);
+    const lineHeight = fontSize + 2;
+    const firstY = y - ((lines.length - 1) * lineHeight) / 2 + fontSize * 0.34;
+    return '<text x="' + x + '" y="' + firstY + '" text-anchor="middle" font-size="' + fontSize +
+      '" font-weight="550" fill="#24324A">' + lines.map((line, index) =>
+        '<tspan x="' + x + '" dy="' + (index === 0 ? 0 : lineHeight) + '">' + esc(line) + '</tspan>'
+      ).join("") + '</text>';
+  }
   function renderMindMapPage(item) {
     const groups = noteMindMapGroups(item);
-    const branches = groups.map((group, index) =>
-      '<section class="map-branch branch-' + (index % 7) + '"><h2><span class="map-dot"></span>' + esc(group.title) + '</h2><div class="map-nodes">' +
-      group.items.map((text) => '<span class="map-node">' + esc(text) + '</span>').join("") + '</div></section>'
-    ).join("");
-    return '<article class="note-page mindmap-page"><p class="eyebrow">KAUSHALPATH · COMPLETE CHAPTER MAP</p>' +
-      '<h1>' + esc(item.chapter) + '</h1><p class="map-subtitle">' + esc(item.level + " · " + item.subject) +
-      ' · A map of every topic recorded in this lesson pack</p><div class="map-center"><span>LESSON / CHAPTER</span><strong>' +
-      esc(item.chapter) + '</strong><small>Concepts · rules · examples · applications · practice</small></div>' +
-      '<div class="map-stem" aria-hidden="true"></div><div class="mindmap-grid">' + branches + '</div>' +
-      '<p class="map-footnote">The map is generated directly from the chapter notes below. Cross-check syllabus-specific wording and examinable scope against the current official textbook/curriculum.</p></article>';
+    const W = 1600, H = 960, cx = 800, cy = 490;
+    const leftGroups = [], rightGroups = [];
+    groups.forEach((group, index) => (index % 2 === 0 ? leftGroups : rightGroups).push({ group, index }));
+    const rootRx = 120, rootRy = 68;
+    const categoryWidth = 200, categoryHeight = 48;
+    const chipPanelX = { left: 22, right: 1238 };
+    const chipPanelWidth = 340;
+    const nodes = [];
+    const mainPaths = [];
+    const subPaths = [];
+    const categories = [];
+    const leafNodes = [];
+    const sides = [
+      { name: "left", entries: leftGroups, categoryX: 390, outerX: 390, rootTargetX: 590, chipEdge: "right" },
+      { name: "right", entries: rightGroups, categoryX: 1010, outerX: 1210, rootTargetX: 1010, chipEdge: "left" }
+    ];
+
+    sides.forEach((side) => {
+      side.entries.forEach((entry, rowIndex) => {
+        const { group, index } = entry;
+        const palette = mapPalette(index);
+        const y = 145 + ((rowIndex + 0.5) / Math.max(1, side.entries.length)) * 690;
+        const isLeft = side.name === "left";
+        const catX = side.categoryX;
+        const catOuterX = isLeft ? catX : catX + categoryWidth;
+        const targetCx = catX + categoryWidth / 2;
+        const theta = Math.atan2((y - cy) / rootRy, (targetCx - cx) / rootRx);
+        const startX = cx + rootRx * Math.cos(theta);
+        const startY = cy + rootRy * Math.sin(theta);
+        const endX = isLeft ? catX + categoryWidth : catX;
+        const dx = endX - startX;
+        const c1x = startX + dx * 0.35;
+        const c2x = endX - dx * 0.35;
+        mainPaths.push(
+          '<path d="M ' + startX + ' ' + startY + ' C ' + c1x + ' ' + startY + ', ' +
+          c2x + ' ' + y + ', ' + endX + ' ' + y + '" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>' +
+          '<path d="M ' + startX + ' ' + startY + ' C ' + c1x + ' ' + startY + ', ' +
+          c2x + ' ' + y + ', ' + endX + ' ' + y + '" fill="none" stroke="' + palette.color +
+          '" stroke-width="7" stroke-linecap="round"/>'
+        );
+
+        const sourceX = isLeft ? catX : catX + categoryWidth;
+        const chipX = chipPanelX[side.name];
+        const items = uniqueNoteText((group.items || []).map(mapKeyword));
+        const columns = items.length > 20 ? 4 : items.length > 8 ? 3 : 2;
+        const gapX = 7;
+        const gapY = 4;
+        const chipW = (chipPanelWidth - gapX * (columns - 1)) / columns;
+        const rows = Math.max(1, Math.ceil(items.length / columns));
+        const panelH = 164;
+        const chipH = Math.max(18, Math.min(32, (panelH - gapY * (rows - 1)) / rows));
+        const top = y - ((rows * chipH + (rows - 1) * gapY) / 2);
+        const fontSize = columns === 4 ? 8.1 : columns === 3 ? 9.0 : 10.0;
+        const maxChars = Math.max(9, Math.floor((chipW - 12) / (fontSize * 0.56)));
+        const maxLines = chipH >= 27 ? 2 : 1;
+
+        items.forEach((label, itemIndex) => {
+          const col = itemIndex % columns;
+          const row = Math.floor(itemIndex / columns);
+          const x = chipX + col * (chipW + gapX);
+          const chipY = top + row * (chipH + gapY);
+          const anchorX = isLeft ? x + chipW : x;
+          const anchorY = chipY + chipH / 2;
+          const pathStartX = sourceX;
+          const bend = isLeft ? -1 : 1;
+          const deltaX = anchorX - pathStartX;
+          const c1 = pathStartX + deltaX * 0.45;
+          const c2 = anchorX - deltaX * 0.25;
+          subPaths.push(
+            '<path d="M ' + pathStartX + ' ' + y + ' C ' + c1 + ' ' + y + ', ' +
+            c2 + ' ' + anchorY + ', ' + anchorX + ' ' + anchorY + '" fill="none" stroke="' +
+            palette.pale + '" stroke-width="5" stroke-linecap="round"/>' +
+            '<path d="M ' + pathStartX + ' ' + y + ' C ' + c1 + ' ' + y + ', ' +
+            c2 + ' ' + anchorY + ', ' + anchorX + ' ' + anchorY + '" fill="none" stroke="' +
+            palette.color + '" stroke-width="2.1" stroke-linecap="round" opacity=".9"/>'
+          );
+          leafNodes.push(
+            '<g class="mindmap-topic" data-branch="' + index + '"><title>' + esc((group.title || "") + " — " + label) + '</title>' +
+            '<rect x="' + x + '" y="' + chipY + '" width="' + chipW + '" height="' + chipH +
+            '" rx="' + Math.min(10, chipH / 2) + '" fill="#FFFFFF" stroke="' + palette.color +
+            '" stroke-opacity=".42" stroke-width="1.25"/>' +
+            '<circle cx="' + (isLeft ? x + chipW - 5 : x + 5) + '" cy="' + anchorY +
+            '" r="2.7" fill="' + palette.color + '"/>' +
+            mapSvgLabel(label, x + chipW / 2, anchorY, chipW - 12, chipH, fontSize, maxChars, maxLines) +
+            '</g>'
+          );
+        });
+
+        const titleFont = group.title.length > 23 ? 11.5 : 13;
+        categories.push(
+          '<g class="mindmap-main-branch" data-branch="' + index + '"><title>' + esc(group.title) + '</title>' +
+          '<rect x="' + catX + '" y="' + (y - categoryHeight / 2) + '" width="' + categoryWidth +
+          '" height="' + categoryHeight + '" rx="15" fill="' + palette.color + '" stroke="#FFFFFF" stroke-width="2.5"/>' +
+          '<circle cx="' + (isLeft ? catX + categoryWidth - 15 : catX + 15) + '" cy="' + y +
+          '" r="4.5" fill="#FFFFFF" fill-opacity=".9"/>' +
+          '<text x="' + (catX + categoryWidth / 2) + '" y="' + (y + titleFont * 0.36) +
+          '" text-anchor="middle" font-size="' + titleFont + '" font-weight="750" fill="#FFFFFF">' +
+          esc(group.title) + '</text></g>'
+        );
+      });
+    });
+
+    const chapterFont = String(item.chapter || "").length > 28 ? 19 : String(item.chapter || "").length > 20 ? 22 : 26;
+    const chapterLines = mapTextLines(item.chapter || "Chapter", 17, 3);
+    const chapterText = '<text x="' + cx + '" y="' + (cy - (chapterLines.length - 1) * 14) +
+      '" text-anchor="middle" font-size="' + chapterFont + '" font-weight="800" fill="#192641">' +
+      chapterLines.map((line, index) => '<tspan x="' + cx + '" dy="' + (index === 0 ? 0 : 28) + '">' + esc(line) + '</tspan>').join("") +
+      '</text>';
+    const subtitle = '<text x="' + cx + '" y="' + (cy + 45) + '" text-anchor="middle" font-size="11" font-weight="650" fill="#66558B">' +
+      esc(item.level + " · " + item.subject) + '</text>';
+    const root = '<g class="mindmap-hub"><rect x="' + (cx - rootRx) + '" y="' + (cy - rootRy) +
+      '" width="' + (rootRx * 2) + '" height="' + (rootRy * 2) + '" rx="25" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="4"/>' +
+      '<path d="M ' + (cx - rootRx + 24) + ' ' + (cy - rootRy) + ' H ' + (cx + rootRx - 24) +
+      '" stroke="#8B5CF6" stroke-width="8" stroke-linecap="round"/>' +
+      '<text x="' + cx + '" y="' + (cy - rootRy + 24) + '" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="2.4" fill="#8151DB">CHAPTER MIND MAP</text>' +
+      chapterText + subtitle + '</g>';
+
+    const decorativeDots = [
+      { x: 1490, c: "#3678E8" }, { x: 1510, c: "#13A89E" }, { x: 1530, c: "#F19A32" },
+      { x: 1550, c: "#D94F8C" }, { x: 1570, c: "#8359DA" }
+    ].map((dot) => '<circle cx="' + dot.x + '" cy="44" r="5" fill="' + dot.c + '"/>').join("");
+
+    const svg = '<svg class="mindmap-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H +
+      '" role="img" aria-label="Colorful connected mind map for ' + esc(item.chapter) + '">' +
+      '<defs><filter id="mapShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#2D2450" flood-opacity=".12"/></filter>' +
+      '<linearGradient id="mapTop" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#3B82F6"/></linearGradient></defs>' +
+      '<rect x="0" y="0" width="' + W + '" height="' + H + '" rx="26" fill="#FBFCFF"/>' +
+      '<path d="M 36 104 H 1564" stroke="#E8ECF5" stroke-width="2"/>' +
+      '<rect x="36" y="31" width="9" height="53" rx="4.5" fill="url(#mapTop)"/>' +
+      '<text x="64" y="55" font-size="28" font-weight="850" fill="#17233E">' + esc(item.chapter) + '</text>' +
+      '<text x="65" y="82" font-size="14" font-weight="550" fill="#6B7690">' +
+      esc(item.level + " · " + item.subject + " · Core concepts and connected revision topics") + '</text>' +
+      decorativeDots +
+      mainPaths.join("") + subPaths.join("") +
+      categories.join("") + leafNodes.join("") +
+      '<g filter="url(#mapShadow)">' + root + '</g>' +
+      '<rect x="36" y="900" width="1528" height="34" rx="12" fill="#F0F3FA"/>' +
+      '<circle cx="56" cy="917" r="4" fill="#8B5CF6"/>' +
+      '<text x="70" y="921" font-size="11" font-weight="600" fill="#58647B">Each colour is a chapter strand; curved sub-branches connect it to its topics.</text>' +
+      '<text x="1545" y="921" text-anchor="end" font-size="10" fill="#6B7690">Generated from this lesson pack · verify syllabus scope with the prescribed text</text>' +
+      '</svg>';
+    return '<article class="note-page mindmap-page"><div class="map-caption"><span class="map-caption-kicker">KAUSHALPATH · VISUAL REVISION</span><span class="map-caption-label">PAGE 1 · CONNECTED CONCEPT MAP</span></div>' +
+      svg + '</article>';
   }
   function sectionContentHtml(sections) {
     return (Array.isArray(sections) ? sections : []).map((section, index) =>
@@ -1554,7 +1734,7 @@
     // The bulk export keeps every chapter and its map without generating thousands of pages by default.
     const sections = items.length === 1 ? fullChapterPacket(items[0]) : items.map((item) => renderMindMapPage(item) + compactChapterHtml(item)).join("");
     const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
-      'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.compact-note-page{min-height:262mm}@page{size:A4;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.map-branch{background:#fff}}' +
+      'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.compact-note-page{min-height:262mm}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.mindmap-topic,.mindmap-main-branch{break-inside:avoid}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}' +
       '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections +
       '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\\/script></body></html>';
     const printWindow = window.open("", "_blank");
