@@ -1264,7 +1264,7 @@
       head.append(meta, pill); card.append(head, h3, summary);
       const actions = document.createElement("div"); actions.className = "notes-card-actions";
       const read = document.createElement("button"); read.type = "button"; read.className = "btn btn-light"; read.textContent = "Read notes"; read.addEventListener("click", () => showNote(item));
-      const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Download 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
+      const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Print / Save 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
       const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
         if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
         else {
@@ -1382,7 +1382,7 @@
     const rh = document.createElement("h3"); rh.textContent = "Quick self-check";
     const rl = document.createElement("ol"); item.recall.forEach((text) => { const li = document.createElement("li"); li.textContent = text; rl.appendChild(li); });
     const actions = document.createElement("div"); actions.className = "notes-card-actions";
-    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Download 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
+    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Print / Save 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
     const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
       if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
     });
