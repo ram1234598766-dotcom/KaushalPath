@@ -493,3 +493,10 @@ console.log("KaushalPath static assets, private AI routing, web research, and im
 
 assert.ok(vercel.builds.some(b => b.src === "cbse-humanities-computer-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish humanities/computer detailed notes");
 assert.ok(serviceWorker.includes('"/cbse-humanities-computer-deep-notes.js"'), "PWA shell must cache humanities/computer detailed notes");
+const cloudflareWorker = readFileSync(new URL("../cloudflare-worker.mjs", import.meta.url), "utf8");
+const wranglerConfig = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
+assert.match(cloudflareWorker, /raw\.githubusercontent\.com\/ram1234598766-dotcom\/KaushalPath\/main/, "Cloudflare should serve current static files without the failing asset-upload JWT flow");
+assert.match(cloudflareWorker, /const STATIC_FILES = new Set\(\[/, "Cloudflare should allowlist the public app assets served by the existing Worker");
+assert.match(cloudflareWorker, /if \(url\.pathname === "\/api\/study-guide"\)/, "Cloudflare must preserve the existing study-guide API route");
+assert.match(cloudflareWorker, /pathname === "\/service-worker\.js"/, "the service worker file must bypass the edge cache to refresh promptly");
+assert.ok(!/^\[assets\]/m.test(wranglerConfig), "Wrangler should not invoke the failing Cloudflare static-assets upload flow");

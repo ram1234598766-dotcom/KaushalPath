@@ -45,5 +45,5 @@ if (missing.length) {
   process.exitCode = 1;
 } else {
   console.log("Cloudflare Workers static-asset build ready: " + staticFiles.length + " assets copied to dist/.");
-  console.log("Worker entry point cloudflare-worker.mjs routes /api/study-guide to the existing Vercel-backed proxy.");
+  console.log("Worker serves public app files from the repository origin and routes /api/study-guide to the existing Vercel-backed API.");
 }
