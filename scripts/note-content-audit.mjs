@@ -103,11 +103,12 @@ assert.ok(gravitationSupplement && gravitationSupplement.formulaCheatSheet.lengt
 const examNotes = loadExport("exam-prep-notes.js", "KP_DEEP_NOTES");
 const deepExamNotes = loadExport("jee-neet-chapter-notes.js", "KP_JEE_NEET_CHAPTER_NOTES");
 assert.ok(deepExamNotes.length >= 54, "JEE/NEET deep chapter library should include the JEE chapters plus NEET Physics/Chemistry adaptations");
+const shallowDeepNotes = [];
 for (const note of deepExamNotes) {
   assert.ok(note.level && note.subject && note.chapter, "JEE/NEET note missing exam/subject/chapter metadata");
   assert.ok(Array.isArray(note.sections) && note.sections.length >= 4, note.chapter + " needs at least four topic explanations");
   const words = note.sections.reduce((sum, section) => sum + String(section.body || "").trim().split(/\s+/).filter(Boolean).length, 0);
-  assert.ok(words >= 200, note.level + " " + note.subject + " " + note.chapter + " has only " + words + " explanatory words");
+  if (words < 260) shallowDeepNotes.push(note.level + " " + note.subject + " · " + note.chapter + " (" + words + " words)");
   assert.ok(Array.isArray(note.workedExamples) && note.workedExamples.length >= 2, note.chapter + " needs multiple worked examples");
   assert.ok(Array.isArray(note.fastMethods) && note.fastMethods.length >= 3, note.chapter + " needs at least three timed-exam methods");
   assert.ok(Array.isArray(note.practiceProblems) && note.practiceProblems.length >= 3, note.chapter + " needs solved practice questions");
@@ -118,6 +119,7 @@ for (const note of deepExamNotes) {
     assert.ok(note.formulaCheatSheet.every(card => card.formula && card.meaning && card.when && card.units && card.trap), note.chapter + " has an incomplete formula card");
   }
 }
+assert.equal(shallowDeepNotes.length, 0, "These JEE/NEET chapters need deeper explanations (260+ words across their topic sections): " + shallowDeepNotes.join("; "));
 
 assert.ok(examNotes.length >= 42, "JEE/NEET preparation needs at least 42 detailed exam-prep entries");
 assert.ok(examNotes.some(note => note.level === "JEE Main" && note.subject === "Mathematics"), "JEE Main Mathematics notes must exist");
