@@ -62,6 +62,22 @@
       "use": "@vercel/static"
     },
     {
+      "src": "cbse-maths-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-physics-chemistry-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-biology-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-remaining-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "study-library.js",
       "use": "@vercel/static"
     },
