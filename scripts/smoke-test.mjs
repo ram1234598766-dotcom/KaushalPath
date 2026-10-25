@@ -55,6 +55,26 @@ assert.equal((humanitiesGuides.match(/=guide\("/g) || []).length, 14, "CBSE huma
 assert.match(studyLibrary, /Common trap:/, "formula cards should render common mistakes");
 assert.match(studyLibrary, /Units \/ notation:/, "formula cards should explain units and notation");
 assert.match(studyLibrary, /Explained formula cheat sheet/, "the chapter reader should show formula cards with explanations");
+assert.match(studyLibrary, /function enrichIndividualChapter\(item\)/, "each short CBSE chapter entry should be deepened before display");
+assert.match(studyLibrary, /notes\.forEach\(enrichIndividualChapter\)/, "the detail pass should apply to all existing chapter entries, not just extra master guides");
+assert.match(studyLibrary, /function genericDeepSections\(item\)/, "individual chapters should include explanations, method guidance and answer-checking sections");
+assert.match(studyLibrary, /const deepChapterOverrides = \[/, "chapters with important missing detail should have dedicated, subject-specific notes");
+assert.match(studyLibrary, /chapter:"Gravitation"/, "Class 11 gravitation should have an individual multi-section deep dive");
+assert.match(studyLibrary, /chapter:"Thermal Properties of Matter"/, "Class 11 thermal properties should have detailed content");
+assert.match(studyLibrary, /chapter:"Oscillations and Waves"/, "Class 11 oscillations and waves should have detailed content");
+assert.match(studyLibrary, /chapter:"Equilibrium"/, "Class 11 chemical equilibrium should have detailed content");
+assert.match(studyLibrary, /chapter:"Redox Reactions"/, "Class 11 redox should have detailed content");
+assert.match(studyLibrary, /chapter:"Thermodynamics"/, "Class 11 chemistry thermodynamics should have detailed content");
+assert.match(studyLibrary, /chapter:"Hydrocarbons"/, "Class 11 hydrocarbons should have detailed content");
+assert.match(studyLibrary, /chapter:"Ray and Wave Optics"/, "Class 12 optics should include individual explanations, formula use and examples");
+assert.match(studyLibrary, /chapter:"Dual Nature of Radiation and Matter"/, "Class 12 dual nature should have detailed content");
+assert.match(studyLibrary, /chapter:"Atoms, Nuclei and Radioactivity"/, "Class 12 atomic and nuclear physics should have detailed content");
+assert.match(studyLibrary, /chapter:"Semiconductor Electronics"/, "Class 12 semiconductor electronics should have detailed content");
+assert.match(studyLibrary, /chapter:"Aldehydes, Ketones and Carboxylic Acids"/, "Class 12 carbonyl chemistry should have detailed content");
+assert.match(studyLibrary, /chapter:"Amines"/, "Class 12 amines should have detailed content");
+assert.match(studyLibrary, /chapter:"Biomolecules"/, "Class 12 biomolecules should have detailed content");
+assert.match(studyLibrary, /EXPLAINED FORMULA CHEAT SHEET/, "downloadable note text should include formula meanings, uses, units and traps");
+
 assert.match(studyLibrary, /FORMULA CHEAT SHEET/, "PDF and saved-text notes should preserve explained formula cards");
 
 assert.match(examPrepNotes, /commonMistakes/, "exam notes should cover common mistakes");
