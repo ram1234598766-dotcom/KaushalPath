@@ -613,7 +613,8 @@
     window.KP_SCIENCE_INDIVIDUAL_DEEP_NOTES,
     window.KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES,
     window.KP_REMAINING_CHAPTER_DEEP_NOTES,
-    window.KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES
+    window.KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES,
+    window.KP_NCERT_CHAPTER_NOTES
   ].filter(Array.isArray);
   const chapterKey = (item) => [item.level, item.subject, item.chapter].map((x) => String(x || "").trim().toLowerCase()).join("::");
   const detailScore = (item) => (item.sections || []).length * 10 +
