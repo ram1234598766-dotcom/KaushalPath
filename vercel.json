@@ -78,6 +78,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "cbse-humanities-computer-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "study-library.js",
       "use": "@vercel/static"
     },
