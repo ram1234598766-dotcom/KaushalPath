@@ -634,6 +634,28 @@ html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion
 .local-ai-limitations strong{color:#513185}
 @media(max-width:650px){.local-ai-panel{padding:16px}.local-ai-header{flex-wrap:wrap}.local-ai-badge{margin-left:56px}.local-ai-device{grid-template-columns:1fr}.local-ai-actions{align-items:flex-start}.local-ai-toggle{width:100%;order:3}.local-ai-progress-row{align-items:flex-start;flex-direction:column}.local-ai-progress-row progress{width:100%}}
 
+
+/* Hide all scrollbar chrome without disabling scrolling, including overflow panels and qnav palettes. */
+html,body,*{scrollbar-width:none!important;-ms-overflow-style:none!important}
+*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+.full-length-test-card{border-color:#c9b7f3;background:linear-gradient(145deg,#fff 54%,#f5f0ff);box-shadow:0 10px 28px #4420800d}
+.full-length-test-card:nth-child(6n+1){border-top:4px solid #3678E8}
+.full-length-test-card:nth-child(6n+2){border-top:4px solid #13A89E}
+.full-length-test-card:nth-child(6n+3){border-top:4px solid #F19A32}
+.full-length-test-card:nth-child(6n+4){border-top:4px solid #D94F8C}
+.full-length-test-card:nth-child(6n+5){border-top:4px solid #8359DA}
+.full-length-test-card:nth-child(6n+6){border-top:4px solid #2D9A66}
+.test-source-links{display:flex;flex-wrap:wrap;gap:8px;margin:-3px 0 15px;font-size:.77rem}
+.test-source-links a{display:inline-flex;align-items:center;gap:5px;border:1px solid #ded4f6;background:#faf7ff;border-radius:9px;padding:7px 9px;font-weight:800}
+.question-source{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-3px 0 16px}
+.question-source-badge{display:inline-block;border:1px solid transparent;border-radius:999px;padding:5px 9px;font-size:.72rem;line-height:1.45;font-weight:850}
+.question-source-badge.pyq{background:#e8f8ef;color:#18734d;border-color:#b8e6cc}
+.question-source-badge.competency{background:#eef4ff;color:#285bb0;border-color:#cbdcff}
+.question-topic{font-size:.76rem;color:#75668a;font-weight:750}
+.question-source a{font-size:.76rem;font-weight:850;color:#5e39ae;border-bottom:1px solid #cdbcf1}
+#examWorkspace .question-nav{max-height:180px;overflow-y:auto;overscroll-behavior:contain;padding:3px}
+#tests .section-head p{max-width:740px}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
@@ -678,7 +700,7 @@ html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion
   <div class="workspace-meta"><span><i class="meta-dot"></i> Learning workspace</span><span class="meta-divider"></span><span>Local mode · Your results stay in this browser</span></div>
 </section>
 <section class="hero"><div class="wrap hero-grid"><div><div class="eyebrow"><span class="dot"></span> LEARN WITH DIRECTION</div><h1>Learn clearly.<br><em>Move forward.</em></h1><p>One calm place for CBSE learning, chapter notes, AI-guided explanations, JEE and NEET practice, and progress you can take with you.</p><div class="actions"><a class="btn btn-primary" href="#learn" data-view="learn">Explore CBSE Hub <span>→</span></a><a class="btn btn-ghost" href="#tests" data-view="tests">Start a practice test</a></div></div><aside class="hero-card"><div class="hero-card-top"><span>YOUR LEARNING SPACE</span><span class="status" id="aiStatus">AI status checking</span></div><div class="hero-score">One topic at a time.</div><p>Ask questions in your own words. Get a structured explanation, then practise with a test.</p><div class="mini-row"><span>CBSE Classes</span><strong>10 · 11 · 12</strong></div><div class="mini-row"><span>Entrance preparation</span><strong>JEE + NEET</strong></div><div class="progress"><span></span></div><div class="mini-row"><span>Progress stays in this browser</span><span>Private by default</span></div></aside></div></section>
-<div class="wrap quickstats"><div class="stat"><strong>10–12</strong><span>CBSE class learning</span></div><div class="stat"><strong>Any topic</strong><span>Ask the AI guide</span></div><div class="stat"><strong>6 sets</strong><span>JEE + NEET practice</span></div><div class="stat"><strong>Download</strong><span>Test results as CSV / JSON / PDF</span></div></div>
+<div class="wrap quickstats"><div class="stat"><strong>10–12</strong><span>CBSE class learning</span></div><div class="stat"><strong>Any topic</strong><span>Ask the AI guide</span></div><div class="stat"><strong>12 full mocks</strong><span>JEE + NEET test series</span></div><div class="stat"><strong>Download</strong><span>Test results as CSV / JSON / PDF</span></div></div>
 <section class="learning-path wrap" id="learningPath">
   <div class="section-head"><div><div class="kicker">YOUR LEARNING PATH</div><h2>Where would you like to begin?</h2><p>Choose the kind of learning you need today.</p></div></div>
   <div class="path-grid">
@@ -794,7 +816,7 @@ html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion
   </section>
  </div>
 </section>
-<section class="section wrap" id="tests"><div class="section-head"><div><div class="kicker">02 / Exam practice</div><h2>Put your understanding to the test.</h2><p>Timed short sets with explanations, answer review and downloadable reports. Every set is labelled as original practice or as sourced from an official paper.</p></div></div><div class="callout"><strong>Exam accuracy:</strong> Short practice sets are not full-length mocks. Only the set explicitly labelled “Official SQP” contains questions taken from CBSE’s published sample paper. Use the official paper links below for complete papers and marking schemes.</div><p class="tiny"><a href="#official-papers">Browse official question papers, marking schemes and current exam patterns ↗</a></p><div id="resumeTestBanner" class="resume-banner hidden" role="region" aria-label="Unfinished test"><div><strong>Resume your saved test</strong><p id="resumeTestTitle"></p><p id="resumeTestDetail" class="tiny"></p></div><div class="actions"><button class="btn btn-purple" id="resumeSavedTest" type="button">Resume test</button><button class="btn btn-light" id="discardSavedTest" type="button">Discard attempt</button></div></div><div id="testGrid" class="test-grid"></div><div id="examWorkspace" class="panel hidden" style="margin-top:20px"></div><div id="resultWorkspace" class="panel hidden" style="margin-top:20px"></div>
+<section class="section wrap" id="tests"><div class="section-head"><div><div class="kicker">02 / Exam practice</div><h2>Put your understanding to the test.</h2><p>Full-length NEET mocks with 180 questions and extended 90-question JEE Main practice mocks, plus short CBSE revision sets and an official sample-paper sampler. Every entrance question is labelled as a previous-year item or syllabus-mapped competency practice.</p></div></div><div class="callout"><strong>Exam accuracy:</strong> Each NEET full mock contains 180 questions (45 Physics, 45 Chemistry and 90 Biology), matching the NEET UG 2026 question count, subject split, 180-minute duration and +4/−1 scoring. Each JEE set is a 90-question extended practice mock (30 per subject, 180 minutes, 360 marks); the official JEE Main 2026 Paper 1 format has 75 questions and 300 marks. Questions are individually labelled as PYQs or original syllabus-mapped competency practice. Always cross-check scope and answers with the official syllabus and paper sources.</div><p class="tiny"><a href="#official-papers">Browse official question papers, marking schemes and current exam patterns ↗</a></p><div id="resumeTestBanner" class="resume-banner hidden" role="region" aria-label="Unfinished test"><div><strong>Resume your saved test</strong><p id="resumeTestTitle"></p><p id="resumeTestDetail" class="tiny"></p></div><div class="actions"><button class="btn btn-purple" id="resumeSavedTest" type="button">Resume test</button><button class="btn btn-light" id="discardSavedTest" type="button">Discard attempt</button></div></div><div id="testGrid" class="test-grid"></div><div id="examWorkspace" class="panel hidden" style="margin-top:20px"></div><div id="resultWorkspace" class="panel hidden" style="margin-top:20px"></div>
 </section>
 <section class="section wrap" id="official-papers"><div class="section-head"><div><div class="kicker">03 / Verified sources</div><h2>Official question papers &amp; marking schemes.</h2><p>These links open material published by the exam authorities. Complete papers stay on the official source; the short interactive sampler is labelled separately.</p></div></div>
 <div class="resource-grid official-paper-grid">
