@@ -108,7 +108,7 @@
     [
       problem("Find S₅ for 3, 7, 11, …","55","Here a=3,d=4, so S₅=5/2[6+16]=55."),
       problem("Evaluate 1/(1·2)+1/(2·3)+…+1/(9·10).","9/10","Rewrite each term as 1/k−1/(k+1); cancellation leaves 1−1/10."),
-      problem("What is the constant term in (x²+1/x)⁶?","20","The general term has x exponent 2(6−k)−k=12−3k; set it to zero, so k=4 and coefficient is ⁶C₄=15. Correction: the constant term is 15.")
+      problem("What is the constant term in (x²+1/x)⁶?","15","The general term has x exponent 2(6−k)−k=12−3k; set it to zero, so k=4 and coefficient is ⁶C₄=15.")
     ],
     ["Applying a geometric sum when ratios vary.","Forgetting the r=1 special case.","Using k as the one-based term number in the binomial general term.","Applying the infinite-GP formula outside |r|<1."],
     ["JEE: sequence definitions, telescoping, Sₙ-to-aₙ, binomial coefficient matching and convergence conditions. Derive only the needed term; full expansions waste time."],
