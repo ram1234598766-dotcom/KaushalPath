@@ -1,5 +1,5 @@
-name = "kaushalpath-smart-system"
-main = "worker.js"
+name = "kaushalpath"
+main = "../cloudflare-worker.mjs"
 compatibility_date = "2026-10-25"
 
 [vars]

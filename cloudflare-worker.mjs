@@ -1,4 +1,5 @@
 import { onRequest } from "./functions/api/study-guide.js";
+import smartSystem from "./smart-system/worker.js";
 
 const STATIC_ORIGIN = "https://raw.githubusercontent.com/ram1234598766-dotcom/KaushalPath/main";
 const STATIC_FILES = new Set([
@@ -103,6 +104,9 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/api/study-guide") {
       return onRequest({ request, env, waitUntil: (promise) => ctx.waitUntil(promise) });
+    }
+    if (url.pathname.startsWith("/api/v2/")) {
+      return smartSystem.fetch(request, env, { waitUntil: (promise) => ctx.waitUntil(promise) });
     }
     return serveStaticAsset(request, env, ctx, url);
   }
