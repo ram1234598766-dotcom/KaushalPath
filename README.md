@@ -79,3 +79,8 @@ Built-in questions are original practice samples, not a verified archive of auth
 Use the repository root as the project root. Set the build command to `npm run build:cloudflare` and the output directory to `dist`. The Pages Function at `functions/api/study-guide.js` streams `/api/study-guide` requests to the Vercel Node API, which keeps PDF/Office/image parsing running in its supported runtime. Set the Pages environment variable `VERCEL_API_BASE_URL` to the HTTPS origin of the Vercel deployment (for example `https://kaushal-path.vercel.app`, with no path or trailing API segment). Keep Vercel's own environment variables configured independently. The function provides a default Vercel origin but the Pages variable is recommended for production. Static headers, local WebGPU model hosts, the service-worker cache and the Pages route manifest are included in the build.
 
 The local browser model is downloaded only after an explicit user action. Its weights remain a client-side browser cache; Cloudflare Pages does not install model weights onto a phone or provide that phone's RAM to the backend.
+
+
+## Individual CBSE subject chapters
+
+The Study Hub loads individual English literature chapters and writing skills, Hindi lesson/skill packs, Social Science history chapters, Business Studies, Accountancy, Economics, Computer Science and Informatics Practices. Each lesson includes explanatory sections, worked answer patterns, practice questions and common-mistake checks. These are original notes rather than copied textbook chapters. Some entries reflect commonly used NCERT texts and may be outside a particular year's assessable list; check the current CBSE curriculum and your subject code before using the library as an exhaustive exam checklist.
