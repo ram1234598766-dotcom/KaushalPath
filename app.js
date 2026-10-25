@@ -545,8 +545,16 @@ function refreshLocalAiCapabilities(){
  const model=document.getElementById("localAiModel"),memory=document.getElementById("localAiMemory"),reason=document.getElementById("localAiDeviceReason");
  const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer"),progress=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
  if(model)model.textContent=local.isReady()?local.getModelLabel():c.modelLabel;
- if(memory)memory.textContent=c.memory?("Browser RAM hint: "+c.memory+" GB · logical CPU cores: "+(c.cores||"not reported")):"Browser RAM hint is unavailable · logical CPU cores: "+(c.cores||"not reported");
- if(reason)reason.textContent=c.reason+" Selected model estimate: "+c.estimatedGpuMemory+".";
+ const memoryBase=c.memory?("Browser RAM hint: "+c.memory+" GB · logical CPU cores: "+(c.cores||"not reported")):"Browser RAM hint is unavailable · logical CPU cores: "+(c.cores||"not reported");
+ if(memory)memory.textContent=memoryBase;
+ if(memory&&navigator.storage&&typeof navigator.storage.estimate==="function"){
+  navigator.storage.estimate().then(function(estimate){
+   if(!memory.isConnected)return;
+   const quota=Number(estimate&&estimate.quota),usage=Number(estimate&&estimate.usage);
+   if(Number.isFinite(quota)&&Number.isFinite(usage))memory.textContent=memoryBase+" · Estimated free browser-origin storage: "+Math.max(0,(quota-usage)/(1024*1024*1024)).toFixed(2)+" GB";
+  }).catch(function(){});
+ }
+ if(reason)reason.textContent=c.reason+" Estimated GPU memory: "+c.estimatedGpuMemory+"; "+c.estimatedDownloadSpace+". Browser estimates are approximate, not a guarantee of free RAM or GPU memory.";
  if(install)install.disabled=!c.canRun;
  if(preference){preference.checked=local.isPreferred();preference.disabled=!c.canRun;}
  if(progress&&!local.isReady())progress.value=0;
