@@ -81,7 +81,7 @@ runInNewContext(harness, sandbox, { timeout: 10000 });
 assert.ok(sandbox.__highlightedPhrase.includes('<mark class="kp-important-mark">Definition</mark>'), "definition cues should be highlighted");
 assert.ok(sandbox.__highlightedPhrase.includes('<mark class="kp-important-mark">defined as</mark>'), "definition phrases should be highlighted");
 assert.ok(sandbox.__importantList.includes('class="kp-key-ideas"') && sandbox.__importantList.includes('<mark class="kp-important-mark">Remember</mark>'), "key ideas should be highlighted and semantically styled");
-assert.ok(sandbox.__formulaMarkup.includes('class="kp-formula-list"') && sandbox.__formulaMarkup.includes('class="kp-formula-card"'), "formula cards should have distinct emphasis");
+assert.ok(sandbox.__formulaMarkup.includes('class="kp-formula-list"') && sandbox.__formulaMarkup.includes("kp-formula-card"), "formula cards should have distinct emphasis");
 assert.ok(source.includes("highlightImportantPhrases(detail)"), "the on-screen notes reader should highlight important phrases");
 assert.ok(source.includes('className = "notes-common-mistakes kp-common-mistakes"'), "common mistakes should be emphasized on screen");
 assert.ok(source.includes('printTarget.print()'), "chapter export should use native print, preserving vector text");
