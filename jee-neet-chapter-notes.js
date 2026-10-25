@@ -10,6 +10,8 @@
   const make = (level, subject, chapter, intro, sections, formulaCheatSheet, workedExamples, fastMethods, practiceProblems, commonMistakes, examFocus, recall, glossary) => {
     const formulaCards = Array.isArray(formulaCheatSheet) ? formulaCheatSheet : [];
     const methods = Array.isArray(fastMethods) ? fastMethods : [];
+    const malformedMethod = methods.find(item => !item || !Array.isArray(item.steps));
+    if (malformedMethod) throw new Error("Malformed timed-exam method in " + chapter + ": " + JSON.stringify(malformedMethod));
     const examples = Array.isArray(workedExamples) ? workedExamples : [];
     const formulaConnections = formulaCards.slice(0, 3).map(card =>
       card.formula + " means " + card.meaning + " Use it when " + card.when +
