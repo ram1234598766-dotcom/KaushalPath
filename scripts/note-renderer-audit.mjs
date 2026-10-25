@@ -7,9 +7,9 @@ const pdfExportStart = source.indexOf("function printNotes(items)");
 const pdfExportEnd = source.indexOf("function toast(", pdfExportStart);
 assert.ok(pdfExportStart >= 0 && pdfExportEnd > pdfExportStart, "the chapter PDF export path must be present");
 const pdfExport = source.slice(pdfExportStart, pdfExportEnd);
-assert.ok(pdfExport.includes('image: { type: "png" }'), "downloaded PDFs must use lossless PNG rendering instead of JPEG artifacts");
-assert.ok(pdfExport.includes("Math.min(2, Math.max(1, Math.sqrt(32000000 / ("), "PDF export must render at higher resolution while bounding large-document canvas memory");
-assert.ok(pdfExport.includes("sharpest selectable text and vector graphics"), "the preview must explain that native Print / Save PDF is the sharpest text-preserving option");
+assert.ok(pdfExport.includes("printTarget.print()"), "the chapter export must use native print, not a canvas screenshot");
+assert.ok(pdfExport.includes("@media print{html,body{width:100%!important;max-width:none!important;"), "print layout must remove portrait-width constraints before rendering the landscape map");
+assert.ok(pdfExport.includes("The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages."), "the PDF preview must explain the mixed page orientation");
 const helperStart = source.indexOf("  function uniqueNoteText(");
 const helperEnd = source.indexOf("function printNotes(items)", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "the pure chapter map and packet helpers must be present");
@@ -92,6 +92,9 @@ assert.ok(!source.includes("html2pdf().set") && !source.includes("html2canvas:")
 
 assert.ok(source.includes("const fontSize = 11.4;"), "mind map labels should remain readable at PDF size");
 assert.ok(sandbox.__map.includes('class="note-page mindmap-page"'), "the first page must be the chapter mind map");
+assert.ok(sandbox.__map.includes('viewBox="0 0 1600 960"'), "the complete concept map must preserve its full landscape SVG viewBox");
+assert.ok(sandbox.__map.includes('x="22"') && sandbox.__map.includes('x="1238"'), "the map must render both left and right topic columns instead of only half");
+assert.ok(sandbox.__map.includes('width="166.5"'), "right-side map cards must remain inside the SVG viewport with their full width");
 assert.ok(sandbox.__map.includes("mindmap-svg"), "the mind map must be a real scalable SVG");
 assert.ok(sandbox.__map.includes('stroke="#3678E8"') && sandbox.__map.includes('stroke="#13A89E"') &&
   sandbox.__map.includes('stroke="#F19A32"'), "the map needs several distinct branch colours");
