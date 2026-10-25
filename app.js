@@ -544,7 +544,7 @@ function refreshLocalAiCapabilities(){
  const c=local.capabilities();
  const model=document.getElementById("localAiModel"),memory=document.getElementById("localAiMemory"),reason=document.getElementById("localAiDeviceReason");
  const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer"),progress=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
- if(model)model.textContent=c.modelLabel;
+ if(model)model.textContent=local.isReady()?local.getModelLabel():c.modelLabel;
  if(memory)memory.textContent=c.memory?("Browser RAM hint: "+c.memory+" GB · logical CPU cores: "+(c.cores||"not reported")):"Browser RAM hint is unavailable · logical CPU cores: "+(c.cores||"not reported");
  if(reason)reason.textContent=c.reason+" Selected model estimate: "+c.estimatedGpuMemory+".";
  if(install)install.disabled=!c.canRun;
@@ -574,7 +574,7 @@ async function enableLocalAiFromUserAction(){
    if(label)label.textContent=Number.isFinite(p.progress)?Math.round(p.progress*100)+"% · "+String(p.text||"Preparing model"):String(p.text||"Preparing model…");
    updateLocalAiStatus(String(p.text||"Preparing on-device model…"),"loading");
   }});
-  updateLocalAiStatus(result.label+" is loaded. Text-only questions now run locally when the preference is enabled.","ready");
+  updateLocalAiStatus(result.fallback?"The larger model could not fit this device, so "+result.label+" was installed instead. Text-only questions can now run locally.":result.label+" is loaded. Text-only questions now run locally when the preference is enabled.","ready");
   if(install){install.textContent="Local model ready ✓";install.disabled=true;}
   if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Ready · cached model reused on future visits where browser storage persists";
   if(document.getElementById("localAiProgress"))document.getElementById("localAiProgress").value=1;
