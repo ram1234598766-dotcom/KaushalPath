@@ -1745,102 +1745,134 @@
       '<h2>Worked practice</h2>' + practiceContentHtml(item) +
       '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
   }
-  function printNotes(items) {
+    function printNotes(items) {
     if (!Array.isArray(items) || !items.length) {
       toast("Choose a chapter first, then I’ll prepare the notes for you.");
       return;
     }
 
-    // Open the print destination during the click, before building the full packet.
-    let printWindow = null;
-    try { printWindow = window.open("", "_blank"); } catch (error) { printWindow = null; }
+    // Keep the preview visible on this page. The export should not depend on a
+    // popup being allowed or on the browser opening a print dialog automatically.
+    const previewShell = document.createElement("section");
+    previewShell.className = "notes-pdf-preview-shell";
+    previewShell.setAttribute("role", "dialog");
+    previewShell.setAttribute("aria-modal", "true");
+    previewShell.setAttribute("aria-label", "Chapter PDF preview");
+    Object.assign(previewShell.style, {
+      position: "fixed", inset: "0", zIndex: "2147483647",
+      display: "flex", flexDirection: "column", gap: "10px",
+      padding: "max(12px, 2vw)", background: "rgba(25, 17, 42, .82)"
+    });
 
-    let printFrame = null;
-    let previewShell = null;
-    let printTarget = printWindow;
+    const toolbar = document.createElement("div");
+    Object.assign(toolbar.style, {
+      display: "flex", flexWrap: "wrap", alignItems: "center",
+      justifyContent: "space-between", gap: "12px", padding: "12px 16px",
+      borderRadius: "12px", background: "#fff", color: "#241536",
+      boxShadow: "0 8px 30px rgba(0,0,0,.18)"
+    });
+    const guidance = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = "Your chapter notes are ready";
+    heading.style.display = "block";
+    const status = document.createElement("span");
+    status.setAttribute("role", "status");
+    status.textContent = "Preparing your PDF…";
+    status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
+    guidance.append(heading, status);
 
+    const controls = document.createElement("div");
+    Object.assign(controls.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.className = "btn btn-purple";
+    downloadButton.textContent = "Preparing PDF…";
+    downloadButton.disabled = true;
+    const printButton = document.createElement("button");
+    printButton.type = "button";
+    printButton.className = "btn btn-light";
+    printButton.textContent = "Print / Save PDF";
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "btn btn-light";
+    closeButton.textContent = "Close preview";
+    closeButton.addEventListener("click", () => {
+      if (previewShell.isConnected) previewShell.remove();
+    });
+    controls.append(downloadButton, printButton, closeButton);
+    toolbar.append(guidance, controls);
+
+    const printFrame = document.createElement("iframe");
+    printFrame.title = "Preview of your chapter PDF";
+    Object.assign(printFrame.style, {
+      display: "block", flex: "1 1 auto", minHeight: "0",
+      width: "100%", border: "0", borderRadius: "12px",
+      background: "#fff", boxShadow: "0 8px 30px rgba(0,0,0,.18)"
+    });
+    previewShell.append(toolbar, printFrame);
+    document.body.appendChild(previewShell);
+    const printTarget = printFrame.contentWindow;
     if (!printTarget) {
-      // If a popup is blocked, show a real preview instead of a hidden 1px iframe.
-      previewShell = document.createElement("section");
-      previewShell.className = "notes-pdf-preview-shell";
-      previewShell.setAttribute("role", "dialog");
-      previewShell.setAttribute("aria-modal", "true");
-      previewShell.setAttribute("aria-label", "Chapter PDF preview");
-      Object.assign(previewShell.style, {
-        position: "fixed", inset: "0", zIndex: "2147483647",
-        display: "flex", flexDirection: "column", gap: "10px",
-        padding: "max(12px, 2vw)", background: "rgba(25, 17, 42, .78)"
-      });
-
-      const toolbar = document.createElement("div");
-      Object.assign(toolbar.style, {
-        display: "flex", flexWrap: "wrap", alignItems: "center",
-        justifyContent: "space-between", gap: "12px", padding: "12px 16px",
-        borderRadius: "12px", background: "#fff", color: "#241536",
-        boxShadow: "0 8px 30px rgba(0,0,0,.18)"
-      });
-      const guidance = document.createElement("div");
-      const heading = document.createElement("strong");
-      heading.textContent = "Your chapter notes are ready";
-      heading.style.display = "block";
-      const help = document.createElement("span");
-      help.textContent = "Use Print / Save PDF in the preview, then choose Save as PDF.";
-      help.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
-      guidance.append(heading, help);
-
-      const closePreview = document.createElement("button");
-      closePreview.type = "button";
-      closePreview.className = "btn btn-light";
-      closePreview.textContent = "Close preview";
-      closePreview.addEventListener("click", () => {
-        if (previewShell && previewShell.isConnected) previewShell.remove();
-      });
-      toolbar.append(guidance, closePreview);
-
-      printFrame = document.createElement("iframe");
-      printFrame.title = "Print-ready chapter notes";
-      Object.assign(printFrame.style, {
-        display: "block", flex: "1 1 auto", minHeight: "0",
-        width: "100%", border: "0", borderRadius: "12px",
-        background: "#fff", boxShadow: "0 8px 30px rgba(0,0,0,.18)"
-      });
-      previewShell.append(toolbar, printFrame);
-      document.body.appendChild(previewShell);
-      printTarget = printFrame.contentWindow;
-    }
-
-    if (!printTarget) {
-      if (previewShell) previewShell.remove();
-      toast("I couldn’t open the PDF preview. Refresh the page and try again.");
+      previewShell.remove();
+      toast("I couldn’t open the chapter preview. Refresh the page and try again.");
       return;
     }
 
-    let printStarted = false;
     const startPrint = () => {
-      if (printStarted || !printTarget || printTarget.closed) return;
-      printStarted = true;
       try {
         printTarget.focus();
         printTarget.print();
       } catch (error) {
-        toast("Your notes are ready. Use Print / Save PDF in the preview to finish saving them.");
+        status.textContent = "The print dialog didn’t open. Try downloading the PDF instead.";
+        toast("The print dialog didn’t open. Use Download PDF in the preview.");
       }
     };
+    printButton.addEventListener("click", startPrint);
 
-    // Only auto-open the native dialog for a real popup. The embedded fallback
-    // stays visible until the learner clicks its own Print / Save PDF button.
-    if (printWindow) {
-      printTarget.addEventListener("load", () => window.setTimeout(startPrint, 450), { once: true });
-    }
+    const loadPdfEngine = () => new Promise((resolve, reject) => {
+      if (typeof window.html2pdf === "function") {
+        resolve(window.html2pdf);
+        return;
+      }
+      let script = document.querySelector('script[data-kp-html2pdf="true"]');
+      if (script && script.dataset.failed === "true") {
+        script.remove();
+        script = null;
+      }
+      const onLoad = () => {
+        script.dataset.loaded = "true";
+        if (typeof window.html2pdf === "function") resolve(window.html2pdf);
+        else reject(new Error("The PDF library loaded without its export function."));
+      };
+      const onError = () => {
+        script.dataset.failed = "true";
+        reject(new Error("The PDF library could not be loaded."));
+      };
+      if (script) {
+        script.addEventListener("load", onLoad, { once: true });
+        script.addEventListener("error", onError, { once: true });
+        return;
+      }
+      script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js";
+      script.async = true;
+      script.dataset.kpHtml2pdf = "true";
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
+      document.head.appendChild(script);
+    });
+
+    const chapter = items.length === 1 ? items[0] : null;
+    const fileStem = (chapter ? chapter.chapter : "KaushalPath-Chapter-Notes")
+      .normalize("NFKD")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 90) || "KaushalPath-Chapter-Notes";
+    const fileName = fileStem + ".pdf";
 
     try {
-      const chapter = items.length === 1 ? items[0] : null;
-      const title = chapter
-        ? (chapter.chapter || "Chapter") + " · Complete Chapter Notes"
-        : "KaushalPath · Complete Chapter Notes";
-
-      // One chapter gets the concept map plus twelve revision sections. The
-      // bulk export keeps each chapter readable without building an enormous packet.
+      // One chapter includes the concept map and twelve revision sections.
+      // The bulk export stays compact so exporting several chapters remains practical.
       const sections = items.length === 1
         ? fullChapterPacket(items[0])
         : items.map((item) => renderMindMapPage(item) + compactChapterHtml(item)).join("");
@@ -1848,45 +1880,60 @@
       const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
         'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.print-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:800px;margin:0 auto 18px;padding:16px 18px;background:#fff;border:1px solid #e5def0;border-radius:12px;box-shadow:0 3px 18px #20123a12}.print-controls p{margin:5px 0 0;color:#675a78;font-size:10pt}.print-controls button{border:0;border-radius:9px;padding:11px 16px;background:#6740bd;color:#fff;font-weight:700;font-size:10pt;cursor:pointer}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}@media print{.print-controls{display:none!important}}' +
         '.note-page:nth-of-type(7n+1){--page-accent:#6875C8}.note-page:nth-of-type(7n+2){--page-accent:#3678E8}.note-page:nth-of-type(7n+3){--page-accent:#13A89E}.note-page:nth-of-type(7n+4){--page-accent:#F19A32}.note-page:nth-of-type(7n+5){--page-accent:#D94F8C}.note-page:nth-of-type(7n+6){--page-accent:#8359DA}.note-page:nth-of-type(7n+7){--page-accent:#2D9A66}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1{color:var(--page-accent,#3678E8)}h2{color:var(--page-accent,#3678E8);border-bottom:2px solid var(--page-accent,#3678E8);background:#F7F8FF;padding:4px 6px;border-radius:4px}li::marker{color:var(--page-accent,#8359DA);font-weight:bold}.content-block{border:1px solid #E4EAF7;border-left:4px solid var(--page-accent,#3678E8);border-radius:7px;padding:7px 9px;background:#F9FBFF}.content-block:nth-of-type(7n+2){border-left-color:#13A89E;background:#EFFBF8}.content-block:nth-of-type(7n+3){border-left-color:#F19A32;background:#FFF7EB}.content-block:nth-of-type(7n+4){border-left-color:#D94F8C;background:#FFF1F7}.content-block:nth-of-type(7n+5){border-left-color:#8359DA;background:#F6F1FF}.content-block:nth-of-type(7n+6){border-left-color:#2D9A66;background:#EFFAF3}.formula-card:nth-of-type(7n+1){border-color:#CDBEFF;border-left:4px solid #8359DA;background:#F6F1FF}.formula-card:nth-of-type(7n+2){border-color:#A9E5DB;border-left:4px solid #13A89E;background:#EFFBF8}.formula-card:nth-of-type(7n+3){border-color:#F6D09E;border-left:4px solid #F19A32;background:#FFF7EB}.formula-card:nth-of-type(7n+4){border-color:#F2BFD7;border-left:4px solid #D94F8C;background:#FFF1F7}.formula-card:nth-of-type(7n+5){border-color:#BFD2FF;border-left:4px solid #3678E8;background:#EFF5FF}.formula-trap{background:#FFF1D8;border-left:3px solid #F19A32;padding:6px 8px;border-radius:5px}.map-caption-kicker{color:#8359DA}.map-caption-label{color:#3678E8}.mindmap-svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-        '</style></head><body><div class="print-controls" role="region" aria-label="PDF saving instructions"><div><strong>Your chapter notes are ready</strong><p>Choose <b>Print / Save PDF</b>, then select <b>Save as PDF</b> in your browser’s print dialog.</p></div><button type="button" id="printButton">Print / Save PDF</button></div><p class="eyebrow">KaushalPath · Chapter notes for revision</p>' + sections + '</body></html>';
+        '</style></head><body><main id="chapterPdfContent">' + sections + '</main></body></html>';
 
       printTarget.document.open();
       printTarget.document.write(page);
       printTarget.document.close();
 
-      // Bind the button from the parent app. This also works when the page's
-      // Content Security Policy blocks inline event handlers in about:blank.
-      const printButton = printTarget.document.getElementById("printButton");
-      if (printButton) {
-        printButton.addEventListener("click", () => {
-          try { printTarget.focus(); printTarget.print(); }
-          catch (error) { toast("The print dialog didn’t open. Please try again from the preview."); }
-        });
-      }
+      const chapterContent = printTarget.document.getElementById("chapterPdfContent");
+      if (!chapterContent) throw new Error("The chapter PDF content was not created.");
 
-      if (printWindow) {
-        // If automatic printing is blocked, the visible page still has a working button.
-        window.setTimeout(startPrint, 1400);
-        toast("Your chapter notes are ready. If the print dialog doesn’t appear, use Print / Save PDF in the new window.");
-      } else {
-        toast("Your browser blocked the new window, so I opened your chapter here instead. Use Print / Save PDF in the preview.");
-      }
+      const runDownload = async () => {
+        downloadButton.disabled = true;
+        downloadButton.textContent = "Preparing PDF…";
+        status.textContent = "Putting the chapter notes into a downloadable PDF. This can take a moment.";
+        try {
+          const html2pdf = await loadPdfEngine();
+          await html2pdf().set({
+            margin: [9, 10, 9, 10],
+            filename: fileName,
+            image: { type: "jpeg", quality: 0.96 },
+            html2canvas: {
+              scale: 1.35, useCORS: true, allowTaint: false,
+              backgroundColor: "#ffffff", logging: false, scrollY: 0
+            },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
+            pagebreak: { mode: ["css", "legacy"] },
+            enableLinks: true
+          }).from(chapterContent).save();
+          status.textContent = "Your PDF is ready. Check your Downloads folder.";
+          toast("Your chapter PDF has been downloaded. Check your Downloads folder.");
+        } catch (error) {
+          console.error("Direct chapter PDF download failed:", error);
+          status.textContent = "The automatic download didn’t finish. Use Print / Save PDF or try Download PDF again.";
+          toast("The PDF download didn’t finish. The print option is still available in the preview.");
+        } finally {
+          downloadButton.disabled = false;
+          downloadButton.textContent = "Download PDF";
+        }
+      };
+      downloadButton.addEventListener("click", runDownload);
+
+      // Start the file export as soon as the chapter preview is ready.
+      toast("Preparing your chapter PDF…");
+      window.setTimeout(runDownload, 0);
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
-      const message = "I couldn’t prepare this chapter PDF. Refresh the Study Hub and try once more.";
-      try {
-        const errorPage = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chapter PDF preview</title><body style="font:16px/1.6 Arial,sans-serif;max-width:700px;margin:12vh auto;padding:24px;color:#241536"><h1>We couldn’t prepare these notes</h1><p>Something went wrong while putting this chapter packet together. Close this window, refresh the Study Hub and try again.</p></body></html>';
-        printTarget.document.open();
-        printTarget.document.write(errorPage);
-        printTarget.document.close();
-      } catch (secondaryError) {
-        if (previewShell) previewShell.remove();
-        if (printWindow && !printWindow.closed) printWindow.close();
-      }
-      toast(message);
+      status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
+      const errorBox = document.createElement("p");
+      errorBox.textContent = "Something went wrong while preparing this chapter. Please try again after refreshing the page.";
+      errorBox.style.cssText = "padding:12px;color:#932a42;background:#fff2f4;border-radius:8px";
+      previewShell.insertBefore(errorBox, printFrame);
+      toast("I couldn’t prepare this chapter PDF. Refresh the Study Hub and try again.");
     }
   }
-  function toast(message) {
+function toast(message) {
     const root = $("toast");
     if (root) { root.textContent = message; root.classList.remove("hidden"); }
   }
