@@ -9,6 +9,9 @@ const studyLibrary = readFileSync(new URL("../study-library.js", import.meta.url
 const examPrepNotes = readFileSync(new URL("../exam-prep-notes.js", import.meta.url), "utf8");
 const formulaSheets = readFileSync(new URL("../formula-cheat-sheets.js", import.meta.url), "utf8");
 const schoolGuides = readFileSync(new URL("../school-chapter-guides.js", import.meta.url), "utf8");
+const ncertPhysicsChapterNotes = readFileSync(new URL("../ncert-physics-chapter-notes.js", import.meta.url), "utf8");
+const ncertChemistryChapterNotes = readFileSync(new URL("../ncert-chemistry-chapter-notes.js", import.meta.url), "utf8");
+const humanitiesGuides = readFileSync(new URL("../school-humanities-commerce-guides.js", import.meta.url), "utf8");
 const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -43,7 +46,10 @@ assert.match(html, /id="localAiPrefer"/, "local model preference must be explici
 assert.match(html, /value="JEE Main"/, "the notes library should filter detailed JEE Main notes");
 assert.match(html, /value="NEET UG"/, "the notes library should filter detailed NEET UG notes");
 assert.ok(html.indexOf('src="/exam-prep-notes.js"') < html.indexOf('src="/study-library.js"'), "exam note data must load before the library renderer");
-assert.match(html, /225 detailed notes & cheat sheets/, "the notes catalogue should reflect 119 school packs + 61 JEE/NEET packs + 17 STEM master guides + 14 formula sheets + 14 humanities/commerce/CS guides");
+assert.match(html, /Expanded chapter notes &amp; formula sheets/, "the catalogue should advertise expanded notes rather than an outdated fixed pack count");
+for (const asset of ["school-chapter-guides.js","school-humanities-commerce-guides.js","formula-cheat-sheets.js","ncert-physics-chapter-notes.js","ncert-chemistry-chapter-notes.js","exam-prep-notes.js"]) {
+  assert.ok(html.indexOf(`src="/${asset}"`) >= 0 && html.indexOf(`src="/${asset}"`) < html.indexOf('src="/study-library.js"'), asset + " must load before the study-library renderer");
+}
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
 assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
 assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/, "deep-dive notes should include dedicated JEE and NEET views");
@@ -58,6 +64,15 @@ assert.match(studyLibrary, /Explained formula cheat sheet/, "the chapter reader 
 assert.match(studyLibrary, /FORMULA CHEAT SHEET/, "PDF and saved-text notes should preserve explained formula cards");
 
 assert.match(examPrepNotes, /commonMistakes/, "exam notes should cover common mistakes");
+assert.match(studyLibrary, /integrateChapterGuides\(ncertChapterNotes\)/, "detailed NCERT Physics/Chemistry content must be integrated into the chapter library");
+assert.match(studyLibrary, /function integrateChapterGuides\(source\)/, "detailed chapter guides should be merged, not silently discarded on duplicate titles");
+assert.match(studyLibrary, /normaliseChapterTitle/, "chapter matching should handle punctuation variants in textbook titles");
+assert.match(ncertPhysicsChapterNotes, /formulaCheatSheet/, "Physics chapter notes should include explanatory formula cards");
+assert.match(ncertPhysicsChapterNotes, /workedExamples/, "Physics chapter notes should include worked problem steps");
+assert.match(ncertChemistryChapterNotes, /formulaCheatSheet/, "Chemistry chapter notes should include explained formula/reaction cards");
+assert.match(ncertChemistryChapterNotes, /commonMistakes/, "Chemistry chapter notes should include common reaction and calculation errors");
+assert.match(humanitiesGuides, /window\.KP_HUMANITIES_GUIDES = all/, "detailed humanities, commerce and computer-science guides should be loaded");
+assert.match(schoolGuides, /window\.KP_SCHOOL_CHAPTER_GUIDES = all/, "detailed STEM master guides should be loaded");
 assert.match(studyLibrary, /Detailed concept explanations/, "the note reader should render expanded concept sections");
 assert.match(studyLibrary, /ADDITIONAL WORKED METHODS/, "the PDF export should include detailed worked methods");
 assert.match(localAI, /web-llm@0\.2\.86/, "local inference should use the current pinned WebLLM release");
@@ -74,6 +89,8 @@ assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Pol
 assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /worker-src 'self' blob:/);
 assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "Vercel should publish the local inference controller");
 assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@vercel/static"), "Vercel should publish the expanded exam notes");
+assert.ok(vercel.builds.some(b => b.src === "ncert-physics-chapter-notes.js" && b.use === "@vercel/static"), "Vercel should publish detailed Physics chapters");
+assert.ok(vercel.builds.some(b => b.src === "ncert-chemistry-chapter-notes.js" && b.use === "@vercel/static"), "Vercel should publish detailed Chemistry chapters");
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
