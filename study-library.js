@@ -1746,7 +1746,52 @@
       '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
   }
   function printNotes(items) {
-    if (!items.length) return;
+    if (!Array.isArray(items) || !items.length) {
+      toast("Choose at least one chapter before exporting the notes.");
+      return;
+    }
+
+    // Open the print destination immediately inside the user's click gesture.
+    // Some browsers block a new tab if it is opened after a large PDF packet is assembled.
+    const printWindow = window.open("", "_blank");
+    let printFrame = null;
+    let printTarget = printWindow;
+    if (!printTarget) {
+      // Keep export usable when pop-ups are disabled by printing a document in an iframe.
+      printFrame = document.createElement("iframe");
+      printFrame.title = "KaushalPath chapter PDF print view";
+      printFrame.setAttribute("aria-hidden", "true");
+      Object.assign(printFrame.style, {
+        position: "fixed", left: "0", top: "0", width: "1px", height: "1px",
+        border: "0", opacity: "0", pointerEvents: "none"
+      });
+      document.body.appendChild(printFrame);
+      printTarget = printFrame.contentWindow;
+    }
+    if (!printTarget) {
+      if (printFrame) printFrame.remove();
+      toast("The PDF print view could not be opened. Allow pop-ups for this site and try again.");
+      return;
+    }
+
+    let printStarted = false;
+    const startPrint = () => {
+      if (printStarted || !printTarget || printTarget.closed) return;
+      printStarted = true;
+      try {
+        printTarget.focus();
+        printTarget.print();
+      } catch (error) {
+        toast("The print dialog could not be opened. Use Ctrl+P in the print view and choose Save as PDF.");
+      }
+    };
+    // Listen before writing the document, then keep a timed fallback for browsers with unusual load events.
+    printTarget.addEventListener("load", () => window.setTimeout(startPrint, 350), { once: true });
+    if (printFrame) {
+      printTarget.addEventListener("afterprint", () => {
+        if (printFrame && printFrame.isConnected) printFrame.remove();
+      }, { once: true });
+    }
     const title = items.length === 1 ? items[0].chapter + " · Complete Chapter Notes" : "KaushalPath · Complete Chapter Notes";
     // A single chapter always gets a 12-section packet with its mind map on page one.
     // The bulk export keeps every chapter and its map without generating thousands of pages by default.
@@ -1755,11 +1800,17 @@
       'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.compact-note-page{min-height:262mm}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.mindmap-topic,.mindmap-main-branch{break-inside:avoid}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}' +
       '.note-page:nth-of-type(7n+1){--page-accent:#6875C8}.note-page:nth-of-type(7n+2){--page-accent:#3678E8}.note-page:nth-of-type(7n+3){--page-accent:#13A89E}.note-page:nth-of-type(7n+4){--page-accent:#F19A32}.note-page:nth-of-type(7n+5){--page-accent:#D94F8C}.note-page:nth-of-type(7n+6){--page-accent:#8359DA}.note-page:nth-of-type(7n+7){--page-accent:#2D9A66}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}h1{color:var(--page-accent,#3678E8)}h2{color:var(--page-accent,#3678E8);border-bottom:2px solid var(--page-accent,#3678E8);background:#F7F8FF;padding:4px 6px;border-radius:4px}li::marker{color:var(--page-accent,#8359DA);font-weight:bold}.content-block{border:1px solid #E4EAF7;border-left:4px solid var(--page-accent,#3678E8);border-radius:7px;padding:7px 9px;background:#F9FBFF}.content-block:nth-of-type(7n+2){border-left-color:#13A89E;background:#EFFBF8}.content-block:nth-of-type(7n+3){border-left-color:#F19A32;background:#FFF7EB}.content-block:nth-of-type(7n+4){border-left-color:#D94F8C;background:#FFF1F7}.content-block:nth-of-type(7n+5){border-left-color:#8359DA;background:#F6F1FF}.content-block:nth-of-type(7n+6){border-left-color:#2D9A66;background:#EFFAF3}.formula-card:nth-of-type(7n+1){border-color:#CDBEFF;border-left:4px solid #8359DA;background:#F6F1FF}.formula-card:nth-of-type(7n+2){border-color:#A9E5DB;border-left:4px solid #13A89E;background:#EFFBF8}.formula-card:nth-of-type(7n+3){border-color:#F6D09E;border-left:4px solid #F19A32;background:#FFF7EB}.formula-card:nth-of-type(7n+4){border-color:#F2BFD7;border-left:4px solid #D94F8C;background:#FFF1F7}.formula-card:nth-of-type(7n+5){border-color:#BFD2FF;border-left:4px solid #3678E8;background:#EFF5FF}.formula-trap{background:#FFF1D8;border-left:3px solid #F19A32;padding:6px 8px;border-radius:5px}.map-caption-kicker{color:#8359DA}.map-caption-label{color:#3678E8}.mindmap-svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
       '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections +
-      '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\\/script></body></html>';
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) { toast("Allow pop-ups to create the PDF, then choose Save as PDF in the print dialog."); return; }
-    printWindow.document.open(); printWindow.document.write(page); printWindow.document.close();
-    toast(items.length === 1 ? "Complete chapter packet opened. Choose Save as PDF; the mind map is page 1 and the notes span at least 12 pages." : "Complete filtered chapter notes opened. Choose Save as PDF in the print dialog.");
+      '</body></html>';
+    printTarget.document.open();
+    printTarget.document.write(page);
+    printTarget.document.close();
+    // The load listener handles normal browsers; this fallback handles cached/about:blank load timing differences.
+    window.setTimeout(startPrint, 1200);
+    toast(printFrame
+      ? "Pop-ups are blocked, so the chapter PDF will print from an embedded view. Choose Save as PDF in the print dialog."
+      : items.length === 1
+        ? "Complete chapter packet opened. Choose Save as PDF; the mind map is page 1 and the notes span at least 12 pages."
+        : "Complete filtered chapter notes opened. Choose Save as PDF in the print dialog.");
   }
   function toast(message) {
     const root = $("toast");
