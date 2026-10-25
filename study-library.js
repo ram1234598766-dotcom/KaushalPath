@@ -2060,5 +2060,20 @@ function toast(message) {
     }
   } catch (error) {}
 
+  window.KP_STUDY_NOTE_INDEX = notes.map((item, index) => ({
+    index,
+    level: String(item.level || ""),
+    subject: String(item.subject || ""),
+    chapter: String(item.chapter || "Chapter notes"),
+    intro: String(item.intro || ""),
+    searchText: [
+      item.level, item.subject, item.chapter, item.intro,
+      ...(Array.isArray(item.points) ? item.points : []),
+      ...(Array.isArray(item.formulas) ? item.formulas : []),
+      ...(Array.isArray(item.recall) ? item.recall : []),
+      ...(Array.isArray(item.sections) ? item.sections.flatMap((section) => [section.heading, ...(Array.isArray(section.points) ? section.points : [])]) : []),
+      ...(Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet.flatMap((card) => [card.formula, card.meaning, card.when]) : [])
+    ].filter(Boolean).join(" ").slice(0, 3200)
+  }));
   window.KP_CURATED_NOTE_COUNT = notes.length;
 })();
