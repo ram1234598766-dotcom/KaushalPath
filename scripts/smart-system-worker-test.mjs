@@ -139,6 +139,13 @@ async function json(response) { return response.json(); }
 }
 
 {
+  const { env, calls } = makeEnv();
+  const response = await smartSystem.fetch(request("/api/v2/formulas?class=12&subject=%E2%9C%A8"), env, context());
+  assert.equal(response.status, 400, "subjects that cannot form a safe catalog key must be rejected");
+  assert.equal(calls.kvGets.length, 0);
+}
+
+{
   const { env } = makeEnv();
   const response = await smartSystem.fetch(request("/api/v2/health", { method: "POST" }), env, context());
   assert.equal(response.status, 405);
@@ -179,6 +186,16 @@ async function json(response) { return response.json(); }
     method: "POST", headers: { "Content-Type": "text/plain" }, body: "[]"
   }), env, context());
   assert.equal(response.status, 415);
+  assert.equal(calls.batches.length, 0);
+}
+
+{
+  const { env, calls } = makeEnv();
+  const response = await smartSystem.fetch(request("/api/v2/analytics/submit-attempt", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: new Uint8Array([0xff])
+  }), env, context());
+  assert.equal(response.status, 400, "invalid UTF-8 should be rejected instead of replaced");
+  assert.equal((await json(response)).error, "invalid_utf8");
   assert.equal(calls.batches.length, 0);
 }
 
@@ -237,6 +254,13 @@ async function json(response) { return response.json(); }
   assert.deepEqual(await json(response), { available: false, reason: "insufficient_sample", minimumAttempts: 20 });
   assert.match(response.headers.get("Cache-Control") || "", /max-age=60/);
   assert.equal(calls.batches.length, 0);
+}
+
+{
+  const { env, calls } = makeEnv({ rateLimitSuccess: false });
+  const response = await smartSystem.fetch(request("/api/v2/analytics/benchmarks?subject=Physics&chapter=Gravitation&topic=Field"), env, context());
+  assert.equal(response.status, 429, "benchmark reads also need edge throttling");
+  assert.equal(calls.prepared.length, 0, "throttled benchmark requests must not touch D1");
 }
 
 {
