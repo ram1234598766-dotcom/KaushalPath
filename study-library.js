@@ -2102,6 +2102,34 @@ function printNotes(items) {
       display: "flex", flexDirection: "column", gap: "10px",
       padding: "max(12px, 2vw)", background: "rgba(25, 17, 42, .82)"
     });
+    const previousFocus = document.activeElement;
+    const previousBodyOverflow = document.body.style.overflow;
+    const closePreview = () => {
+      if (previewShell.isConnected) previewShell.remove();
+      document.body.style.overflow = previousBodyOverflow;
+      if (previousFocus && typeof previousFocus.focus === "function") {
+        try { previousFocus.focus({ preventScroll: true }); } catch (error) { previousFocus.focus(); }
+      }
+    };
+    previewShell.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePreview();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const candidates = [downloadButton, closeButton, printFrame].filter((node) => node && !node.disabled);
+      if (!candidates.length) return;
+      const first = candidates[0], last = candidates[candidates.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    });
+    previewShell.addEventListener("click", (event) => {
+      if (event.target === previewShell) closePreview();
+    });
 
     const toolbar = document.createElement("div");
     Object.assign(toolbar.style, {
@@ -2134,9 +2162,7 @@ function printNotes(items) {
     closeButton.type = "button";
     closeButton.className = "btn btn-light";
     closeButton.textContent = "Close preview";
-    closeButton.addEventListener("click", () => {
-      if (previewShell.isConnected) previewShell.remove();
-    });
+    closeButton.addEventListener("click", closePreview);
     controls.append(downloadButton, closeButton);
     toolbar.append(guidance, controls);
 
@@ -2148,10 +2174,12 @@ function printNotes(items) {
       background: "#fff", boxShadow: "0 8px 30px rgba(0,0,0,.18)"
     });
     previewShell.append(toolbar, printFrame);
+    document.body.style.overflow = "hidden";
     document.body.appendChild(previewShell);
+    closeButton.focus({ preventScroll: true });
     const printTarget = printFrame.contentWindow;
     if (!printTarget) {
-      previewShell.remove();
+      closePreview();
       toast("I couldn’t open the chapter preview. Refresh the page and try again.");
       return;
     }
@@ -2256,6 +2284,9 @@ function printNotes(items) {
       printTarget.document.open();
       printTarget.document.write(page);
       printTarget.document.close();
+      printTarget.document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") { event.preventDefault(); closePreview(); }
+      });
 
       const chapterContent = printTarget.document.getElementById("chapterPdfContent");
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
