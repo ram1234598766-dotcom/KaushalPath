@@ -82,6 +82,11 @@ assert.ok(!studyLibrary.includes("return chosen.length > 72") && !studyLibrary.i
 assert.ok(studyLibrary.includes("const firstSentence = (value) =>") && studyLibrary.includes("const avoidSentence = (value) =>"), "mind maps should show complete explanations and grammatical trap sentences");
 assert.ok(studyLibrary.indexOf("notes.forEach(enrichIndividualChapter);") > studyLibrary.indexOf("individualChapterSets.flat().forEach((item) => {") && !studyLibrary.includes('linkedSections.push({heading:"Related topic · "'), "detailed chapter sources must merge before fallback enrichment and stay on-topic");
 assert.ok(studyLibrary.includes("print-color-adjust:exact") && html.includes(".notes-card:nth-child(7n+1)") && html.includes(".notes-detail .practice-answer"), "chapter PDFs, note cards and practice explanations should use distinct colours");
+assert.ok(studyLibrary.indexOf('const printWindow = window.open("", "_blank");') < studyLibrary.indexOf("const sections = items.length === 1 ? fullChapterPacket(items[0])"), "PDF export must open the print destination synchronously before building the large chapter packet");
+assert.ok(studyLibrary.includes('printFrame = document.createElement("iframe")') && studyLibrary.includes("printTarget.document.write(page)"), "PDF export must still work when pop-ups are blocked by using an embedded print frame");
+assert.ok(studyLibrary.includes('printTarget.addEventListener("load"') && studyLibrary.includes("window.setTimeout(startPrint, 1200)") && studyLibrary.includes("printTarget.print()"), "PDF export must wait for the document and retry print startup when browser load timing varies");
+assert.ok(!studyLibrary.includes("<\\\\/script></body></html>"), "print document must not contain an escaped script closing tag that makes the generated page blank");
+
 
 assert.ok(mathsDeepNotes.includes("KP_MATHS_INDIVIDUAL_DEEP_NOTES = notes"), "maths collection must be exported");
 assert.ok(physicsChemistryDeepNotes.includes("KP_SCIENCE_INDIVIDUAL_DEEP_NOTES = notes"), "Physics/Chemistry collection must be exported");
