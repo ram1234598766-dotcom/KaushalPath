@@ -38,6 +38,18 @@
       "use": "@vercel/static"
     },
     {
+      "src": "school-humanities-commerce-guides.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "school-chapter-guides.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "formula-cheat-sheets.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "exam-prep-notes.js",
       "use": "@vercel/static"
     },
