@@ -36,7 +36,7 @@
     }
     return {
       webgpu, memory, cores, mobile, saveData, model, modelLabel: model === MODEL_PLUS ? "Llama 3.2 · 3B (quantised)" : "Llama 3.2 · 1B (quantised)",
-      estimatedGpuMemory: size, reason, canRun: webgpu && !(memory > 0 && memory <= 2)
+      estimatedGpuMemory: size, estimatedDownloadSpace: model === MODEL_PLUS ? "about 2.7 GB browser storage recommended" : "about 1.2 GB browser storage recommended", reason, canRun: webgpu && !(memory > 0 && memory <= 2)
     };
   }
 
