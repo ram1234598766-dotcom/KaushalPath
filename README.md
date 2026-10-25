@@ -74,12 +74,13 @@ Built-in questions are original practice samples, not a verified archive of auth
 - Images are decoded, pixel-limited, orientation-corrected and re-encoded server-side; PNG/WebP are preserved where possible, vector/other formats are normalized, and damaged image bytes are rejected.
 
 
-## Cloudflare Pages deployment
+## Cloudflare Workers deployment
 
-Use the repository root as the project root. Set the build command to `npm run build:cloudflare` and the output directory to `dist`. The Pages Function at `functions/api/study-guide.js` streams `/api/study-guide` requests to the Vercel Node API, which keeps PDF/Office/image parsing running in its supported runtime. Set the Pages environment variable `VERCEL_API_BASE_URL` to the HTTPS origin of the Vercel deployment (for example `https://kaushal-path.vercel.app`, with no path or trailing API segment). Keep Vercel's own environment variables configured independently. The function provides a default Vercel origin but the Pages variable is recommended for production. Static headers, local WebGPU model hosts, the service-worker cache and the Pages route manifest are included in the build.
+The Cloudflare build now uses a Worker with Static Assets instead of sending Pages-specific configuration to `wrangler deploy`. The Worker serves the static frontend from `dist/` and forwards only `/api/study-guide` to the existing Vercel Node API, where PDF, Office and image parsing runs in its supported runtime.
 
-The local browser model is downloaded only after an explicit user action. Its weights remain a client-side browser cache; Cloudflare Pages does not install model weights onto a phone or provide that phone's RAM to the backend.
+The repository root is the build root. Cloudflare's Workers Builds settings should use **`npm run build:cloudflare`** as the build command and **`npx wrangler deploy`** as the production deploy command. The matching `wrangler.toml` binds `dist/` as Worker assets and includes a separate `kaushalpath-preview` environment. The build script copies the required frontend scripts, styles/headers, icons, manifest and service worker into `dist/`; the Pages-only `_routes.json` is excluded from the Worker bundle.
 
+The API proxy uses `VERCEL_API_BASE_URL` when configured and otherwise defaults to `https://kaushal-path.vercel.app`. Keep Vercel environment variables configured independently. Local WebGPU model weights are downloaded only after a student explicitly enables the local model; they stay in that browser's storage and are not installed on a phone or moved to the backend.
 
 ## Individual CBSE subject chapters
 

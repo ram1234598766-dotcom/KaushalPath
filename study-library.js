@@ -1264,7 +1264,7 @@
       head.append(meta, pill); card.append(head, h3, summary);
       const actions = document.createElement("div"); actions.className = "notes-card-actions";
       const read = document.createElement("button"); read.type = "button"; read.className = "btn btn-light"; read.textContent = "Read notes"; read.addEventListener("click", () => showNote(item));
-      const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Save as PDF"; pdf.addEventListener("click", () => printNotes([item]));
+      const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Print / Save 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
       const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
         if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
         else {
@@ -1382,7 +1382,7 @@
     const rh = document.createElement("h3"); rh.textContent = "Quick self-check";
     const rl = document.createElement("ol"); item.recall.forEach((text) => { const li = document.createElement("li"); li.textContent = text; rl.appendChild(li); });
     const actions = document.createElement("div"); actions.className = "notes-card-actions";
-    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Save these notes as PDF"; pdf.addEventListener("click", () => printNotes([item]));
+    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Print / Save 12+ page PDF"; pdf.addEventListener("click", () => printNotes([item]));
     const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
       if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
     });
@@ -1390,43 +1390,177 @@
     detail.classList.remove("hidden");
     detail.scrollIntoView({ behavior: profile.reduceMotion ? "auto" : "smooth", block: "start" });
   }
+  function uniqueNoteText(values) {
+    const seen = new Set();
+    return (Array.isArray(values) ? values : []).map((value) => String(value == null ? "" : value).trim()).filter((value) => {
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  function noteMindMapGroups(item) {
+    const sections = Array.isArray(item.sections) ? item.sections : [];
+    const formulas = Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : [];
+    const worked = Array.isArray(item.workedExamples) ? item.workedExamples : [];
+    const methods = Array.isArray(item.fastMethods) ? item.fastMethods : [];
+    return [
+      { title: "Concepts & chapter structure", items: uniqueNoteText(sections.map((section) => section.heading).concat(item.points || [])) },
+      { title: "Formulas, rules & conditions", items: uniqueNoteText((item.formulas || []).concat(formulas.map((card) => String(card.formula || "Rule") + (card.when ? " · " + card.when : "")))) },
+      { title: "Worked reasoning", items: uniqueNoteText((worked.map((example) => example.title || "Worked method")).concat(item.example ? ["Primary worked example"] : [])) },
+      { title: "Methods & exam approach", items: uniqueNoteText(methods.map((method) => method.title || "Problem-solving method").concat(item.examFocus || [])) },
+      { title: "Common traps", items: uniqueNoteText((item.commonMistakes || []).concat(formulas.map((card) => card.trap ? "Avoid: " + card.trap : ""))) },
+      { title: "Vocabulary", items: uniqueNoteText(item.glossary || []) },
+      { title: "Practice & retrieval", items: uniqueNoteText((item.practiceProblems || []).map((problem) => problem.question || "").concat(item.recall || [])) }
+    ].filter((group) => group.items.length);
+  }
+  function noteListHtml(values, ordered) {
+    const list = Array.isArray(values) ? values : [];
+    if (!list.length) return '<p class="empty-note">No separate entries are provided in this subsection. Use the detailed explanations and source note in this chapter pack.</p>';
+    const tag = ordered ? "ol" : "ul";
+    return "<" + tag + ">" + list.map((value) => "<li>" + esc(value) + "</li>").join("") + "</" + tag + ">";
+  }
+  function notePage(item, pageNumber, heading, intro, body) {
+    return '<article class="note-page packet-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) +
+      ' · PAGE ' + esc(pageNumber) + ' OF 12</div><h1>' + esc(heading) + '</h1>' +
+      (intro ? '<p class="intro">' + esc(intro) + '</p>' : "") + body +
+      '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
+  }
+  function renderMindMapPage(item) {
+    const groups = noteMindMapGroups(item);
+    const branches = groups.map((group, index) =>
+      '<section class="map-branch branch-' + (index % 7) + '"><h2><span class="map-dot"></span>' + esc(group.title) + '</h2><div class="map-nodes">' +
+      group.items.map((text) => '<span class="map-node">' + esc(text) + '</span>').join("") + '</div></section>'
+    ).join("");
+    return '<article class="note-page mindmap-page"><p class="eyebrow">KAUSHALPATH · COMPLETE CHAPTER MAP</p>' +
+      '<h1>' + esc(item.chapter) + '</h1><p class="map-subtitle">' + esc(item.level + " · " + item.subject) +
+      ' · A map of every topic recorded in this lesson pack</p><div class="map-center"><span>LESSON / CHAPTER</span><strong>' +
+      esc(item.chapter) + '</strong><small>Concepts · rules · examples · applications · practice</small></div>' +
+      '<div class="map-stem" aria-hidden="true"></div><div class="mindmap-grid">' + branches + '</div>' +
+      '<p class="map-footnote">The map is generated directly from the chapter notes below. Cross-check syllabus-specific wording and examinable scope against the current official textbook/curriculum.</p></article>';
+  }
+  function sectionContentHtml(sections) {
+    return (Array.isArray(sections) ? sections : []).map((section, index) =>
+      '<section class="content-block"><h2>' + esc((index + 1) + ". " + (section.heading || "Concept")) + '</h2>' +
+      '<p>' + esc(section.body || "") + '</p>' + (section.points && section.points.length ? noteListHtml(section.points, false) : "") + '</section>'
+    ).join("");
+  }
+  function formulaContentHtml(item) {
+    const rules = (item.formulas || []).map((formula) => String(formula));
+    const cards = (item.formulaCheatSheet || []).map((card, index) =>
+      '<section class="formula-card"><h2>' + esc((index + 1) + ". " + (card.formula || "Rule")) + '</h2>' +
+      '<p><strong>Meaning:</strong> ' + esc(card.meaning || "See the stated rule and its chapter context.") + '</p>' +
+      '<p><strong>When to use:</strong> ' + esc(card.when || "Use only after confirming the question matches the rule’s assumptions.") + '</p>' +
+      '<p><strong>Units / notation:</strong> ' + esc(card.units || "Follow the units and notation used in the prescribed text/question.") + '</p>' +
+      '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "Check assumptions, signs, units and the valid domain before applying the rule.") + '</p></section>'
+    ).join("");
+    return (rules.length ? '<h2>Chapter formulas and rules</h2>' + noteListHtml(rules, false) : '<h2>Key relationships and rules</h2>' + noteListHtml(item.points || [], false)) + cards;
+  }
+  function workedContentHtml(item) {
+    const primary = '<section class="content-block"><h2>Primary worked example</h2><p>' + esc(item.example || "Use the chapter concepts to build a complete answer.") + '</p></section>';
+    const extra = (item.workedExamples || []).map((example, index) =>
+      '<section class="content-block"><h2>' + esc((index + 1) + ". " + (example.title || "Worked method")) + '</h2>' +
+      noteListHtml(example.steps || [], true) + '</section>'
+    ).join("");
+    return primary + extra;
+  }
+  function methodsContentHtml(item) {
+    const methods = (item.fastMethods || []).map((method, index) =>
+      '<section class="content-block"><h2>' + esc((index + 1) + ". " + (method.title || "Problem-solving path")) + '</h2>' +
+      (method.when ? '<p><strong>Use when:</strong> ' + esc(method.when) + '</p>' : "") +
+      noteListHtml(method.steps || [], true) + (method.caution ? '<p class="formula-trap"><strong>Caution:</strong> ' + esc(method.caution) + '</p>' : "") + '</section>'
+    ).join("");
+    const defaultMethod = '<h2>A reliable answer workflow</h2>' + noteListHtml([
+      "Identify the exact concept, event, process, quantity or claim the question asks about.",
+      "Select the chapter definition, relation, evidence or method that directly supports the answer.",
+      "Write each reasoning step clearly; state assumptions and units where the subject requires them.",
+      "Connect the final result or explanation back to the question, then verify it against the chapter notes."
+    ], true);
+    return methods + defaultMethod;
+  }
+  function practiceContentHtml(item) {
+    const problems = Array.isArray(item.practiceProblems) ? item.practiceProblems : [];
+    if (problems.length) {
+      return '<ol class="practice-list">' + problems.map((problem) =>
+        '<li><p><strong>' + esc(problem.question || "Practice prompt") + '</strong></p>' +
+        '<p><strong>Answer:</strong> ' + esc(problem.answer || "Construct the answer using the relevant definition, rule or worked method above.") + '</p>' +
+        '<p><strong>Reasoning:</strong> ' + esc(problem.solution || "Explain why the selected concept or method applies, then check each step against the chapter notes.") + '</p></li>'
+      ).join("") + '</ol>';
+    }
+    return '<h2>Recall questions</h2>' + noteListHtml(item.recall || [], true) +
+      '<p>For each prompt, write an answer from memory and verify it against the concept explanations on the preceding pages.</p>';
+  }
+  function fullChapterPacket(item) {
+    const glossary = item.glossary && item.glossary.length ? noteListHtml(item.glossary, false) : noteListHtml((item.sections || []).map((section) => section.heading), false);
+    const conceptLinks = (item.sections || []).map((section) => (section.heading || "Concept") + " — " + (section.body || ""));
+    const exam = item.examFocus && item.examFocus.length ? noteListHtml(item.examFocus, false) : noteListHtml(item.points || [], false);
+    const traps = (item.commonMistakes || []).concat((item.formulaCheatSheet || []).map((card) => card.trap ? card.trap : "").filter(Boolean));
+    const revisionChecklist = [
+      "I can explain the chapter’s main ideas without copying a paragraph.",
+      "I can state each important definition and explain where it applies.",
+      "I can choose and justify the relevant formula, rule, evidence or process.",
+      "I can complete a worked example and explain every step.",
+      "I can identify common traps and correct my own mistakes.",
+      "I have checked the lesson’s scope against the current official textbook and curriculum."
+    ];
+    const pages = [
+      notePage(item, 2, "Chapter overview & learning outcomes", item.intro,
+        '<h2>What this chapter covers</h2>' + noteListHtml((item.sections || []).map((section) => section.heading).concat(item.points || []), false) +
+        '<h2>Learning outcomes</h2>' + noteListHtml((item.points || []).map((point) => "Explain and apply: " + point), false) +
+        '<h2>Recommended study order</h2>' + noteListHtml(["Read the concept explanations before memorising terms or formulas.", "Work through the example and show the missing reasoning steps yourself.", "Review conditions, traps and exam focus before attempting practice.", "Finish with closed-book recall and correct gaps from the source text."], true)),
+      notePage(item, 3, "Core concept explanations", "Read each topic with its meaning, conditions and connections in mind.",
+        sectionContentHtml(item.sections) + '<h2>Chapter key ideas</h2>' + noteListHtml(item.points || [], false)),
+      notePage(item, 4, "Definitions, vocabulary & concept links", "A useful answer defines terms precisely and connects them to the lesson’s main ideas.",
+        '<h2>Important terms</h2>' + glossary + '<h2>Connections between concepts</h2>' + noteListHtml(conceptLinks, false)),
+      notePage(item, 5, "Formulas, rules & relationships", "Use the exact relations and definitions included in the chapter pack; check the conditions before applying them.",
+        formulaContentHtml(item)),
+      notePage(item, 6, "How to choose and apply a rule", "This page links the chapter’s rules to their conditions, notation and common errors.",
+        noteListHtml((item.formulaCheatSheet || []).map((card) => (card.formula || "Rule") + " — Meaning: " + (card.meaning || "") + " — Use when: " + (card.when || "") + " — Units/notation: " + (card.units || "") + " — Trap: " + (card.trap || "")), false) +
+        '<h2>Check before using a formula or rule</h2>' + noteListHtml(["Does the question match the stated assumptions and domain?", "Are symbols, signs, units and reference conditions consistent?", "Does the result make sense in the original context?", "Can I explain why this method is more suitable than an alternative?"], true)),
+      notePage(item, 7, "Worked examples & full reasoning", "Follow the reasoning, then close the page and solve the same problem independently.",
+        workedContentHtml(item)),
+      notePage(item, 8, "Methods, strategies & answer construction", "Choose a method because the conditions fit—not because a question looks familiar.",
+        methodsContentHtml(item)),
+      notePage(item, 9, "Applications & exam focus", "Use this page to translate chapter knowledge into clear, relevant answers.",
+        '<h2>Exam approach</h2>' + exam + '<h2>Transfer the idea to a new question</h2>' +
+        noteListHtml(["Identify which chapter concept the question tests and quote the relevant definition or relation.", "List the given facts and the information that must be found or explained.", "Show a clear sequence from evidence/givens to reasoning and conclusion.", "Check whether the answer includes the requested units, comparison, diagram, condition or explanation."], true)),
+      notePage(item, 10, "Common mistakes & how to correct them", "Use errors as a checklist: identify the cause, correct the method and retry without notes.",
+        '<h2>Chapter-specific mistakes</h2>' + noteListHtml(traps, false) +
+        '<h2>Final verification checks</h2>' + noteListHtml(["Definitions match the meaning used by the lesson.", "Every step follows from a stated fact, rule or observation.", "Units, signs, notation, dates, names or classifications are checked where relevant.", "The final statement answers the question directly rather than repeating the prompt."], true)),
+      notePage(item, 11, "Practice questions with worked answers", "Try each question before revealing or reading the answer. Mark the step that was hardest.",
+        practiceContentHtml(item)),
+      notePage(item, 12, "Final revision sheet & retrieval practice", "The final page is a closed-book checklist. Revisit any item you cannot explain confidently.",
+        '<h2>Chapter at a glance</h2>' + noteListHtml(item.points || [], false) +
+        '<h2>Recall prompts</h2>' + noteListHtml(item.recall || [], true) +
+        '<h2>Revision checklist</h2>' + noteListHtml(revisionChecklist, true) +
+        '<h2>Exam focus</h2>' + exam)
+    ];
+    return renderMindMapPage(item) + pages.join("");
+  }
+  function compactChapterHtml(item) {
+    const concepts = sectionContentHtml(item.sections);
+    return '<article class="note-page compact-note-page"><p class="eyebrow">' + esc(item.level + " · " + item.subject) + '</p>' +
+      '<h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p>' + concepts +
+      '<h2>Key ideas</h2>' + noteListHtml(item.points || [], false) +
+      '<h2>Formulas & rules</h2>' + noteListHtml(item.formulas || [], false) +
+      '<h2>Worked example</h2><p>' + esc(item.example || "") + '</p>' +
+      '<h2>Worked practice</h2>' + practiceContentHtml(item) +
+      '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
+  }
   function printNotes(items) {
     if (!items.length) return;
-    const title = items.length === 1 ? items[0].chapter : "KaushalPath Detailed Revision Notes";
-    const sections = items.map((item) => {
-      const deep = (item.sections || []).map((section) =>
-        '<h2>' + esc(section.heading || "Detailed concept") + '</h2><p>' + esc(section.body || "") + '</p>' +
-        (Array.isArray(section.points) && section.points.length ? '<ul>' + section.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "")
-      ).join("");
-      const formulaCards = (item.formulaCheatSheet || []).map((card, idx) =>
-        '<section class="formula-card"><h3>' + esc((idx + 1) + ". " + (card.formula || "Formula")) + '</h3>' +
-        '<p><strong>Meaning:</strong> ' + esc(card.meaning || "") + '</p>' +
-        '<p><strong>When to use:</strong> ' + esc(card.when || "") + '</p>' +
-        '<p><strong>Units / notation:</strong> ' + esc(card.units || "") + '</p>' +
-        '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "") + '</p></section>'
-      ).join("");
-      const worked = (item.workedExamples || []).map((example, idx) =>
-        '<h3>' + esc((idx + 1) + ". " + (example.title || "Worked method")) + '</h3><ol>' +
-        (example.steps || []).map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>'
-      ).join("");
-      const practice = item.practiceProblems && item.practiceProblems.length ? '<h2>Practice questions with worked answers</h2><ol class="practice-list">' + item.practiceProblems.map((p) => '<li><p><strong>' + esc(p.question || "") + '</strong></p><p><strong>Answer:</strong> ' + esc(p.answer || "") + '</p><p><strong>Reasoning:</strong> ' + esc(p.solution || "") + '</p></li>').join("") + '</ol>' : "";
-      const fastMethods = item.fastMethods && item.fastMethods.length ? '<h2>Fast calculation &amp; question-selection tricks</h2>' + item.fastMethods.map((m,idx) => '<h3>' + esc((idx+1)+". "+(m.title||"Method")) + '</h3><p><strong>Use when:</strong> ' + esc(m.when||"") + '</p><ol>' + (m.steps||[]).map(step => '<li>' + esc(step) + '</li>').join("") + '</ol>' + (m.caution ? '<p class="formula-trap"><strong>Caution:</strong> ' + esc(m.caution) + '</p>' : "")).join("") : "";
-      const mistakes = item.commonMistakes && item.commonMistakes.length ? '<h2>Common mistakes to avoid</h2><ul>' + item.commonMistakes.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
-      const examFocus = item.examFocus && item.examFocus.length ? '<h2>Exam approach</h2><ul>' + item.examFocus.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
-      const glossary = item.glossary && item.glossary.length ? '<h2>Glossary</h2><ul>' + item.glossary.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
-      return '<article class="note-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) + '</div><h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p>' + deep +
-        '<h2>Key ideas</h2><ul>' + item.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' +
-        (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") + formulaCards +
-        '<h2>Worked example</h2><p>' + esc(item.example) + '</p>' + worked + mistakes + examFocus + glossary +
-        '<h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>' + practice + '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
-    }).join("");
+    const title = items.length === 1 ? items[0].chapter + " · Complete Chapter Notes" : "KaushalPath · Complete Chapter Notes";
+    // A single chapter always gets a 12-section packet with its mind map on page one.
+    // The bulk export keeps every chapter and its map without generating thousands of pages by default.
+    const sections = items.length === 1 ? fullChapterPacket(items[0]) : items.map((item) => renderMindMapPage(item) + compactChapterHtml(item)).join("");
     const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
-      'body{font:11pt/1.62 Arial,sans-serif;color:#211735;max-width:800px;margin:28px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin:10px 0}h2{font-size:14pt;margin:21px 0 8px;border-bottom:1px solid #e2d8f2;padding-bottom:4px;break-after:avoid}h3{font-size:12pt;margin:16px 0 6px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:9pt;font-weight:bold}.intro{font-size:12pt;color:#594b6f}.note-page{page-break-after:always;break-after:page}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 7px;page-break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line}.source{border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#6e6678}@page{size:A4;margin:17mm} @media screen{body{padding:26px;box-shadow:0 3px 24px #20123a14;border-radius:12px}}' +
-      '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections + '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\/script></body></html>';
+      'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.compact-note-page{min-height:262mm}@page{size:A4;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.map-branch{background:#fff}}' +
+      '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections +
+      '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\\/script></body></html>';
     const printWindow = window.open("", "_blank");
     if (!printWindow) { toast("Allow pop-ups to create the PDF, then choose Save as PDF in the print dialog."); return; }
     printWindow.document.open(); printWindow.document.write(page); printWindow.document.close();
-    toast("In the print dialog, choose Save as PDF to download the notes.");
+    toast(items.length === 1 ? "Complete chapter packet opened. Choose Save as PDF; the mind map is page 1 and the notes span at least 12 pages." : "Complete filtered chapter notes opened. Choose Save as PDF in the print dialog.");
   }
   function toast(message) {
     const root = $("toast");

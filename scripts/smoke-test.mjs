@@ -74,7 +74,8 @@ assert.ok(existsSync(new URL("../scripts/note-content-audit.mjs", import.meta.ur
 assert.match(pkg.scripts.test, /node scripts\/note-content-audit\.mjs/, "CI must run the detailed note audit");
 assert.ok(studyLibrary.includes("Practice questions with worked answers"), "reader must render solved practice");
 assert.ok(studyLibrary.includes("PRACTICE QUESTIONS WITH WORKED ANSWERS"), "saved note export must retain solved practice");
-assert.ok(studyLibrary.includes("const practice = item.practiceProblems"), "PDF export must retain solved practice");
+assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLibrary.includes("problem.question ||") && studyLibrary.includes("problem.answer ||") && studyLibrary.includes("problem.solution ||"), "PDF export must retain solved practice with answers and reasoning");
+assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
 assert.ok(mathsDeepNotes.includes("KP_MATHS_INDIVIDUAL_DEEP_NOTES = notes"), "maths collection must be exported");
 assert.ok(physicsChemistryDeepNotes.includes("KP_SCIENCE_INDIVIDUAL_DEEP_NOTES = notes"), "Physics/Chemistry collection must be exported");
 assert.ok(biologyDeepNotes.includes("KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES = notes"), "Biology collection must be exported");
