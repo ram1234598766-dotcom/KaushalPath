@@ -6,6 +6,11 @@ const SHELL_FILES = [
   "/school-chapter-guides.js",
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
+  "ncert-maths-chapter-notes.js",
+  "ncert-senior-maths-chapter-notes.js",
+  "ncert-chemistry-chapter-notes.js",
+  "ncert-physics-chapter-notes.js",
+  "ncert-biology-chapter-notes.js",
   "/exam-prep-notes.js",
   "/study-library.js",
   "/question-bank.js",
@@ -24,7 +29,12 @@ const STATIC_FILES = new Set([
   "/question-bank.js",
   "/manifest.webmanifest",
   "/app-icon.svg"
-]);
+
+  "ncert-maths-chapter-notes.js",
+  "ncert-senior-maths-chapter-notes.js",
+  "ncert-chemistry-chapter-notes.js",
+  "ncert-physics-chapter-notes.js",
+  "ncert-biology-chapter-notes.js",]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
