@@ -5,7 +5,7 @@
   const card = (formula, meaning, when, units, trap) => ({formula,meaning,when,units,trap});
   const q = (question, answer, explanation) => ({question,answer,explanation});
   const b = (level, chapter, intro, sections, factCards, workedExamples, commonMistakes, examFocus, recall, glossary, practiceQuestions=[]) => ({
-    level, subject:"Biology", chapter, intro, depth:"detailed",
+    level, subject:level === "Class 10" ? "Science" : "Biology", chapter, intro, depth:"detailed",
     sections:sections.map(([heading,body])=>({heading,body})),
     formulas:factCards.map(x=>x.formula), formulaCheatSheet:factCards,
     workedExamples, commonMistakes, examFocus, recall, glossary, practiceQuestions,
