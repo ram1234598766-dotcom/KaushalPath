@@ -7,9 +7,9 @@ const pdfExportStart = source.indexOf("function printNotes(items)");
 const pdfExportEnd = source.indexOf("function toast(", pdfExportStart);
 assert.ok(pdfExportStart >= 0 && pdfExportEnd > pdfExportStart, "the chapter PDF export path must be present");
 const pdfExport = source.slice(pdfExportStart, pdfExportEnd);
-assert.ok(pdfExport.includes('image: { type: "png" }'), "downloaded PDFs must use lossless PNG rendering instead of JPEG artifacts");
-assert.ok(pdfExport.includes("Math.min(2, Math.max(1, Math.sqrt(32000000 / ("), "PDF export must render at higher resolution while bounding large-document canvas memory");
-assert.ok(pdfExport.includes("sharpest selectable text and vector graphics"), "the preview must explain that native Print / Save PDF is the sharpest text-preserving option");
+assert.ok(pdfExport.includes("printTarget.print()"), "the chapter export must use native print, not a canvas screenshot");
+assert.ok(pdfExport.includes("@media print{html,body{width:100%!important;max-width:none!important;"), "print layout must remove portrait-width constraints before rendering the landscape map");
+assert.ok(pdfExport.includes("The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages."), "the PDF preview must explain the mixed page orientation");
 const helperStart = source.indexOf("  function uniqueNoteText(");
 const helperEnd = source.indexOf("function printNotes(items)", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "the pure chapter map and packet helpers must be present");
@@ -71,11 +71,32 @@ globalThis.__label = mapSvgLabel(
   "Universal gravitational field strength changes with altitude and must use centre-to-centre distance",
   80, 20, 160, 38, 8.2, 28
 );
+globalThis.__highlightedPhrase = importantTextHtml("Definition: field strength is defined as force per unit mass.");
+globalThis.__importantList = noteListHtml(["Remember: use the centre-to-centre distance.", "Exam tip: verify units before substituting."], false, "kp-key-ideas");
+globalThis.__formulaMarkup = formulaContentHtml({"level":"Class 11","subject":"Physics","chapter":"Audit","intro":"Definition: force is defined as mass times acceleration.","formulas":["F = ma"],"points":["Remember: always check units."],"formulaCheatSheet":[{"formula":"F = ma","meaning":"The net force is equal to mass times acceleration.","when":"Use if the mass is known.","units":"newtons","trap":"Never omit units."}]});
+globalThis.__practiceMarkup = practiceContentHtml({"practiceProblems":[{"question":"What if distance doubles?","answer":"Force becomes one-quarter.","solution":"Because force is inversely proportional to distance squared."}]});
+
 `;
 runInNewContext(harness, sandbox, { timeout: 10000 });
 
+assert.ok(sandbox.__highlightedPhrase.includes('<mark class="kp-important-mark">Definition</mark>'), "definition cues should be highlighted");
+assert.ok(sandbox.__highlightedPhrase.includes('<mark class="kp-important-mark">defined as</mark>'), "definition phrases should be highlighted");
+assert.ok(sandbox.__importantList.includes('class="kp-key-ideas"') && sandbox.__importantList.includes('<mark class="kp-important-mark">Remember</mark>'), "key ideas should be highlighted and semantically styled");
+assert.ok(sandbox.__formulaMarkup.includes('class="kp-formula-list"') && sandbox.__formulaMarkup.includes("kp-formula-card"), "formula cards should have distinct emphasis");
+assert.ok(sandbox.__practiceMarkup.includes("kp-practice-question") && sandbox.__practiceMarkup.includes("kp-practice-answer") && sandbox.__practiceMarkup.includes("kp-practice-reasoning"), "practice questions, answers and reasoning must be emphasized");
+assert.ok(source.includes("highlightImportantPhrases(detail)"), "the on-screen notes reader should highlight important phrases");
+assert.ok(source.includes('className = "notes-common-mistakes kp-common-mistakes"'), "common mistakes should be emphasized on screen");
+assert.ok(source.includes('printTarget.print()'), "chapter export should use native print, preserving vector text");
+assert.ok(source.includes("@page chapter-map{size:A4 landscape"), "the mind map should use a landscape first page");
+assert.ok(source.includes("@page chapter-notes{size:A4 portrait"), "remaining note pages should remain portrait");
+assert.ok(source.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;") && source.includes("min-height:0!important;overflow:visible!important"), "the landscape map should use full print width without clipping");
+assert.ok(!source.includes("html2pdf().set") && !source.includes("html2canvas:"), "the chapter PDF flow must not use a raster canvas that can crop the map");
+
 assert.ok(source.includes("const fontSize = 11.4;"), "mind map labels should remain readable at PDF size");
 assert.ok(sandbox.__map.includes('class="note-page mindmap-page"'), "the first page must be the chapter mind map");
+assert.ok(sandbox.__map.includes('viewBox="0 0 1600 960"'), "the complete concept map must preserve its full landscape SVG viewBox");
+assert.ok(sandbox.__map.includes('x="22"') && sandbox.__map.includes('x="1238"'), "the map must render both left and right topic columns instead of only half");
+assert.ok(sandbox.__map.includes('width="166.5"'), "right-side map cards must remain inside the SVG viewport with their full width");
 assert.ok(sandbox.__map.includes("mindmap-svg"), "the mind map must be a real scalable SVG");
 assert.ok(sandbox.__map.includes('stroke="#3678E8"') && sandbox.__map.includes('stroke="#13A89E"') &&
   sandbox.__map.includes('stroke="#F19A32"'), "the map needs several distinct branch colours");
