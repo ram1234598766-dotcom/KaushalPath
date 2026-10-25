@@ -57,7 +57,7 @@ assert.match(ncertPhysics, /Explained formula|Universal gravitation and field/, 
 assert.ok((ncertPhysics.match(/make\("Class /g) || []).length >= 33, "Physics should include individual Class 10-12 chapters");
 assert.ok((ncertChemistry.match(/make\("Class /g) || []).length >= 23, "Chemistry should include individual Class 10-12 chapters");
 assert.ok((ncertMathematics.match(/make\("Class /g) || []).length >= 40, "Mathematics should include individual Class 10-12 chapters");
-assert.ok((ncertBiology.match(/make\("Class /g) || []).length >= 40, "Biology should include individual Class 10-12 chapters");
+assert.ok((ncertBiology.match(/make\("Class /g) || []).length >= 35 && (ncertBiology.match(/makeClass10Science\(/g) || []).length >= 6, "Biology should include individual Class 11-12 chapters plus Class 10 Science biology topics");
 assert.match(studyLibrary, /function chapterDepthScore\(item\)/, "the catalogue should rank detailed NCERT content above short duplicate summaries");
 assert.match(studyLibrary, /KP_NCERT_CHAPTER_NOTES/, "the catalogue must merge the detailed NCERT chapter data");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
