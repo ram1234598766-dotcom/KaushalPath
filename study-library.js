@@ -605,10 +605,55 @@
   const schoolGuides = Array.isArray(window.KP_SCHOOL_CHAPTER_GUIDES) ? window.KP_SCHOOL_CHAPTER_GUIDES : [];
   const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
   const humanitiesGuides = Array.isArray(window.KP_HUMANITIES_GUIDES) ? window.KP_HUMANITIES_GUIDES : [];
-  if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
-  notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
-  notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
-  notes.push(...humanitiesGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
+  const ncertChapterNotes = Array.isArray(window.KP_NCERT_CHAPTER_NOTES) ? window.KP_NCERT_CHAPTER_NOTES : [];
+  const incomingNoteSets = [
+    ...(Array.isArray(window.KP_DEEP_NOTES) ? window.KP_DEEP_NOTES : []),
+    ...ncertChapterNotes,
+    ...schoolGuides,
+    ...formulaSheets,
+    ...humanitiesGuides
+  ];
+  function chapterDepthScore(item) {
+    const sections = Array.isArray(item.sections) ? item.sections : [];
+    const formulaCards = Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : [];
+    const worked = Array.isArray(item.workedExamples) ? item.workedExamples : [];
+    const words = [
+      item.intro || "",
+      ...sections.map((section) => String(section.heading || "") + " " + String(section.body || "")),
+      ...(item.points || []),
+      ...formulaCards.map((card) => [card.formula, card.meaning, card.when, card.units, card.trap].join(" ")),
+      ...worked.map((example) => [example.title, ...(example.steps || [])].join(" ")),
+      ...(item.commonMistakes || []),
+      ...(item.examFocus || []),
+      ...(item.recall || []),
+      ...(item.glossary || [])
+    ].join(" ").trim().split(/\\s+/).filter(Boolean).length;
+    return (item.depth === "detailed" ? 1000 : 0) + sections.length * 150 +
+      formulaCards.length * 22 + worked.length * 35 +
+      (item.commonMistakes || []).length * 10 + (item.examFocus || []).length * 8 +
+      Math.min(words, 12000) / 12;
+  }
+  function chapterKey(item) {
+    return [item.level, item.subject, item.chapter].map((part) => String(part || "").trim().toLowerCase()).join("::");
+  }
+  // Merge by chapter and keep the most complete version. This makes full NCERT chapter
+  // notes replace the older short summary when both share a chapter title.
+  const mergedChapterNotes = [];
+  const mergedChapterIndex = new Map();
+  [...notes, ...incomingNoteSets].forEach((item) => {
+    if (!item || typeof item !== "object" || !item.level || !item.subject || !item.chapter) return;
+    const key = chapterKey(item);
+    if (!mergedChapterIndex.has(key)) {
+      mergedChapterIndex.set(key, mergedChapterNotes.length);
+      mergedChapterNotes.push(item);
+      return;
+    }
+    const index = mergedChapterIndex.get(key);
+    if (chapterDepthScore(item) > chapterDepthScore(mergedChapterNotes[index])) {
+      mergedChapterNotes[index] = item;
+    }
+  });
+  notes.splice(0, notes.length, ...mergedChapterNotes);
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
