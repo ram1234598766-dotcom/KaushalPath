@@ -13,6 +13,8 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - A focus timer with persistent countdowns, completed-session tracking, accuracy summaries and active-day streaks.
 - Full progress backup and restore as validated JSON, plus intentional progress clearing.
 - A searchable Saved Library for useful AI explanations and notes, included in progress backups.
+- Chapter-level JEE Main and NEET UG notes with explained formula cards, worked problems, fast calculation/question-selection methods, cautions on when shortcuts fail, and solved practice questions.
+- Dual hosting: Vercel serves the Node-based document/image AI API; Cloudflare Pages serves the static frontend and proxies `/api/study-guide` to the Vercel API through a Pages Function.
 - Local AI conversation history: recent chats restore after refresh, can be searched or deleted, and are included in backups. Uploaded file contents are not retained in chat history.
 - A local Study Planner with due dates, priority levels, time estimates, task completion tracking, and backup/restore support.
 - An installable progressive web app with a limited offline app shell; API responses and local student progress are never cached by the service worker.
@@ -70,3 +72,15 @@ Built-in questions are original practice samples, not a verified archive of auth
 - [NTA downloads](https://nta.ac.in/Downloads)
 
 - Images are decoded, pixel-limited, orientation-corrected and re-encoded server-side; PNG/WebP are preserved where possible, vector/other formats are normalized, and damaged image bytes are rejected.
+
+
+## Cloudflare Pages deployment
+
+Use the repository root as the project root. Set the build command to `npm run build:cloudflare` and the output directory to `dist`. The Pages Function at `functions/api/study-guide.js` streams `/api/study-guide` requests to the Vercel Node API, which keeps PDF/Office/image parsing running in its supported runtime. Set the Pages environment variable `VERCEL_API_BASE_URL` to the HTTPS origin of the Vercel deployment (for example `https://kaushal-path.vercel.app`, with no path or trailing API segment). Keep Vercel's own environment variables configured independently. The function provides a default Vercel origin but the Pages variable is recommended for production. Static headers, local WebGPU model hosts, the service-worker cache and the Pages route manifest are included in the build.
+
+The local browser model is downloaded only after an explicit user action. Its weights remain a client-side browser cache; Cloudflare Pages does not install model weights onto a phone or provide that phone's RAM to the backend.
+
+
+## Individual CBSE subject chapters
+
+The Study Hub loads individual English literature chapters and writing skills, Hindi lesson/skill packs, Social Science history chapters, Business Studies, Accountancy, Economics, Computer Science and Informatics Practices. Each lesson includes explanatory sections, worked answer patterns, practice questions and common-mistake checks. These are original notes rather than copied textbook chapters. Some entries reflect commonly used NCERT texts and may be outside a particular year's assessable list; check the current CBSE curriculum and your subject code before using the library as an exhaustive exam checklist.

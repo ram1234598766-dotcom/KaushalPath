@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
@@ -88,7 +89,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v8"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v10"), "PWA cache must be bumped for new chapter assets");
 assert.ok(vercel.builds.some(b => b.src === "cbse-maths-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-maths-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-physics-chemistry-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-physics-chemistry-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-biology-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-biology-deep-notes.js");
@@ -156,7 +157,7 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v8/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v10/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
@@ -174,7 +175,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v8/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v10/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
@@ -385,6 +386,15 @@ assert.match(app, /payload\.version!==1/, "progress imports should validate back
 assert.match(app, /payload\.results\.some\(function\(r\)\{return !validResult\(r\);\}\)/, "progress imports should reject malformed result records");
 assert.match(app, /function readLocalJSON\(key,fallback\)/, "local storage parsing should fail safely when browser data is unavailable");
 assert.match(html, /id="clearProgress"/, "students should be able to clear saved progress intentionally");
+assert.ok(html.includes('src="/cbse-english-chapter-notes.js"'), "HTML must load English chapter notes");
+assert.ok(html.includes('src="/cbse-commerce-computing-hindi-chapters.js"'), "HTML must load Hindi/commerce/computing chapter notes");
+assert.ok(serviceWorker.includes('"/cbse-english-chapter-notes.js"'), "PWA shell must cache English chapter notes");
+assert.ok(serviceWorker.includes('"/cbse-commerce-computing-hindi-chapters.js"'), "PWA shell must cache Hindi/commerce/computing chapter notes");
+assert.ok(vercel.builds.some(b => b.src === "cbse-english-chapter-notes.js" && b.use === "@vercel/static"), "Vercel must publish English chapter notes");
+assert.ok(vercel.builds.some(b => b.src === "cbse-commerce-computing-hindi-chapters.js" && b.use === "@vercel/static"), "Vercel must publish other CBSE chapter notes");
+assert.match(await readFile(new URL("../scripts/cloudflare-build.mjs", import.meta.url), "utf8"), /cbse-english-chapter-notes[.]js/);
+assert.match(await readFile(new URL("../scripts/cloudflare-build.mjs", import.meta.url), "utf8"), /cbse-commerce-computing-hindi-chapters[.]js/);
+assert.ok(html.includes("<option>Hindi</option>") && html.includes("<option>Informatics Practices</option>"), "Study Hub must expose expanded subject filters");
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 

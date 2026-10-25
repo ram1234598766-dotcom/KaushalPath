@@ -101,6 +101,26 @@ const gravitationSupplement = supplementalNotes.find(note => note.level === "Cla
 assert.ok(gravitationSupplement && gravitationSupplement.formulaCheatSheet.length >= 3, "supplemental Gravitation note must contain explained formula cards");
 
 const examNotes = loadExport("exam-prep-notes.js", "KP_DEEP_NOTES");
+const deepExamNotes = loadExport("jee-neet-chapter-notes.js", "KP_JEE_NEET_CHAPTER_NOTES");
+assert.ok(deepExamNotes.length >= 54, "JEE/NEET deep chapter library should include the JEE chapters plus NEET Physics/Chemistry adaptations");
+const shallowDeepNotes = [];
+for (const note of deepExamNotes) {
+  assert.ok(note.level && note.subject && note.chapter, "JEE/NEET note missing exam/subject/chapter metadata");
+  assert.ok(Array.isArray(note.sections) && note.sections.length >= 4, note.chapter + " needs at least four topic explanations");
+  const words = note.sections.reduce((sum, section) => sum + String(section.body || "").trim().split(/\s+/).filter(Boolean).length, 0);
+  if (words < 260) shallowDeepNotes.push(note.level + " " + note.subject + " · " + note.chapter + " (" + words + " words)");
+  assert.ok(Array.isArray(note.workedExamples) && note.workedExamples.length >= 2, note.chapter + " needs multiple worked examples");
+  assert.ok(Array.isArray(note.fastMethods) && note.fastMethods.length >= 3, note.chapter + " needs at least three timed-exam methods");
+  assert.ok(Array.isArray(note.practiceProblems) && note.practiceProblems.length >= 3, note.chapter + " needs solved practice questions");
+  assert.ok(Array.isArray(note.commonMistakes) && note.commonMistakes.length >= 3, note.chapter + " needs common traps");
+  assert.ok(Array.isArray(note.recall) && note.recall.length >= 3, note.chapter + " needs active recall questions");
+  if (["Mathematics","Physics","Chemistry"].includes(note.subject)) {
+    assert.ok(Array.isArray(note.formulaCheatSheet) && note.formulaCheatSheet.length >= 3, note.chapter + " needs an explained formula cheat sheet");
+    assert.ok(note.formulaCheatSheet.every(card => card.formula && card.meaning && card.when && card.units && card.trap), note.chapter + " has an incomplete formula card");
+  }
+}
+assert.equal(shallowDeepNotes.length, 0, "These JEE/NEET chapters need deeper explanations (260+ words across their topic sections): " + shallowDeepNotes.join("; "));
+
 assert.ok(examNotes.length >= 42, "JEE/NEET preparation needs at least 42 detailed exam-prep entries");
 assert.ok(examNotes.some(note => note.level === "JEE Main" && note.subject === "Mathematics"), "JEE Main Mathematics notes must exist");
 assert.ok(examNotes.some(note => note.level === "JEE Main" && note.subject === "Physics"), "JEE Main Physics notes must exist");
@@ -117,6 +137,28 @@ for (const note of examNotes) {
   assert.ok(Array.isArray(note.examFocus) && note.examFocus.length >= 1, note.chapter + " needs exam-specific strategy");
   assert.ok(Array.isArray(note.recall) && note.recall.length >= 3, note.chapter + " needs active-recall questions");
   assert.ok(Array.isArray(note.glossary) && note.glossary.length >= 3, note.chapter + " needs a glossary");
+}
+
+
+const englishChapterNotes = loadExport("cbse-english-chapter-notes.js", "KP_CBSE_ENGLISH_CHAPTER_NOTES");
+const otherCbseChapterNotes = loadExport("cbse-commerce-computing-hindi-chapters.js", "KP_CBSE_COMMERCE_COMPUTING_HINDI_NOTES");
+assert.ok(englishChapterNotes.length >= 75, "English must have individual literature lessons plus language/writing chapters");
+assert.ok(otherCbseChapterNotes.length >= 100, "Hindi, Social Science, commerce and computing must have individual chapter entries");
+for (const [label, notes] of [["English", englishChapterNotes], ["Hindi/CBSE other subjects", otherCbseChapterNotes]]) {
+  for (const note of notes) {
+    assert.ok(note.level && note.subject && note.chapter, label + " note missing class/subject/chapter metadata");
+    assert.ok(Array.isArray(note.sections) && note.sections.length >= 4, label + " " + note.chapter + " needs individual topic explanations");
+    const words = note.sections.reduce((sum, section) => sum + String(section.body || "").trim().split(/\s+/).filter(Boolean).length, 0);
+    assert.ok(words >= 180, label + " " + note.level + " " + note.subject + " · " + note.chapter + " is still too short (" + words + " explanatory words)");
+    assert.ok(Array.isArray(note.workedExamples) && note.workedExamples.length >= 2, label + " " + note.chapter + " needs worked methods/examples");
+    assert.ok(Array.isArray(note.practiceProblems) && note.practiceProblems.length >= 3, label + " " + note.chapter + " needs solved practice");
+    assert.ok(Array.isArray(note.commonMistakes) && note.commonMistakes.length >= 3, label + " " + note.chapter + " needs exam-trap guidance");
+    assert.ok(Array.isArray(note.recall) && note.recall.length >= 3, label + " " + note.chapter + " needs self-check questions");
+    assert.ok(Array.isArray(note.fastMethods) && note.fastMethods.length >= 1, label + " " + note.chapter + " needs an answer/speed method");
+  }
+}
+for (const [level, subject] of [["Class 10","English"],["Class 11","English"],["Class 12","English"],["Class 10","Hindi"],["Class 11","Hindi"],["Class 12","Hindi"],["Class 10","Social Science"],["Class 11","Accountancy"],["Class 12","Accountancy"],["Class 11","Business Studies"],["Class 12","Business Studies"],["Class 11","Economics"],["Class 12","Economics"],["Class 11","Computer Science"],["Class 12","Computer Science"],["Class 12","Informatics Practices"]]) {
+  assert.ok(englishChapterNotes.concat(otherCbseChapterNotes).some(note => note.level === level && note.subject === subject), "Missing chapter coverage for " + level + " " + subject);
 }
 
 console.log("Detailed chapter audit passed: " + counts.join(", ") + "; " + cbseNotes.length + " CBSE chapter entries and " + examNotes.length + " JEE/NEET entries validated. Gravitation has detailed theory, formula cards, worked examples and practice answers.");
