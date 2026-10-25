@@ -1394,37 +1394,37 @@
     const methods = Array.isArray(item.fastMethods) ? item.fastMethods : [];
     const genericHeading = /^(chapter framework and connections|key ideas unpacked|how to solve questions step by step|formula, process and result checks|how to write a complete exam answer)$/i;
     const firstSentence = (value) => {
-      const text = String(value == null ? "" : value).replace(/\\s+/g, " ").trim();
+      const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
       if (!text) return "";
-      const match = text.match(/^.*?[.!?](?=\\s|$)/);
+      const match = text.match(/^.*?[.!?](?=\s|$)/);
       return match ? match[0].trim() : text;
     };
     const endSentence = (value) => {
-      const text = String(value == null ? "" : value).replace(/\\s+/g, " ").trim();
+      const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
       if (!text) return "";
       return /[.!?]$/.test(text) ? text : text + ".";
     };
     const shortExplanation = (value, maxWords = 11) => {
       const sentence = firstSentence(value);
       if (!sentence) return "";
-      const words = sentence.split(/\\s+/).filter(Boolean);
+      const words = sentence.split(/\s+/).filter(Boolean);
       if (words.length <= maxWords) return sentence;
       return words.slice(0, maxWords).join(" ").replace(/[,:;—-]+$/, "") + "…";
     };
     const explain = (heading, body, maxWords = 9) => {
-      const title = String(heading == null ? "" : heading).replace(/\\s+/g, " ").trim();
+      const title = String(heading == null ? "" : heading).replace(/\s+/g, " ").trim();
       const description = shortExplanation(body, maxWords);
       return title && description ? title + " — " + description : title || description;
     };
     const avoidSentence = (value) => {
       const text = endSentence(value).replace(/[.!?]+$/, "").trim();
       if (!text) return "";
-      if (/^(avoid|do not|don't|never)\\b/i.test(text)) return text + ".";
+      if (/^(avoid|do not|don't|never)\b/i.test(text)) return text + ".";
       return "Avoid " + text.charAt(0).toLowerCase() + text.slice(1) + ".";
     };
     const realSections = sections.filter((section) => {
       const heading = String(section.heading || "").trim();
-      return heading && !genericHeading.test(heading) && !/^related topic\\s*[·:]/i.test(heading);
+      return heading && !genericHeading.test(heading) && !/^related topic\s*[·:]/i.test(heading);
     });
     // Six explanation cards per branch fit the landscape page; group overflow
     // without silently omitting recorded ideas from the source chapter.
