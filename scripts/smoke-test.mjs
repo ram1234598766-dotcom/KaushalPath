@@ -6,6 +6,8 @@ const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
 const questionBank = readFileSync(new URL("../question-bank.js", import.meta.url), "utf8");
 const studyLibrary = readFileSync(new URL("../study-library.js", import.meta.url), "utf8");
+const examPrepNotes = readFileSync(new URL("../exam-prep-notes.js", import.meta.url), "utf8");
+const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
@@ -34,6 +36,36 @@ assert.match(html, /id="notesDownloadAll"/, "the notes catalogue should export f
 assert.match(html, /id="startTour"/, "the app should expose the animated guided tour");
 assert.match(html, /does not send your chapter selection to the AI endpoint/, "the visible CBSE notes hub should be independent of AI requests");
 assert.match(studyLibrary, /function printNotes\(items\)/, "curated notes should be exportable through the browser PDF print flow");
+assert.match(html, /id="localAiInstall"/, "AI Study Guide should expose local model download controls");
+assert.match(html, /id="localAiPrefer"/, "local model preference must be explicit and user controlled");
+assert.match(html, /value="JEE Main"/, "the notes library should filter detailed JEE Main notes");
+assert.match(html, /value="NEET UG"/, "the notes library should filter detailed NEET UG notes");
+assert.ok(html.indexOf('src="/exam-prep-notes.js"') < html.indexOf('src="/study-library.js"'), "exam note data must load before the library renderer");
+assert.match(html, /180 note packs/, "the notes catalogue should reflect 119 core packs plus 61 detailed exam entries");
+assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
+assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
+assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/, "deep-dive notes should include dedicated JEE and NEET views");
+assert.match(examPrepNotes, /workedExamples/, "exam notes should include stepwise examples and problem methods");
+assert.match(examPrepNotes, /commonMistakes/, "exam notes should cover common mistakes");
+assert.match(studyLibrary, /Detailed concept explanations/, "the note reader should render expanded concept sections");
+assert.match(studyLibrary, /ADDITIONAL WORKED METHODS/, "the PDF export should include detailed worked methods");
+assert.match(localAI, /web-llm@0\.2\.86/, "local inference should use the current pinned WebLLM release");
+assert.match(localAI, /navigator\.deviceMemory/, "local model recommendation should use browser RAM hints when available");
+assert.match(localAI, /navigator\.gpu\.requestAdapter/, "local model installation should verify WebGPU adapter availability");
+assert.match(localAI, /requiredStorageBytes/, "local model installation should check estimated browser storage before downloading");
+assert.match(localAI, /\[MODEL_PLUS, MODEL_LITE\]/, "a failed larger model should fall back to the smaller mobile-friendly model");
+assert.match(localAI, /getModelLabel/, "the app should report which model actually loaded after fallback");
+assert.match(localAI, /kp-local-ai-consent-v1/, "first-time local model downloads should be consent gated");
+assert.match(app, /localApi\.respond/, "text-only Study Guide prompts should be routable to local inference");
+assert.match(app, /needsCloudForThisRequest=Boolean\(attachmentForRequest\|\|webSearch\)/, "file and web-research prompts should use cloud support rather than claim local support");
+assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /https:\/\/esm\.run/);
+assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /wasm-unsafe-eval/);
+assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /worker-src 'self' blob:/);
+assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "Vercel should publish the local inference controller");
+assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@vercel/static"), "Vercel should publish the expanded exam notes");
+assert.match(serviceWorker, /kaushalpath-shell-v3/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
+assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
 assert.match(studyLibrary, /window\.KP_DEVICE_PROFILE/, "device capability detection should run before app initialization");
 assert.match(studyLibrary, /navigator\.deviceMemory/, "the UI should use available browser memory hints without assuming universal support");
@@ -48,7 +80,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v2/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v3/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
@@ -89,7 +121,7 @@ assert.match(app, /function renderSavedLibrary\(\)/, "the saved library should r
 assert.match(app, /savedLibrary:getSavedLibrary\(\)/, "full progress backups should include the saved library");
 assert.match(html, /id="topicSuggestions"/, "class-aware study topics should be available");
 assert.doesNotMatch(html, /On-device AI|Qwen 1\.5B|localAiEnable|localAiDisable|Kilo Auto Free/, "the website should not expose model or provider details");
-assert.doesNotMatch(app, /KaushalPathLocalAI|Qwen|Kilo Auto Free|localAiStatus/, "frontend logic should not expose provider or local-model status");
+assert.doesNotMatch(app, /Kilo Auto Free|api\\.kilo\\.ai|VISION_MODEL/, "frontend logic should not expose remote provider endpoints or server-side model identifiers");
 assert.match(html, /@media print/, "print-ready PDF styles should exist");
 assert.match(app, /streamStudyRequest/, "study requests should support streaming output");
 assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
@@ -187,8 +219,10 @@ for (const asset of offlineAssets) {
   assert.ok(vercel.builds.some((build) => build.src === asset && build.use === "@vercel/static"), asset + " must be explicitly published by Vercel");
 }
 
-assert.equal(vercel.builds.some(b => b.src === "local-ai.js"), false, "the model runtime should not be sent to the browser");
-assert.doesNotMatch(JSON.stringify(vercel), /esm\.sh|huggingface\.co|cdn-lfs/, "browser policy should not include unused local-model origins");
+assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "the consent-gated local model controller should be published to the browser");
+assert.match(JSON.stringify(vercel), /esm[.]run/, "CSP should allow the pinned WebLLM runtime after local mode is selected");
+assert.match(JSON.stringify(vercel), /cdn[.]jsdelivr[.]net/, "CSP should allow the official CDN delivery route used by WebLLM");
+assert.match(JSON.stringify(vercel), /huggingface\.co/, "CSP should allow model-weight downloads after explicit local installation consent");
 assert.ok(vercel.builds.some(b => b.src === "api/study-guide.mjs" && b.use === "@vercel/node"), "AI endpoint should be deployed as a Node function");
 assert.ok(existsSync(new URL("../api/study-guide.mjs", import.meta.url)), "Vercel AI route exists");
 assert.ok(existsSync(new URL("../index.html", import.meta.url)), "Vercel homepage exists at the root");

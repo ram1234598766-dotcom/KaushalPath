@@ -387,7 +387,7 @@ async function retryCloudWithoutStream(payload,onText,signal,onStatus,onSources)
  onText(answer);return answer;
 }
 function makePrompt(level,subject,chapter,mode,topic){
- const task=({"notes":"Create useful but compact chapter notes with headings, key ideas, definitions or formulas, one worked example, common mistakes and a recap.","explain":"Explain the concept in plain language, step by step, with one worked or everyday example and a short self-check.","revision":"Create a compact revision sheet with high-yield points, formulas or facts, common mistakes and five recall prompts.","questions":"Create five original practice questions, then provide their answers with short explanations.","solve":"Solve the learner's question step by step, show calculations and units, state assumptions, and check the result."})[mode]||"Explain this clearly with a short example.";
+ const task=({"notes":"Create detailed NCERT-aligned chapter notes, not a short summary. Organise every relevant chapter topic into clear sections. Explain definitions, intuition, mechanisms or derivations, assumptions, formulas with variable meanings and units, fully worked examples, important exceptions, connections between concepts, diagrams in words where helpful, common misconceptions, exam traps, and end-of-chapter recall questions with worked answers. Keep it original rather than copying textbook passages. If chapter scope or edition is uncertain, say so and do not invent official citations.","explain":"Explain the concept in plain language, step by step, with one worked or everyday example and a short self-check.","revision":"Create a compact revision sheet with high-yield points, formulas or facts, common mistakes and five recall prompts.","questions":"Create five original practice questions, then provide their answers with short explanations.","solve":"Solve the learner's question step by step, show calculations and units, state assumptions, and check the result."})[mode]||"Explain this clearly with a short example.";
  return "Act as a careful CBSE study tutor. Student level: "+level+". Subject: "+subject+". Chapter: "+(chapter||"not specified")+". Task: "+task+"\nLearner request:\n"+topic+"\nBe accurate and age-appropriate. Keep the answer focused. Do not invent official citations or claim live syllabus verification.";
 }
 let lastStudyController=null;
@@ -530,6 +530,109 @@ function chatAddMessage(role,text){
 function enableChatTools(enabled){
  ["chatCopy","chatPdf","chatText","chatSpeak","chatRegenerate","chatSave"].forEach(function(id){$(id).disabled=!enabled;});
 }
+function updateLocalAiStatus(message,kind){
+ const text=document.getElementById("localAiStatus"),badge=document.getElementById("localAiBadge");
+ if(text)text.textContent=String(message||"");
+ if(badge){
+  badge.classList.toggle("is-ready",kind==="ready");
+  badge.classList.toggle("is-loading",kind==="loading");
+  badge.textContent=kind==="ready"?"Ready on device":kind==="loading"?"Downloading model…":kind==="error"?"Unavailable":(window.KP_LOCAL_AI&&window.KP_LOCAL_AI.isPreferred()?"Local preferred":"Not installed");
+ }
+}
+function refreshLocalAiCapabilities(){
+ const local=window.KP_LOCAL_AI;if(!local)return;
+ const c=local.capabilities();
+ const model=document.getElementById("localAiModel"),memory=document.getElementById("localAiMemory"),reason=document.getElementById("localAiDeviceReason");
+ const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer"),progress=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
+ if(model)model.textContent=local.isReady()?local.getModelLabel():c.modelLabel;
+ const memoryBase=c.memory?("Browser RAM hint: "+c.memory+" GB · logical CPU cores: "+(c.cores||"not reported")):"Browser RAM hint is unavailable · logical CPU cores: "+(c.cores||"not reported");
+ if(memory)memory.textContent=memoryBase;
+ if(memory&&navigator.storage&&typeof navigator.storage.estimate==="function"){
+  navigator.storage.estimate().then(function(estimate){
+   if(!memory.isConnected)return;
+   const quota=Number(estimate&&estimate.quota),usage=Number(estimate&&estimate.usage);
+   if(Number.isFinite(quota)&&Number.isFinite(usage))memory.textContent=memoryBase+" · Estimated free browser-origin storage: "+Math.max(0,(quota-usage)/(1024*1024*1024)).toFixed(2)+" GB";
+  }).catch(function(){});
+ }
+ if(reason)reason.textContent=c.reason+" Estimated GPU memory: "+c.estimatedGpuMemory+"; "+c.estimatedDownloadSpace+". Browser estimates are approximate, not a guarantee of free RAM or GPU memory.";
+ if(install)install.disabled=!c.canRun;
+ if(preference){preference.checked=local.isPreferred();preference.disabled=!c.canRun;}
+ if(progress&&!local.isReady())progress.value=0;
+ if(label&&!local.isReady())label.textContent="Model will download after you enable it";
+ if(local.isReady()){
+  updateLocalAiStatus("Local inference is ready. Text-only prompts can run on this device; attached files and web research still require the cloud route.","ready");
+  if(install){install.textContent="Local model ready ✓";install.disabled=true;}
+  if(label)label.textContent="Model loaded for this session";
+ }else if(!c.canRun){
+  updateLocalAiStatus(c.reason+" You can continue using cloud AI.","error");
+ }
+}
+let localAiLoadingUi=false;
+async function enableLocalAiFromUserAction(){
+ const local=window.KP_LOCAL_AI;if(!local){updateLocalAiStatus("The local AI module did not initialise. Refresh the page and retry.","error");return;}
+ const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer");
+ if(!local.capabilities().canRun){refreshLocalAiCapabilities();return;}
+ local.setPreferred(true);if(preference)preference.checked=true;
+ if(install){install.disabled=true;install.textContent="Preparing model…";}
+ localAiLoadingUi=true;updateLocalAiStatus("Downloading model files if they are not cached, then preparing WebGPU memory. Keep this tab open.","loading");
+ try{
+  const result=await local.load({onProgress:function(p){
+   const bar=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
+   if(bar&&Number.isFinite(p.progress))bar.value=Math.max(0,Math.min(1,p.progress));
+   if(label)label.textContent=Number.isFinite(p.progress)?Math.round(p.progress*100)+"% · "+String(p.text||"Preparing model"):String(p.text||"Preparing model…");
+   updateLocalAiStatus(String(p.text||"Preparing on-device model…"),"loading");
+  }});
+  updateLocalAiStatus(result.fallback?"The larger model could not fit this device, so "+result.label+" was installed instead. Text-only questions can now run locally.":result.label+" is loaded. Text-only questions now run locally when the preference is enabled.","ready");
+  if(install){install.textContent="Local model ready ✓";install.disabled=true;}
+  if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Ready · cached model reused on future visits where browser storage persists";
+  if(document.getElementById("localAiProgress"))document.getElementById("localAiProgress").value=1;
+ }catch(error){
+  updateLocalAiStatus(!local.isPreferred()?"Cloud AI remains selected. Local setup did not finish. "+String(error&&error.message||error):String(error&&error.message||error)+" No prompt was automatically sent to the cloud. You can switch to cloud AI explicitly below.","error");
+  if(install){install.disabled=false;install.textContent="Retry local model setup";}
+  if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Setup did not finish";
+ }finally{localAiLoadingUi=false;refreshLocalAiCapabilities();}
+}
+function initLocalAiControls(){
+ const local=window.KP_LOCAL_AI;if(!local)return;
+ refreshLocalAiCapabilities();
+ const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer"),cloud=document.getElementById("localAiUseCloud");
+ if(install)install.addEventListener("click",enableLocalAiFromUserAction);
+ if(preference)preference.addEventListener("change",function(){
+  local.setPreferred(preference.checked);
+  if(preference.checked){enableLocalAiFromUserAction();}
+  else{updateLocalAiStatus("Cloud AI is selected by default. Your downloaded model files are not removed; you can enable local preference again any time.","");refreshLocalAiCapabilities();}
+ });
+ if(cloud)cloud.addEventListener("click",function(){
+  local.setPreferred(false);if(preference)preference.checked=false;
+  updateLocalAiStatus("Cloud AI selected. Text prompts will use the server; attachments and web research also use the cloud route.","");
+  if(!chatBusy&&typeof local.unload==="function")local.unload().then(function(){updateLocalAiStatus("Cloud AI selected. The local model has been unloaded from GPU memory; its cached files remain available for a later opt-in.","");refreshLocalAiCapabilities();}).catch(function(){updateLocalAiStatus("Cloud AI selected. A local GPU session could not be unloaded cleanly; close or refresh this tab if memory remains constrained.","error");});
+  toast("Cloud AI selected for text-only questions.");
+ });
+ window.addEventListener("kp-local-ai-error",function(event){
+  if(!localAiLoadingUi)updateLocalAiStatus(String(event.detail&&event.detail.message||"The saved local model could not be restored. Use Retry local model setup."),"error");
+ });
+ // Restore on-device AI only after the learner explicitly opted in during a previous visit.
+ if(local.isPreferred()&&local.capabilities().canRun&&!local.isReady()){
+  updateLocalAiStatus("Restoring your previously enabled local model. If its cache was cleared, model files may need to download again.","loading");
+  const installButton=document.getElementById("localAiInstall");
+  if(installButton){installButton.disabled=true;installButton.textContent="Loading saved model…";}
+  local.load({onProgress:function(p){
+   const bar=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
+   if(bar&&Number.isFinite(p.progress))bar.value=Math.max(0,Math.min(1,p.progress));
+   if(label)label.textContent=Number.isFinite(p.progress)?Math.round(p.progress*100)+"% · "+String(p.text||"Loading saved model"):String(p.text||"Loading saved model…");
+   updateLocalAiStatus(String(p.text||"Loading saved local model…"),"loading");
+  }}).then(function(result){
+   updateLocalAiStatus(result.fallback?"The larger model did not fit; "+result.label+" was loaded instead. Text-only questions will run locally.":result.label+" is ready. Text-only prompts will run locally.","ready");
+   if(installButton){installButton.textContent="Local model ready ✓";installButton.disabled=true;}
+   const bar=document.getElementById("localAiProgress");if(bar)bar.value=1;
+  }).catch(function(error){
+   updateLocalAiStatus(String(error&&error.message||error)+" Use Retry local model setup, or switch to cloud AI.","error");
+   if(installButton){installButton.disabled=false;installButton.textContent="Retry local model setup";}
+  });
+ }
+}
+initLocalAiControls();
+
 async function sendChat(raw,regenerate){
  const question=String(raw||"").trim();if(!question||chatBusy)return;
  if(activeChatController)activeChatController.abort();
@@ -540,30 +643,46 @@ async function sendChat(raw,regenerate){
   chatHistory.push({role:"user",content:question});lastChatPrompt=question;const displayedQuestion=question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):"");chatAddMessage("user",displayedQuestion);recordChatMessage("user",displayedQuestion);
  }else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
  const attachmentForRequest=lastChatAttachment,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
+ const localApi=window.KP_LOCAL_AI,localPreferred=Boolean(localApi&&localApi.isPreferred());
+ const needsCloudForThisRequest=Boolean(attachmentForRequest||webSearch);
+ const useLocal=localPreferred&&!needsCloudForThisRequest;
+ if(localPreferred&&needsCloudForThisRequest)updateLocalAiStatus("This request includes a file or web research, so it will use the cloud route. Text-only questions can use the local model.","");
  chatBusy=true;activeChatController=new AbortController();
  const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop"),messages=$("chatMessages");
- send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent="Connecting to the study assistant…";
+ send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent=useLocal?"Preparing private on-device inference…":(needsCloudForThisRequest?"Connecting to cloud AI for file/research support…":"Connecting to the cloud study assistant…");
  enableChatTools(Boolean(lastChatAnswer));
  const node=chatAddMessage("assistant",""),messageBox=node.closest(".chat-message");
+ const routeLabel=messageBox&&messageBox.querySelector(".chat-message-label");
+ if(routeLabel)routeLabel.textContent=useLocal?"On-device AI · private":(localPreferred&&needsCloudForThisRequest?"KaushalPath AI · cloud required":"KaushalPath AI · cloud");
  node.innerHTML='<span class="chat-typing" role="status"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span class="chat-typing-copy">Preparing your answer…</span></span>';messageBox.classList.add("is-pending");
  let waiting=true,answer="";
  try{
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
   renderSourceLinks($("chatSources"),[]);
-  answer=await streamStudyRequest(Object.assign({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),webSearch:webSearch,searchQuery:question,userPrompt:question},attachmentPayload(attachmentForRequest)),function(delta){
+  const onText=function(delta){
    const shouldFollow=messages.scrollHeight-messages.scrollTop-messages.clientHeight<120;
    if(waiting){node.innerHTML="";waiting=false;messageBox.classList.remove("is-pending");const copyButton=messageBox.querySelector("[data-copy-message]");if(copyButton)copyButton.disabled=false;}
    answer+=delta;renderMarkdownInto(node,answer);
    if(shouldFollow)messages.scrollTop=messages.scrollHeight;
-   $("chatStatus").textContent="Writing your answer · "+answer.length+" characters";
-  },controller.signal,function(status){$("chatStatus").textContent=status;},function(sources){renderSourceLinks($("chatSources"),sources);});
+   $("chatStatus").textContent=(useLocal?"Generating on this device · ":"Writing your answer · ")+answer.length+" characters";
+  };
+  if(useLocal){
+   if(!localApi.isReady()){
+    $("chatStatus").textContent="Loading the selected on-device model…";
+    await localApi.load({onProgress:function(p){updateLocalAiStatus(String(p.text||"Preparing local model…"),"loading");$("chatStatus").textContent=String(p.text||"Preparing local model…");}});
+   }
+   if(!localApi.isReady())throw new Error("The local model is not ready. Retry setup or choose cloud AI. This request was not sent to the cloud.");
+   answer=await localApi.respond({prompt:prompt,mode:mode,history:chatHistory.slice(0,-1).slice(-6),signal:controller.signal,onToken:onText});
+  }else{
+   answer=await streamStudyRequest(Object.assign({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),webSearch:webSearch,searchQuery:question,userPrompt:question},attachmentPayload(attachmentForRequest)),onText,controller.signal,function(status){$("chatStatus").textContent=status;},function(sources){renderSourceLinks($("chatSources"),sources);});
+  }
   if(!String(answer||"").trim()){
    waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
   }
   messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);recordChatMessage("assistant",answer);
-  $("chatStatus").textContent=needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready";
+  $("chatStatus").textContent=useLocal?"Answer ready · on-device inference; your text prompt stayed on this device":(needsCloudForThisRequest?"Answer ready · cloud used for file or research support":(needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready"));
   enableChatTools(Boolean(answer));
  }catch(err){
   messageBox.classList.remove("is-pending");
@@ -573,6 +692,7 @@ async function sendChat(raw,regenerate){
  }finally{
   if(activeChatController===controller)activeChatController=null;
   chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();renderChatSessions();
+  if(localApi&&!localApi.isPreferred()&&localApi.isReady()&&typeof localApi.unload==="function")localApi.unload().catch(function(){});
  }
 }
 $("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatAttachment){toast("Wait for the selected file to finish preparing, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
