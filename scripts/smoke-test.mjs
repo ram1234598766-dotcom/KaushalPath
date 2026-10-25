@@ -77,19 +77,27 @@ assert.ok(studyLibrary.includes("Practice questions with worked answers"), "read
 assert.ok(studyLibrary.includes("PRACTICE QUESTIONS WITH WORKED ANSWERS"), "saved note export must retain solved practice");
 assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLibrary.includes("problem.question ||") && studyLibrary.includes("problem.answer ||") && studyLibrary.includes("problem.solution ||"), "PDF export must retain solved practice with answers and reasoning");
 assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
+assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should have a dedicated export action");
+assert.match(studyLibrary, /html2pdf\.js@0\.10\.3\/dist\/html2pdf\.bundle\.min\.js/, "chapter export should load the browser PDF generator");
+assert.match(studyLibrary, /html2pdf\(\)\.set\(/, "the export action should generate and download a real PDF file");
+assert.match(studyLibrary, /filename: fileName/, "each chapter PDF should have a useful file name");
+assert.match(studyLibrary, /id="chapterPdfContent"/, "only the chapter content should be included in the exported PDF");
+assert.match(studyLibrary, /printButton\.addEventListener\("click", startPrint\)/, "print-to-PDF should remain available as a fallback");
+assert.match(studyLibrary, /The automatic download didn’t finish/, "the preview should explain how to recover if direct PDF creation fails");
+assert.match(studyLibrary, /Preparing your PDF/, "PDF generation should show progress instead of appearing unresponsive");
 assert.ok(studyLibrary.includes("function mapPalette(index)") && studyLibrary.includes("stroke-width=\"7\"") && studyLibrary.includes("stroke-width=\"2.1\""), "mind maps should use distinct colorful curved main and sub-branches");
 assert.ok(studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("mindmap-svg"), "the chapter mind map should print as a landscape SVG cover page");
 assert.ok(!studyLibrary.includes("return chosen.length > 72") && !studyLibrary.includes('last.slice(0, maxChars - 2).trimEnd() + "…"'), "mind-map labels must wrap completely instead of adding ellipses");
 assert.ok(studyLibrary.includes("const firstSentence = (value) =>") && studyLibrary.includes("const avoidSentence = (value) =>"), "mind maps should show complete explanations and grammatical trap sentences");
 assert.ok(studyLibrary.indexOf("notes.forEach(enrichIndividualChapter);") > studyLibrary.indexOf("individualChapterSets.flat().forEach((item) => {") && !studyLibrary.includes('linkedSections.push({heading:"Related topic · "'), "detailed chapter sources must merge before fallback enrichment and stay on-topic");
 assert.ok(studyLibrary.includes("print-color-adjust:exact") && html.includes(".notes-card:nth-child(7n+1)") && html.includes(".notes-detail .practice-answer"), "chapter PDFs, note cards and practice explanations should use distinct colours");
-assert.ok(studyLibrary.indexOf('window.open("", "_blank")') < studyLibrary.indexOf("const sections = items.length === 1"), "PDF export must open the print destination synchronously before building the large chapter packet");
-assert.ok(studyLibrary.includes('printFrame = document.createElement("iframe")') && studyLibrary.includes("printTarget.document.write(page)"), "PDF export must still work when pop-ups are blocked by using an embedded print frame");
-assert.ok(studyLibrary.includes('printTarget.addEventListener("load"') && studyLibrary.includes("window.setTimeout(startPrint, 1400)") && studyLibrary.includes("printTarget.print()"), "PDF export must wait for the document and retry print startup when browser load timing varies");
-assert.match(studyLibrary, /previewShell\.setAttribute\("role", "dialog"\)/, "blocked popups must open an accessible print preview");
-assert.match(studyLibrary, /flex: "1 1 auto"/, "the fallback preview must be large enough to see and use");
-assert.match(studyLibrary, /id="printButton"/, "the print page must keep a direct Print / Save PDF button if auto-print is blocked");
-assert.match(studyLibrary, /getElementById\("printButton"\)/, "the parent app must bind the print action without an inline handler so Content Security Policy does not block it");
+
+
+
+
+
+
+
 assert.match(studyLibrary, /We couldn’t prepare these notes/, "PDF export errors must show a helpful message instead of leaving a blank window");
 assert.match(studyLibrary, /Your chapter notes are ready/, "the PDF preview should explain the next step in natural language");
 assert.match(studyLibrary, /Start by checking exactly what the question wants you to find or explain/, "general revision guidance should sound natural and clear");
@@ -110,7 +118,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v18"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v19"), "PWA cache must be bumped for new chapter assets");
 assert.ok(questionBank.includes("window.KP_FULL_LENGTH_QUESTION_BANK = fullLengthBank"), "the question bank must expose full-length JEE and NEET question pools");
 assert.ok(questionBank.includes("questionsPerTest: 90") && questionBank.includes("questionsPerTest: 180"), "the configured mock lengths must be 90 for JEE and 180 for NEET");
 assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("selectRotated(subjects.Mathematics,30") && app.includes("selectRotated(subjects.Biology,90"), "the app must assemble the requested subject-balanced mock tests");
@@ -233,14 +241,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v18/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v19/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v18/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v19/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -257,7 +265,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v18/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v19/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
