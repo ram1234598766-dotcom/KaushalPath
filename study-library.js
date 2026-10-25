@@ -2113,7 +2113,7 @@ function printNotes(items) {
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
     const qualityHint = document.createElement("span");
-    qualityHint.textContent = "Download PDF saves a real .pdf file directly — no print dialog. The complete concept map stays vector-sharp, followed by detailed portrait notes with selectable text.";
+    qualityHint.textContent = "The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages. Click Download PDF to save a real .pdf file directly — no print dialog. The map stays crisp and selectable.";
     qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
     guidance.append(heading, status, qualityHint);
 
