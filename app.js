@@ -220,7 +220,24 @@ function needsRemoteTools(payload){
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(function(){el.classList.add("hidden");},3200);}
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
-function renderTests(){const grid=$("testGrid");grid.innerHTML="";questions.forEach(function(t){const card=document.createElement("article");card.className="test-card";card.dataset.exam=t.exam;const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";const kind=t.official?"Official sample-paper question":"Original practice set";const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";const sourceLinks=t.official?'<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>':"";card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+t.id+'">Start test ↗</button>';grid.appendChild(card);});}
+function renderTests(){
+ const grid=$("testGrid");grid.innerHTML="";
+ questions.forEach(function(t){
+  const card=document.createElement("article");
+  card.className="test-card"+(t.fullLength?" full-length-test-card":"");
+  card.dataset.exam=t.exam;
+  const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";
+  const kind=t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
+  const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);
+  const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
+  let sourceLinks="";
+  if(t.official) sourceLinks='<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>';
+  else if(t.fullLength && t.exam==="JEE Main") sourceLinks='<div class="test-source-links"><a href="https://jeemain.nta.nic.in/2026/" target="_blank" rel="noopener noreferrer">Official JEE Main papers and syllabus ↗</a></div>';
+  else if(t.fullLength && t.exam==="NEET UG") sourceLinks='<div class="test-source-links"><a href="https://neet.nta.nic.in/documents/page/4/" target="_blank" rel="noopener noreferrer">Official NEET UG syllabus and documents ↗</a></div>';
+  card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+safe(t.id)+'">Start test ↗</button>';
+  grid.appendChild(card);
+ });
+}
 function renderStudyText(answer){const out=$("studyOutput");out.innerHTML=markdownToHtml(answer);lastAnswerText=answer;$("copyAnswer").disabled=!answer;if($("saveStudyPdf"))$("saveStudyPdf").disabled=!answer;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=!answer;}
 $("copyAnswer").addEventListener("click",async function(){if(!lastAnswerText)return;try{await navigator.clipboard.writeText(lastAnswerText);toast("Study text copied.");}catch(e){toast("Copy was blocked by this browser.");}});
 const subjectSets={
