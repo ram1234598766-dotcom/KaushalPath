@@ -18,7 +18,7 @@ Benchmarks describe **recorded attempts**, not unique students. The Worker hides
 
 ## Reliability and abuse controls
 - Analytics request bodies are read as a bounded stream. The 16 KiB limit is enforced even when a client omits or lies about `Content-Length`; invalid UTF-8 and malformed JSON are rejected before D1 is called.
-- The public analytics write path fails closed with a retryable `503` if the Cloudflare rate-limit binding or connection IP is unavailable. Throttled writes receive `429` plus `Retry-After`.
+- Analytics writes and public benchmark reads fail closed with a retryable `503` if the Cloudflare rate-limit binding or connection IP is unavailable. Throttled requests receive `429` plus `Retry-After`.
 - Every API response includes `X-Request-Id` and `Server-Timing`. Failure logs use structured event fields and avoid recording prompt/body data or student-level study history.
 - CORS is an origin policy, not user authentication. The API intentionally stores only aggregate attempts and should continue to require explicit student consent in the client before submitting attempts.
 - `GET /api/v2/health` confirms that the Worker route is responding; it does not claim that D1, KV, or the analytics provider is healthy.
