@@ -53,8 +53,8 @@
   }
   function isReady() { return Boolean(engine && activeModel); }
   function modelLabel(id) {
-    if (id === MODEL_PLUS) return "Llama 3.2 · 3B (quantised)";
-    if (id === MODEL_LITE) return "Llama 3.2 · 1B (quantised)";
+    if (id === MODEL_PLUS) return "Higher-capacity local model · 3B (quantised)";
+    if (id === MODEL_LITE) return "Small local model · 1B (quantised)";
     return id || "No local model loaded";
   }
   function candidatesFor(caps) {
@@ -142,6 +142,10 @@
       if (!candidate || !chosen) {
         throw new Error("No selected local model could be loaded on this device. Tried " + modelCandidates.map(modelLabel).join(" then ") + ". " + failures.join(" | ") + ". The model was not marked installed; choose cloud AI or try again after closing other apps/tabs.");
       }
+      if (!isPreferred()) {
+        if (candidate && typeof candidate.unload === "function") { try { await candidate.unload(); } catch (error) {} }
+        throw new Error("Local AI was switched off before setup finished. Cloud AI remains selected.");
+      }
       engine = candidate;
       activeModel = chosen;
       if (opts.onProgress) opts.onProgress({ progress: 1, text: modelLabel(chosen) + " is ready on this device." });
@@ -152,6 +156,16 @@
       throw error;
     }).finally(() => { loadingPromise = null; });
     return loadingPromise;
+  }
+
+  async function unload() {
+    const pending = loadingPromise;
+    if (pending) { try { await pending; } catch (error) {} }
+    const current = engine;
+    engine = null;
+    activeModel = "";
+    if (current && typeof current.unload === "function") await current.unload();
+    return true;
   }
 
   async function respond(options) {
@@ -200,6 +214,7 @@
     isPreferred,
     setPreferred,
     load,
+    unload,
     respond,
     getModel: () => activeModel,
     getModelLabel: () => modelLabel(activeModel),
