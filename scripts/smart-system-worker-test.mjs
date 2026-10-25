@@ -91,7 +91,7 @@ async function json(response) { return response.json(); }
   assert.deepEqual(await json(response), { status: "ok", service: "kaushalpath-smart-system", apiVersion: 2 });
   assert.ok(response.headers.get("X-Request-Id"), "all responses carry a traceable request ID");
   assert.match(response.headers.get("Server-Timing") || "", /^app;dur=\d+$/);
-  assert.equal(response.headers.get("Cache-Control"), "no-store, max-age=0");
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
 }
 
 {
