@@ -121,7 +121,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v29"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v30"), "PWA cache must be bumped for new chapter assets");
 assert.ok(questionBank.includes("window.KP_FULL_LENGTH_QUESTION_BANK = fullLengthBank"), "the question bank must expose full-length JEE and NEET question pools");
 assert.ok(questionBank.includes("questionsPerTest: 90") && questionBank.includes("questionsPerTest: 180"), "the configured mock lengths must be 90 for JEE and 180 for NEET");
 assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("selectRotated(subjects.Mathematics,30") && app.includes("selectRotated(subjects.Biology,90"), "the app must assemble the requested subject-balanced mock tests");
@@ -244,14 +244,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v29/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v30/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v29/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v30/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -268,7 +268,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v29/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v30/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
@@ -541,14 +541,21 @@ assert.ok(app.includes('String(event.key).toLowerCase()==="k"') && app.includes(
 assert.match(app, /dashboardAccuracyBar/, "dashboard accuracy should be calculated from local practice results");
 assert.match(app, /mobile-dock \[data-view\]/, "mobile quick navigation should track the active workspace");
 assert.match(studyLibrary, /window\.KP_STUDY_NOTE_INDEX = notes\.map/, "chapter metadata should be indexed for global search without exposing learner history");
-assert.match(serviceWorker, /kaushalpath-shell-v29/, "the offline shell cache should be refreshed for the workspace overhaul");
+assert.match(serviceWorker, /kaushalpath-shell-v30/, "the offline shell cache should be refreshed for the workspace overhaul");
 
-// CBSE annual exam model-paper coverage and written-response safety.
+// CBSE self-paced sample-test behaviour and written-response safety.
 
 assert.match(html, /id="cbseAnnualExamBuilder"/, "Test Series must include a CBSE annual-exam builder");
+assert.match(html, /Start sample test/, "the CBSE builder should start a sample test");
+assert.match(html, /Sample test · Self-paced/, "the CBSE builder should describe the sample test as self-paced");
+assert.doesNotMatch(html, /Start timed annual paper|Timed · Full paper/, "the CBSE builder must not present this as a timed annual test");
 assert.match(html, /id="cbseAnnualClass"/, "annual papers must support Classes 10, 11 and 12");
 assert.match(html, /id="cbseAnnualSubject"/, "annual papers must let learners choose a subject");
 assert.match(app, /function buildCbseAnnualPaper\(className, subject\)/, "annual papers should be built from the selected class and subject");
+assert.match(app, /sampleTest:true/, "the generated CBSE paper should be explicitly marked as a sample test");
+assert.match(app, /timed:false/, "the generated CBSE sample test should be untimed");
+assert.match(app, /if\(t\.timed!==false\)tick=setInterval/, "countdown timers should only run for timed tests");
+assert.match(app, /Self-paced sample test — no timer is enforced/, "the active sample test should disclose its untimed behaviour");
 assert.match(app, /function cbseAnnualPaperConfig\(className, subject\)/, "annual papers should use class/subject-aware mark and duration blueprints");
 assert.match(app, /function downloadCbseAnnualPaperPdf\(paper,withKey\)/, "annual question papers and marking schemes should be direct PDF downloads");
 assert.ok(app.includes('pdf.output("blob")') && app.includes('anchor.download="CBSE-"'), "annual paper exports should create downloadable PDF blobs");
@@ -561,4 +568,4 @@ assert.match(app, /cbseClass10AnnualSubjects/, "the annual subject picker should
 assert.match(app, /cbseSeniorAnnualSubjects/, "the annual subject picker should cover senior-secondary core and elective subjects");
 assert.match(html, /sqp_classx_2026-27\.html/, "the Class X annual paper builder should link to current official SQPs");
 assert.match(html, /SQP_CLASSXII_2026-27\.html/, "the Class XII annual paper builder should link to current official SQPs");
-assert.match(serviceWorker, /kaushalpath-shell-v29/, "the offline shell cache must refresh after the annual-exam workspace update");
+assert.match(serviceWorker, /kaushalpath-shell-v30/, "the offline shell cache must refresh after the annual-exam workspace update");

@@ -462,11 +462,11 @@ function buildCbseAnnualPaper(className, subject){
  const total=qs.reduce(function(sum,q){return sum+Number(q.mark||1);},0);
  if(total!==cfg.marks)throw new Error("The annual-paper blueprint does not sum to the required maximum marks.");
  const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
- const id="cbse-annual-"+className.toLowerCase().replace(/\s+/g,"-")+"-"+slug;
+ const id="cbse-sample-"+className.toLowerCase().replace(/\s+/g,"-")+"-"+slug;
  return {
-  id:id,title:"CBSE-Style Annual Exam · "+className+" · "+subject,exam:"CBSE Annual",subject:subject,level:className,
-  duration:cfg.duration,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
-  desc:fallback?"Original subject-format competency scaffold because class-specific curated chapters were not available. Check coverage against the current official curriculum. This is not an official CBSE paper.":"Original syllabus-mapped competency model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
+  id:id,title:"CBSE Sample Test · "+className+" · "+subject,exam:"CBSE",subject:subject,level:className,
+  duration:cfg.duration,timed:false,sampleTest:true,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
+  desc:fallback?"Self-paced original subject-format sample test. Class-specific curated chapters were not available, so check coverage against the current official curriculum. This is not an official CBSE paper.":"Self-paced original syllabus-mapped sample test with objective, constructed-response and case/source-based questions. No timer is enforced. Not an official CBSE paper.",
   sourceScope:source.scope,subjectFormatFallback:fallback,qs:qs
  };
 }
@@ -477,11 +477,11 @@ function updateCbseAnnualPattern(){
  const totalQuestions=config.mcq+config.veryShort+config.short+config.long+config.case;
  const marks=$("cbseAnnualMarks"),duration=$("cbseAnnualDuration"),count=$("cbseAnnualQuestionCount"),competency=$("cbseAnnualCompetency");
  if(marks)marks.textContent=config.marks+" marks";
- if(duration)duration.textContent=(config.duration/60)+" hour"+(config.duration===60?"":"s");
+ if(duration)duration.textContent="Self-paced";
  if(count)count.textContent=totalQuestions+" questions";
  if(competency)competency.textContent=config.profile==="class-x-science"?"Science · 39-question model":config.profile==="class-x-mathematics"?"Maths · 38-question model":config.profile==="class-xii-computer-science"?"CS · 37-question model":config.profile==="senior-science"?"Science · 33-question model":config.profile==="language-paper"?"Reading + language application":"Case + application";
  const status=$("cbseAnnualStatus");
- if(status){const source=cbseAnnualSources(classNode.value,subjectNode.value);status.textContent=source.fallback?"This subject will use an original subject-format competency scaffold. Verify chapter coverage against the current CBSE curriculum and your school syllabus.":"Class-specific curated chapter content is available for this selection. The paper will be an original practice model, not an official CBSE paper.";}
+ if(status){const source=cbseAnnualSources(classNode.value,subjectNode.value);status.textContent=source.fallback?"This self-paced sample test uses an original subject-format competency scaffold. Verify chapter coverage against the current CBSE curriculum and your school syllabus.":"Class-specific curated chapter content is available for this self-paced sample test. It is original practice, not an official CBSE paper.";}
 }
 function initCbseAnnualBuilder(){
  const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject"),start=$("cbseAnnualStart"),downloadPaper=$("cbseAnnualDownloadPaper"),downloadKey=$("cbseAnnualDownloadKey"),status=$("cbseAnnualStatus");
@@ -526,7 +526,7 @@ function initCbseAnnualBuilder(){
   const existing=questions.findIndex(function(test){return test.id===paper.id;});
   if(existing>=0)questions[existing]=paper;else questions.push(paper);
   renderTests();
-  if(status)status.textContent=(paper.subjectFormatFallback?"This subject uses an original subject-format competency scaffold because no class-specific curated chapter set was available. Check chapter coverage against the official syllabus. ":"Paper content is drawn from available class-specific curated chapter notes. ")+ "Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
+  if(status)status.textContent=(paper.subjectFormatFallback?"This sample test uses an original subject-format competency scaffold because no class-specific curated chapter set was available. Check chapter coverage against the official syllabus. ":"Sample test content is drawn from available class-specific curated chapter notes. ")+ "Started "+paper.title+". This test is self-paced with no timer. Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
   startTest(paper.id);
  });
  downloadPaper.addEventListener("click",function(){exportPaper(false);});
@@ -536,7 +536,7 @@ function initCbseAnnualBuilder(){
 
 
 function downloadCbseAnnualPaperPdf(paper,withKey){
- if(!paper||!Array.isArray(paper.qs)||!paper.qs.length)throw new Error("The selected annual paper has no questions.");
+ if(!paper||!Array.isArray(paper.qs)||!paper.qs.length)throw new Error("The selected sample test has no questions.");
  if(typeof window.KP_LOAD_PDF_ENGINE!=="function")throw new Error("The direct PDF engine is unavailable.");
  return window.KP_LOAD_PDF_ENGINE().then(function(engine){
   const pdf=new engine.jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true,putOnlyUsedFonts:true});
@@ -588,7 +588,7 @@ function downloadCbseAnnualPaperPdf(paper,withKey){
   pageStart(false);
   pdf.setFont("helvetica","bold");pdf.setFontSize(16);color(pdf.setTextColor,palette.ink);
   const titleLines=pdf.splitTextToSize(title,size().w-margin*2);pdf.text(titleLines,margin,y);y+=titleLines.length*7+3;
-  addText("Maximum marks: "+paper.maxMarks+"    Time allowed: "+(paper.duration/60)+" hour"+(paper.duration===60?"":"s"),{fontSize:9,style:"bold",color:palette.blue,after:3});
+  addText("Maximum marks: "+paper.maxMarks+" · Self-paced sample test · No timer · Suggested practice time: "+(paper.duration/60)+" hour"+(paper.duration===60?"":"s"),{fontSize:9,style:"bold",color:palette.blue,after:3});
   addText(isKey
    ?"Marking scheme and suggested answers. Accept equivalent correct reasoning and syllabus-appropriate wording; this is an original practice model, not an official CBSE key."
    :"Instructions: Attempt every question. Read any source or case before answering. Show calculations/reasoning where relevant. This is an original KaushalPath practice model, not an official CBSE paper.",{fontSize:8.5,color:palette.muted,after:5});
@@ -622,7 +622,7 @@ function downloadCbseAnnualPaperPdf(paper,withKey){
   if(!(blob instanceof Blob)||blob.size<1000)throw new Error("The generated PDF is unexpectedly small.");
   const url=URL.createObjectURL(blob),anchor=document.createElement("a");
   const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
-  anchor.href=url;anchor.download="CBSE-"+className.replace(/\s+/g,"-")+"-"+slug+"-Annual-"+(isKey?"Marking-Scheme":"Question-Paper")+".pdf";
+  anchor.href=url;anchor.download="CBSE-"+className.replace(/\s+/g,"-")+"-"+slug+"-Sample-Test-"+(isKey?"Marking-Scheme":"Question-Paper")+".pdf";
   anchor.style.display="none";document.body.appendChild(anchor);anchor.click();anchor.remove();
   window.setTimeout(function(){URL.revokeObjectURL(url);},30000);
   return {filename:anchor.download,pages:total,size:blob.size};
@@ -637,14 +637,14 @@ function renderTests(){
   card.style.setProperty("--kp-card-index",String(Math.min(index,12)));
   card.dataset.exam=t.exam;
   const cls=t.exam==="NEET UG"?"teal":(t.exam==="CBSE"||t.exam==="CBSE Annual")?"orange":"";
-  const kind=t.annualExam?"CBSE-style annual model paper · competency + written responses":t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
+  const kind=t.sampleTest?"CBSE sample test · self-paced · competency + written responses":t.annualExam?"CBSE model paper · competency + written responses":t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
   const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);
   const marking=t.annualExam?"Objective marks automatic; written responses self-marked":t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
   let sourceLinks="";
   if(t.official) sourceLinks='<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>';
   else if(t.fullLength && t.exam==="JEE Main") sourceLinks='<div class="test-source-links"><a href="https://jeemain.nta.nic.in/2026/" target="_blank" rel="noopener noreferrer">Official JEE Main papers and syllabus ↗</a></div>';
   else if(t.fullLength && t.exam==="NEET UG") sourceLinks='<div class="test-source-links"><a href="https://neet.nta.nic.in/documents/page/4/" target="_blank" rel="noopener noreferrer">Official NEET UG syllabus and documents ↗</a></div>';
-  card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+safe(t.id)+'">Start test ↗</button>';
+  card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>'+(t.sampleTest?"Self-paced · no timer":"◷ "+t.duration+" min")+'</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+safe(t.id)+'">Start test ↗</button>';
   grid.appendChild(card);
  });
 }
@@ -1261,7 +1261,7 @@ function refreshResumeBanner(){
  const test=questions.find(function(t){return t.id===saved.testId;});if(!test){banner.classList.add("hidden");return;}
  if(title)title.textContent=test.title;
  const remaining=Math.max(0,Math.ceil((saved.endAt-Date.now())/1000)),answered=test.qs.reduce(function(total,q,index){return total+(questionIsAnswered(q,saved.answers[index])?1:0);},0);
- if(detail)detail.textContent=remaining===0?"Time has expired. Resume to submit your saved answers.":answered+" of "+test.qs.length+" answers saved · Question "+(saved.index+1)+" of "+test.qs.length+" · time remaining "+String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0")+".";
+ if(detail)detail.textContent=test.timed===false?"Self-paced sample test · no timer.":remaining===0?"Time has expired. Resume to submit your saved answers.":answered+" of "+test.qs.length+" answers saved · Question "+(saved.index+1)+" of "+test.qs.length+" · time remaining "+String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0")+".";
  banner.classList.remove("hidden");
 }
 function renderHistory(){
@@ -1339,8 +1339,8 @@ $("resumeSavedTest").addEventListener("click",function(){
  const saved=getSavedTest();if(!saved){refreshResumeBanner();return;}
  const test=questions.find(function(t){return t.id===saved.testId;});if(!test)return;
  clearInterval(tick);active={test:test,answers:saved.answers,index:saved.index,endAt:saved.endAt};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
- if(active.endAt<=Date.now()){finishTest(true);return;}
- renderQuestion();saveActiveTest();tick=setInterval(function(){if(!active)return;updateTimer();},1000);
+ if(active.test.timed!==false&&active.endAt<=Date.now()){finishTest(true);return;}
+ renderQuestion();saveActiveTest();if(active.test.timed!==false)tick=setInterval(function(){if(!active)return;updateTimer();},1000);
 });
 $("discardSavedTest").addEventListener("click",function(){if(!confirm("Discard this saved test attempt? Your completed results will remain."))return;clearSavedTest();refreshResumeBanner();toast("Unfinished test discarded.");});
 window.addEventListener("beforeunload",function(){if(active)saveActiveTest();});
@@ -1587,14 +1587,14 @@ function initPlanner(){
  renderPlanner();
 }
 
-function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
-function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
+function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);tick=null;active={test:t,answers:{},index:0,endAt:t.timed===false?0:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();if(t.timed!==false)tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
+function updateTimer(){if(!active)return;const el=$("timer");if(active.test&&active.test.timed===false){if(el){el.textContent="Self-paced";el.setAttribute("aria-label","Untimed sample test");}return;}const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
 function renderQuestion(){
  if(!active)return;
  const t=active.test,q=t.qs[active.index],selected=active.answers[active.index],root=$("examWorkspace");
  const written=q.responseType==="written";
- const sourceKind=t.official?"Official sample-paper question":q.sourceType==="PYQ"?"Previous-year question":t.annualExam?"Original competency-based annual model":"Competency-based practice";
- const sourceLabel=t.official?"CBSE Class XII Computer Science · Official SQP 2026–27":(q.sourceLabel||(t.annualExam?"Original KaushalPath model · not an official CBSE paper":"Syllabus-mapped competency practice"));
+ const sourceKind=t.official?"Official sample-paper question":q.sourceType==="PYQ"?"Previous-year question":t.sampleTest?"Original CBSE sample-test question":t.annualExam?"Original competency-based model":"Competency-based practice";
+ const sourceLabel=t.official?"CBSE Class XII Computer Science · Official SQP 2026–27":(q.sourceLabel||(t.sampleTest?"Original KaushalPath sample test · not an official CBSE paper":t.annualExam?"Original KaushalPath model · not an official CBSE paper":"Syllabus-mapped competency practice"));
  const sourceMarkup='<div class="question-source"><span class="question-source-badge '+(t.official?"official":q.sourceType==="PYQ"?"pyq":"competency")+'">'+safe(sourceKind+" · "+sourceLabel)+'</span>'+(q.subject?'<span class="question-topic">'+safe(q.subject)+(q.topic?" · "+safe(q.topic):"")+'</span>':"")+(q.sourceUrl?'<a href="'+safe(q.sourceUrl)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>':"")+'</div>';
  const sectionMarkup=q.sectionTitle?'<div class="annual-section-label">'+safe(q.sectionTitle)+' · '+Number(q.mark||1)+' mark'+(Number(q.mark)===1?"":"s")+'</div>':"";
  const responseMarkup=written
@@ -1602,7 +1602,7 @@ function renderQuestion(){
   :'<div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div>';
  const answeredCount=t.qs.reduce(function(total,item,index){return total+(questionIsAnswered(item,active.answers[index])?1:0);},0);
  const maxScore=Number.isFinite(Number(q.mark))?Number(q.mark):Number(t.mark)||1;
- root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3><p class="tiny">'+answeredCount+' of '+t.qs.length+' questions answered</p></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div>'+sourceMarkup+sectionMarkup+'<div class="question '+(written?"written-question":"")+'" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div>'+responseMarkup+'<div class="question-nav" aria-label="Question navigation">'+t.qs.map(function(item,i){const done=questionIsAnswered(item,active.answers[i]);return '<button type="button" class="qnav '+(done?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+(done?", answered":"")+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+' aria-label="Previous question">← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.annualExam?"Model paper only — written responses are self-marked against the downloadable rubric; objective questions are marked automatically.":t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":t.fullLength?(t.exam==="NEET UG"?"Full NEET-length mock: 180 questions in 180 minutes, with 45 Physics, 45 Chemistry and 90 Biology questions.":"Extended JEE practice mock: 90 questions in 180 minutes; official JEE Main Paper 1 currently uses 75 questions."):"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted.")+'</p>';
+ root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3><p class="tiny">'+answeredCount+' of '+t.qs.length+' questions answered</p></div><div class="timer '+(t.sampleTest?"sample-test-timer":"") +'" id="timer" role="'+(t.sampleTest?"status":"timer") +'" aria-label="'+(t.sampleTest?"Untimed sample test":"Time remaining") +'">'+(t.sampleTest?"Self-paced":"--:--") +'</div></div>'+sourceMarkup+sectionMarkup+'<div class="question '+(written?"written-question":"")+'" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div>'+responseMarkup+'<div class="question-nav" aria-label="Question navigation">'+t.qs.map(function(item,i){const done=questionIsAnswered(item,active.answers[i]);return '<button type="button" class="qnav '+(done?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+(done?", answered":"")+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+' aria-label="Previous question">← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.sampleTest?"Self-paced sample test — no timer is enforced. Written responses are self-marked against the downloadable rubric; objective questions are marked automatically.":t.annualExam?"Model paper only — written responses are self-marked against the downloadable rubric; objective questions are marked automatically.":t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":t.fullLength?(t.exam==="NEET UG"?"Full NEET-length mock: 180 questions in 180 minutes, with 45 Physics, 45 Chemistry and 90 Biology questions.":"Extended JEE practice mock: 90 questions in 180 minutes; official JEE Main Paper 1 currently uses 75 questions."):"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted.")+'</p>';
  updateTimer();
 }
 function openMockTestWindow(id){const test=questions.find(function(q){return q.id===id&&q.fullLength;});if(!test){startTest(id);return;}const child=window.open("about:blank","_blank","popup=yes,width=1280,height=960,resizable=yes,scrollbars=yes");if(!child){toast("Your browser blocked the mock-test window. Allow pop-ups for this site, then click Start test again.");return;}const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?")){child.close();return;}if(pending)clearSavedTest();const url=new URL(window.location.href);url.searchParams.set("kpMockTest",test.id);url.hash="#tests";try{child.location.replace(url.toString());child.focus();}catch(error){child.close();toast("Could not open the mock-test window. Allow pop-ups for this site and try again.");}}
