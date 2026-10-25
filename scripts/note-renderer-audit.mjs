@@ -9,7 +9,7 @@ assert.ok(pdfExportStart >= 0 && pdfExportEnd > pdfExportStart, "the chapter PDF
 const pdfExport = source.slice(pdfExportStart, pdfExportEnd);
 assert.ok(pdfExport.includes("createAndDownloadChapterPdf("), "the chapter preview must call the direct PDF file generator");
 assert.ok(pdfExport.includes("@media print{html,body{width:100%!important;max-width:none!important;"), "print layout must remove portrait-width constraints before rendering the landscape map");
-assert.ok(pdfExport.includes("The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages."), "the PDF preview must explain the mixed page orientation");
+assert.ok(pdfExport.includes("The PDF starts with the complete chapter mind map on a landscape page, followed by detailed portrait notes."), "the PDF preview must explain the mixed page orientation without suggesting a print-dialog workflow");
 const helperStart = source.indexOf("  function uniqueNoteText(");
 const helperEnd = source.indexOf("function printNotes(items)", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "the pure chapter map and packet helpers must be present");
