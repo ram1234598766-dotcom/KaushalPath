@@ -15,6 +15,9 @@ const SHELL_FILES = [
 ];
 const STATIC_FILES = new Set([
   "/app.js",
+  "/school-chapter-guides.js",
+  "/formula-cheat-sheets.js",
+  "/exam-prep-notes.js",
   "/study-library.js",
   "/question-bank.js",
   "/manifest.webmanifest",
