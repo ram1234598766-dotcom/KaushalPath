@@ -623,7 +623,15 @@
     "class12|physics|electromagneticinductionandac": "electromagneticinduction",
     "class12|physics|rayandwaveoptics": "rayopticsandopticalinstruments",
     "class12|chemistry|solutionsandelectrochemistry": "solutions",
-    "class11|physics|oscillationsandwaves": "oscillations"
+    "class11|physics|oscillationsandwaves": "oscillations",
+    "class11|biology|cellstructureandfunction": "celltheunitoflife",
+    "class11|biology|thelivingworldandbiologicalclassification": "thelivingworld",
+    "class11|biology|plantandanimaldiversity": "plantkingdom",
+    "class11|biology|plantphysiology": "photosynthesisinhigherplants",
+    "class11|biology|humanphysiology": "digestionandabsorption",
+    "class11|biology|plantstructureandanimaltissues": "morphologyoffloweringplants",
+    "class12|biology|ecologyandecosystems": "ecosystem",
+    "class12|biology|biotechnologyprinciplesandapplications": "biotechnologyprinciplesandprocesses"
   };
   function chapterKey(item) {
     if (!item || typeof item !== "object") return "";
