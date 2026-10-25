@@ -642,5 +642,66 @@
       ["What is eutrophication?","Why does high BOD indicate risk?","How does source reduction differ from end-of-pipe treatment?"],
       ["BOD: biochemical oxygen demand.","Eutrophication: nutrient enrichment causing excessive growth and related ecological effects.","Mitigation: action reducing a cause of harm, such as greenhouse-gas emissions."])
   ];
+
+  notes.push(
+    chapter("Class 10","Hindi","Hindi Grammar and Writing Skills","व्याकरण, लेखन-कौशल और पाठ-आधारित उत्तरों को शुद्ध, सुसंगत और अंक-उपयुक्त रूप में तैयार करने के लिए विस्तृत मार्गदर्शिका।",
+      [
+        {heading:"वाक्य, पद और व्याकरणिक शुद्धता",body:"वाक्य शब्दों का ऐसा सार्थक क्रम है जो पूर्ण अर्थ व्यक्त करता है। वाक्य-सुधार में लिंग, वचन, पुरुष, काल, कारक, क्रिया-सामंजस्य और शब्द-क्रम की जाँच करें। केवल एक शब्द बदलना पर्याप्त नहीं होता; पहले यह पहचानें कि त्रुटि संज्ञा, सर्वनाम, विशेषण, क्रिया या वाक्य-संरचना में है। शुद्ध वाक्य में अर्थ भी वही रहना चाहिए जो प्रश्न के अनुसार अपेक्षित है।"},
+        {heading:"समास, मुहावरे और शब्द-प्रयोग",body:"समास में दो या अधिक पद मिलकर संक्षिप्त पद बनाते हैं; विग्रह से उनके अर्थ-संबंध को स्पष्ट करें। समास का प्रकार पहचानते समय केवल शब्द की लंबाई नहीं, बल्कि विग्रह में प्रधान पद और संबंध देखें। मुहावरे का अर्थ शाब्दिक अर्थ से अलग हो सकता है, इसलिए उसे प्रसंगानुकूल वाक्य में प्रयोग करें। पर्यायवाची/विलोम चुनते समय संदर्भ, भाव और वाक्य में शब्द की भूमिका देखें।"},
+        {heading:"औपचारिक पत्र और ई-मेल",body:"औपचारिक पत्र का उद्देश्य शुरुआत में स्पष्ट करें। प्रेषक/प्राप्तकर्ता विवरण, दिनांक, विषय, संबोधन, संक्षिप्त भूमिका, व्यवस्थित मुख्य अनुच्छेद, अपेक्षित कार्रवाई और उपयुक्त समापन शामिल करें। शिकायत-पत्र में समस्या, प्रमाण/प्रभाव और व्यवहारिक समाधान लिखें; आवेदन में योग्यता/उद्देश्य और स्पष्ट अनुरोध दें। ई-मेल में विषय-पंक्ति छोटी और सटीक रखें तथा भाषा विनम्र व अनावश्यक विस्तार से मुक्त हो।"},
+        {heading:"अनुच्छेद, सूचना और रचनात्मक लेखन",body:"लेखन से पहले प्रश्न के मुख्य उद्देश्य और पाठक की पहचान करें। अनुच्छेद में आरंभिक कथन, क्रमबद्ध तर्क/उदाहरण और निष्कर्ष होना चाहिए; प्रत्येक वाक्य मुख्य विषय से जुड़ा रहे। सूचना में कौन, क्या, कब, कहाँ और किससे संपर्क करना है जैसे तथ्य स्पष्ट हों। रचनात्मक लेखन में कथानक/विचार का क्रम, उपयुक्त शब्दावली और विषयानुकूल स्वर बनाए रखें। अंत में वर्तनी, विराम-चिह्न, दोहराव, शब्द-सीमा और सभी निर्देश जाँचें।"}
+      ],
+      ["उत्तर-ढाँचा: विषय/उद्देश्य → मुख्य तथ्य/तर्क → अपेक्षित कार्रवाई या निष्कर्ष।"],
+      [card("पत्र-जाँच सूची","विषय, संबोधन, उद्देश्य, मुख्य अनुच्छेद, अनुरोध, समापन।","औपचारिक पत्र/ई-मेल लिखते समय।","प्रश्न में दी गई शब्द-सीमा।","फॉर्मेट के साथ विषयवस्तु भी अंक दिलाती है; केवल प्रारूप पर्याप्त नहीं है।"),
+       card("व्याकरण जाँच","लिंग-वचन, क्रिया-सामंजस्य, काल, कारक, वर्तनी और विराम-चिह्न।","वाक्य-सुधार और अंतिम प्रूफरीड में।","लागू नहीं।","शुद्ध करते समय मूल आशय न बदलें।")],
+      [worked("शिकायत-पत्र का ढाँचा",["विषय में समस्या स्पष्ट लिखें।","पहले अनुच्छेद में स्थान/समय/घटना का विवरण दें।","दूसरे में प्रभाव और उपलब्ध तथ्य बताएं।","अंत में स्पष्ट, व्यवहारिक समाधान माँगें और विनम्र समापन करें।"]),
+       worked("अनुच्छेद को बेहतर बनाना",["मुख्य विचार को पहले वाक्य में रखें।","दो या तीन प्रासंगिक तर्क/उदाहरण क्रम से जोड़ें।","विषय से हटने वाली पंक्ति हटाएँ।","निष्कर्ष में मुख्य विचार लौटाएँ और शब्द-सीमा जाँचें।"])],
+      [problem("औपचारिक पत्र में विषय-पंक्ति क्यों उपयोगी है?","यह पत्र का उद्देश्य तुरंत स्पष्ट करती है।","पाठक मुख्य अनुरोध को जल्दी समझ सकता है।"),
+       problem("मुहावरे का प्रयोग कैसे जाँचना चाहिए?","उसका अर्थ और प्रसंग दोनों उपयुक्त होने चाहिए।","केवल शाब्दिक अर्थ देखकर प्रयोग न करें।"),
+       problem("अंतिम प्रूफरीड में किन बातों को देखें?","वर्तनी, व्याकरण, विराम-चिह्न, क्रम और निर्देश/शब्द-सीमा।","भाषा और प्रश्न-पूर्ति दोनों जाँचें।")],
+      ["पत्र का उद्देश्य देर से बताना।","मुहावरे का शाब्दिक अर्थ लेकर गलत प्रयोग करना।","अनुच्छेद में असंबद्ध विचार जोड़ना।","शब्द-सीमा और प्रश्न के निर्देश भूलना।"],
+      ["हर लेखन-प्रश्न में पहले अपेक्षित प्रारूप पहचानें, फिर विषयवस्तु को अनुच्छेदों में व्यवस्थित करें।"],
+      ["औपचारिक पत्र के मुख्य भाग कौन-से हैं?","समास-विग्रह से क्या स्पष्ट होता है?","सूचना में कौन-से बुनियादी तथ्य होने चाहिए?"],
+      ["समास: पदों के मेल से बना संक्षिप्त पद।","मुहावरा: विशेष अर्थ वाला स्थिर पद-समूह।","विषय-पंक्ति: पत्र/ई-मेल के उद्देश्य का संक्षिप्त परिचय।"]),
+    chapter("Class 12","Computer Science","Functions and Data Structures","Use function contracts, collection choice, recursion, stacks and algorithmic reasoning to write reliable programmes.",
+      [
+        {heading:"Function contracts and parameter passing",body:"A function should have a clear purpose, required inputs, return value and assumptions. Parameters are names in the definition; arguments are supplied in a call. Return sends a value to the caller; print only displays output. Scope controls where a name can be accessed. Keep functions small enough to test and avoid hidden dependency on mutable global data."},
+        {heading:"Lists, tuples, dictionaries and strings",body:"Lists are ordered and mutable; tuples are ordered and immutable; strings are immutable character sequences; dictionaries map keys to values. Indexing begins at zero and slices exclude their stop index. Choose a structure based on needed operations: ordered updates, fixed groups, character processing or key lookup. Understand aliasing: two names may refer to the same mutable list, so edits through one name may be visible through the other."},
+        {heading:"Stack, queue and recursion",body:"A stack is LIFO and a queue is FIFO. List append/pop at the end can implement a simple stack; a queue needs operations that preserve first-in-first-out behaviour efficiently. Recursion repeatedly calls a function on a smaller/subproblem state; a base case is required, and every recursive path must progress toward it. Trace call stack state to diagnose unexpected output."},
+        {heading:"Complexity, testing and robustness",body:"Big-O describes how work grows with input size, not exact seconds. Linear search is O(n); binary search is O(log n) when the data is sorted and comparable. Test boundary/empty inputs, duplicate keys, missing values and invalid input where relevant. A correct algorithm has a clear invariant and terminates on valid inputs."}
+      ],
+      ["List first index=0; slice stop is excluded.","Stack=LIFO; queue=FIFO.","Linear search O(n); binary search O(log n) when sorted."],
+      [card("Return vs print","Return value is used by caller; print displays information.","Use when designing reusable functions.","Any type.","A printed output does not equal a return result."),
+       card("Choose data structure","Match order, mutability and lookup needs.","Use in design/trace questions.","Time/space complexity where requested.","Watch shared references to mutable objects.")],
+      [worked("Predict a slice",["For values [10,20,30,40,50], values[1:4] includes indexes 1,2,3.","The result is [20,30,40].","Stop index 4 is excluded."]),
+       worked("Write a stack trace",["Start empty; push A then B: [A,B], with B at top.","Pop returns B and leaves [A].","Check empty stack before a further pop."])],
+      [problem("What is the difference between list and tuple?","A list is mutable; a tuple is immutable under normal use.","Both are ordered sequence types."),
+       problem("Why does binary search require sorted data?","It discards half the interval based on order.","Without sorting, comparisons cannot justify discarding half."),
+       problem("What prevents recursive calls from continuing forever?","A reachable base case and progress toward it.","Both are necessary for termination.")],
+      ["Using print instead of return in reusable code.","Ignoring slice stop exclusion.","Using binary search on unsorted data.","Writing recursion without a terminating base case."],
+      ["Trace variable values and data-structure contents after every operation; state assumptions behind complexity claims."],
+      ["What is aliasing?","How do stack and queue differ?","What assumptions permit binary search?"],
+      ["Aliasing: multiple names refer to the same object.","LIFO: last in, first out.","Base case: recursion's terminating condition."]),
+    chapter("Class 12","English","Literary Analysis and Textual Evidence","Write detailed literature answers that interpret theme, character, setting, language and structure using evidence.",
+      [
+        {heading:"Move from plot to analysis",body:"Plot retells what happens; analysis explains how events, choices and language create meaning. Begin by identifying the question's focus—character, conflict, setting, theme, narrator or technique. Select two or three relevant details from the prescribed text, then explain how each detail supports the interpretation. Avoid writing a general chapter summary when asked about one specific idea."},
+        {heading:"Characterisation and change",body:"Character analysis examines actions, speech, motives, relationships and change over the text. Distinguish direct description from indirect characterisation through choices and reactions. A character may show contradictions; explain how context or conflict helps interpret them. Strong answers use evidence across the narrative rather than one isolated adjective."},
+        {heading:"Theme, imagery and structure",body:"Themes are ideas developed through patterns of events, images, contrasts and consequences; they are not merely one-word labels. Imagery and symbolism gain meaning from their context. Narrative point of view influences what the reader knows and how events are presented; pacing, sequence and contrast can shape tension or sympathy. Explain the effect of a technique rather than only naming it."},
+        {heading:"Quotations and paragraph construction",body:"Use a short, accurate quotation or precise paraphrase, then interpret it. A paragraph can follow claim → evidence → explanation → link back to the prompt. Do not invent quotations or attribute words to the wrong speaker. End with a judgement supported by the text, and respect the requested length and prescribed-text scope."}
+      ],
+      ["Literary paragraph: claim → textual evidence → interpretation → link to question."],
+      [card("Evidence-based analysis","Support interpretation with exact details and explanation.","Use for theme/character questions.","Word count as prescribed.","A quotation without explanation is not complete analysis."),
+       card("Technique and effect","Name a technique, identify an example and explain its reader/narrative effect.","Use for imagery, point of view and structure questions.","Textual evidence.","Do not name a technique that the text doesn't support.")],
+      [worked("Turn plot summary into analysis",["Summary: the character leaves home.","Claim: the departure signals a conflict between duty and independence.","Evidence: choose a scene detail or line that reveals hesitation/resolve.","Explain how the detail develops the conflict and answers the prompt."]),
+       worked("Analyse imagery",["Identify the image and its immediate context.","Describe associations it evokes in the work.","Connect those associations to character, mood or theme.","Avoid claiming a universal symbol meaning without textual support."])],
+      [problem("Why is a plot summary insufficient for a theme question?","It recounts events but may not explain the idea developed through them.","Analysis connects detail to meaning."),
+       problem("What should follow a quotation?","Explanation showing how it supports the claim.","Evidence needs interpretation."),
+       problem("How should an answer handle conflicting traits in a character?","Use context and multiple actions to explain complexity.","Characters need not fit one adjective.")],
+      ["Retelling the whole plot instead of answering the prompt.","Using inaccurate quotations.","Naming imagery/irony without explaining effect.","Making a theme claim unsupported by the prescribed text."],
+      ["Every paragraph should contain a direct claim and textual support. Use precise paraphrase if exact quotation is uncertain."],
+      ["How does point of view shape narrative?","What is the difference between plot and theme?","How can character contradiction strengthen analysis?"],
+      ["Theme: central idea developed by a work.","Characterisation: methods used to present character traits/change.","Narrative point of view: perspective through which the story is presented."])
+  );
+
   window.KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES = notes;
 })();
