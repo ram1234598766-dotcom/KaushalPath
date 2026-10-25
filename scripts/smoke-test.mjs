@@ -59,6 +59,8 @@ assert.ok((ncertChemistry.match(/make\("Class /g) || []).length >= 23, "Chemistr
 assert.ok((ncertMathematics.match(/make\("Class /g) || []).length >= 40, "Mathematics should include individual Class 10-12 chapters");
 assert.ok((ncertBiology.match(/make\("Class /g) || []).length >= 35 && (ncertBiology.match(/makeClass10Science\(/g) || []).length >= 6, "Biology should include individual Class 11-12 chapters plus Class 10 Science biology topics");
 assert.match(studyLibrary, /function chapterDepthScore\(item\)/, "the catalogue should rank detailed NCERT content above short duplicate summaries");
+assert.ok(existsSync(new URL("../scripts/ncert-content-audit.mjs", import.meta.url)), "the individual NCERT content audit should be included in CI");
+assert.match(pkg.scripts.test, /node scripts\/ncert-content-audit\.mjs/, "CI must execute the NCERT content audit");
 assert.match(studyLibrary, /KP_NCERT_CHAPTER_NOTES/, "the catalogue must merge the detailed NCERT chapter data");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
 assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
