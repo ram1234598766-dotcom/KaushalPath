@@ -228,6 +228,407 @@ function needsRemoteTools(payload){
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(function(){el.classList.add("hidden");},3200);}
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
+
+const cbseCommonLanguages=[
+ "Arabic","Assamese","Bengali","Bhoti","Bhutia","Bodo","French","German","Gujarati","Japanese","Kannada","Kashmiri","Kokborok","Lepcha","Malayalam","Manipuri","Marathi","Mizo","Nepali","Odia","Persian","Punjabi","Russian","Sanskrit","Santhali","Sindhi","Spanish","Tamil","Telugu","Tibetan","Urdu"
+];
+const cbseClass10AnnualSubjects=[
+ "Mathematics (Standard)","Mathematics (Basic)","Science","Social Science","English Language & Literature","English Communicative","Hindi Course A","Hindi Course B","Sanskrit",
+ "Computer Applications","Information Technology","Artificial Intelligence","Home Science","Elements of Business","Elements of Book Keeping and Accountancy","National Cadet Corps (NCC)","Painting","Hindustani Music (Vocal)","Hindustani Music (Melodic Instruments)","Hindustani Music (Percussion)",
+ "Retail","Introduction to Financial Markets","Introduction to Tourism","Beauty & Wellness","Front Office Operations","Marketing and Sales",
+ ...cbseCommonLanguages.filter(function(subject){return subject!=="Sanskrit";}),
+ "Other approved subject / language"
+];
+const cbseSeniorAnnualSubjects=[
+ "Mathematics","Applied Mathematics","Physics","Chemistry","Biology","Biotechnology","English Core","English Elective","Hindi Core","Hindi Elective",
+ "Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education",
+ "Entrepreneurship","Legal Studies","Home Science","Engineering Graphics","Fine Arts — Painting","Fine Arts — Sculpture","Fine Arts — Graphics","Fine Arts — Applied Art",
+ "NCC","Agriculture","Artificial Intelligence","Data Science","Information Technology","Retail","Introduction to Financial Markets","Introduction to Tourism","Beauty & Wellness","Front Office Operations","Marketing and Sales",
+ "Hindustani Music (Vocal)","Hindustani Music (Melodic Instruments)","Hindustani Music (Percussion)","Carnatic Music (Vocal)","Carnatic Music (Melodic Instruments)","Carnatic Music (Percussion)",
+ "Dance — Bharatanatyam","Dance — Kathak","Dance — Odissi","Other approved subject / language",
+ ...cbseCommonLanguages
+];
+const cbseAnnualSubjectOptions={"Class 10":cbseClass10AnnualSubjects,"Class 11":cbseSeniorAnnualSubjects,"Class 12":cbseSeniorAnnualSubjects};
+function cbseAnnualNormalize(value){
+ return String(value||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+}
+function cbseAnnualCanonical(value){
+ const text=cbseAnnualNormalize(value);
+ const aliases={
+  "mathematics standard":"mathematics","mathematics basic":"mathematics","applied mathematics":"mathematics",
+  "science":"science","social science":"social science",
+  "english language literature":"english","english communicative":"english","english core":"english","english elective":"english",
+  "hindi course a":"hindi","hindi course b":"hindi","hindi core":"hindi","hindi elective":"hindi",
+  "sanskrit core":"sanskrit","sanskrit elective":"sanskrit",
+  "information technology":"information technology","computer applications":"computer applications",
+  "artificial intelligence":"artificial intelligence","biotechnology":"biology",
+  "elements of business":"business studies","elements of book keeping and accountancy":"accountancy",
+  "fine arts painting":"painting","fine arts sculpture":"sculpture","fine arts graphics":"graphic arts","fine arts applied art":"applied art",
+  "other approved subject language":"other approved subject","national cadet corps ncc":"ncc",
+  "hindustani music vocal":"hindustani music","hindustani music melodic instruments":"hindustani music","hindustani music percussion":"hindustani music",
+  "carnatic music vocal":"carnatic music","carnatic music melodic instruments":"carnatic music","carnatic music percussion":"carnatic music",
+  "dance bharatanatyam":"dance","dance kathak":"dance","dance odissi":"dance"
+ };
+ return aliases[text]||text;
+}
+function cbseAnnualFamily(subject){
+ const canonical=cbseAnnualCanonical(subject);
+ if(canonical==="science")return ["science","physics","chemistry","biology"];
+ if(canonical==="social science")return ["social science","history","geography","political science","economics","sociology"];
+ if(canonical==="computer science"||canonical==="computer applications"||canonical==="information technology"||canonical==="artificial intelligence"||canonical==="informatics practices")return [canonical,"computer science","computer applications","information technology","informatics practices","artificial intelligence"];
+ if(canonical==="other approved subject")return [];
+ return [canonical];
+}
+function cbseAnnualFallbackNotes(className, subject){
+ const canonical=cbseAnnualCanonical(subject);
+ let points, sections, chapter;
+ if(canonical==="english"||canonical==="hindi"||cbseCommonLanguages.map(cbseAnnualCanonical).includes(canonical)||canonical==="sanskrit"){
+  chapter="Reading, writing, grammar and interpretation";
+  points=["Identify a text's central idea and support the interpretation with specific evidence.","Infer the writer's or speaker's purpose, audience and tone from the language used.","Apply grammar and vocabulary rules in context rather than as isolated definitions.","Organise a coherent written response suited to its audience, purpose and required form."];
+  sections=[{heading:"Reading and interpretation",body:"A reader is given an unfamiliar text with a clear claim, supporting evidence and a particular audience. The reader must distinguish stated information from inference, explain tone, and cite evidence."},{heading:"Writing for a real audience",body:"A writing task specifies a reader, purpose and format. A strong response uses a clear structure, accurate language, relevant details and a tone suited to the audience."}];
+ }else if(["mathematics","physics","chemistry","biology","science"].includes(canonical)){
+  chapter="Concepts, evidence and application";
+  points=["Identify the quantities, conditions or observations that matter in a given problem.","Select a relevant principle, relation, representation or method before calculating or concluding.","Show working and connect each step to the information supplied in the question.","Check units, assumptions and whether the final result is consistent with the evidence."];
+  sections=[{heading:"Applying a concept to unfamiliar information",body:"A student receives a new data set or practical situation and must identify the relevant concept, choose a method, show the reasoning and evaluate whether the conclusion fits the data."},{heading:"Reasoning and verification",body:"A complete response explains why a method applies, shows intermediate reasoning and checks units, assumptions or boundary conditions instead of relying only on a final answer."}];
+ }else if(["accountancy","business studies","economics","entrepreneurship"].includes(canonical)){
+  chapter="Business, accounting and economic decision-making";
+  points=["Identify the relevant accounting, management or economic concept in a practical situation.","Use the given figures or case evidence accurately before reaching a conclusion.","Compare available choices using a stated criterion and justify the decision.","Explain one likely consequence, limitation or risk of the chosen course of action."];
+  sections=[{heading:"Decision-making from a case",body:"A small enterprise faces a decision using limited resources and data. The response should identify the relevant concept, use the case evidence and justify a practical decision."},{heading:"Interpretation and evaluation",body:"A business or economic conclusion must be supported by figures, assumptions or evidence. A good answer distinguishes a calculation from its interpretation and recognises a relevant limitation."}];
+ }else if(["history","geography","political science","sociology","psychology"].includes(canonical)){
+  chapter="Source analysis, evidence and interpretation";
+  points=["Distinguish a fact stated in a source from an inference drawn from it.","Explain a relationship using evidence and a relevant subject concept.","Compare two situations or viewpoints against a clear criterion.","Support a conclusion with evidence and acknowledge a limitation or alternative explanation."];
+  sections=[{heading:"Interpreting a source",body:"A learner is given a short source, set of observations or social situation. The response must separate evidence from assumption, identify a relevant concept and explain a defensible inference."},{heading:"Cause, context and consequence",body:"A strong response connects evidence to context, explains a causal or conceptual relationship and justifies its conclusion rather than listing unrelated facts."}];
+ }else if(["computer science","computer applications","information technology","informatics practices","artificial intelligence","data science"].includes(canonical)){
+  chapter="Computational thinking, data and digital responsibility";
+  points=["Trace the steps of a process or program before predicting its output.","Choose a data representation or digital tool that fits the task and explain why.","Test an answer with an example or boundary case and locate a possible error.","Protect data, privacy and digital access when applying a technology to a real situation."];
+  sections=[{heading:"Solving a practical digital task",body:"A user needs a small digital solution from supplied input data. The response should describe the steps, select a suitable representation or tool and test the result against the requirements."},{heading:"Responsible technology use",body:"A proposed digital solution handles information about people. A sound evaluation considers data minimisation, access, reliability and likely unintended consequences."}];
+ }else if(["physical education","ncc","retail","beauty wellness","front office operations","marketing and sales","introduction to financial markets","introduction to tourism","agriculture","home science"].includes(canonical)){
+  chapter="Practical skills, decisions and safety";
+  points=["Identify the goal and constraints in a realistic practical situation.","Choose a safe, suitable procedure and explain the reason for each major step.","Interpret observations or simple measurements before deciding what to do next.","Evaluate the result and name one improvement, safety check or ethical consideration."];
+  sections=[{heading:"Practical scenario",body:"A person or team must complete a task safely using limited time and resources. A complete response outlines a suitable procedure, explains the reason for the main choices and checks the outcome."},{heading:"Reviewing performance",body:"After a task, use observations and evidence to judge whether the goal was met, identify a risk or limitation and propose a practical improvement."}];
+ }else{
+  chapter="Subject knowledge, evidence and applied reasoning";
+  points=["Define the key idea and use the subject's terms accurately.","Apply a relevant concept to a new situation rather than repeating a definition alone.","Use evidence, examples or a stepwise method to support the response.","Check the conclusion against the task's conditions and explain one limitation."];
+  sections=[{heading:"Applying subject knowledge",body:"A learner is given a new situation related to the selected subject. The learner must identify the relevant idea, apply it with evidence and justify a clear conclusion."},{heading:"Evaluation and communication",body:"A high-quality answer explains the reasoning, uses accurate terminology, considers a relevant limitation and communicates the conclusion in a structured way."}];
+ }
+ return [{level:className,subject:subject,chapter:chapter,intro:"Subject-format competency practice scaffold. Confirm the final chapter scope and literature texts against the prescribed current syllabus.",points:points,sections:sections,formulas:[],example:"Use the details in the source, identify the relevant principle, show the reasoning and state a justified conclusion.",recall:["What evidence supports the main conclusion?","Which condition or assumption matters most?","How would the method change if one important detail changed?"]}];
+}
+function cbseAnnualSources(className, subject){
+ const catalog=Array.isArray(window.KP_ANNUAL_PAPER_CATALOG)?window.KP_ANNUAL_PAPER_CATALOG:[];
+ const family=cbseAnnualFamily(subject);
+ const classNotes=catalog.filter(function(item){return item&&item.level===className;});
+ const exact=classNotes.filter(function(item){return family.includes(cbseAnnualCanonical(item.subject));});
+ if(exact.length)return {notes:exact,scope:"class-specific curated chapters",fallback:false};
+ // Do not silently pull another class's notes into this paper.
+ return {notes:cbseAnnualFallbackNotes(className,subject),scope:"subject-format competency scaffold",fallback:true};
+}
+function cbseAnnualPaperConfig(className, subject){
+ const text=cbseAnnualNormalize(subject),canonical=cbseAnnualCanonical(subject);
+ const seniorScience=["physics","chemistry","biology","biotechnology"].includes(canonical);
+ const seniorPractical=["computer science","informatics practices","physical education"].includes(canonical);
+ const skillSubject=/(computer applications|information technology|artificial intelligence|retail|financial markets|tourism|beauty wellness|front office|marketing and sales|ncc)/.test(text);
+ if(className==="Class 10"&&canonical==="science"){
+  return {marks:80,duration:180,mcq:20,veryShort:6,short:7,long:3,case:3,profile:"class-x-science",questionCount:39};
+ }
+ if(className==="Class 12"&&canonical==="computer science"){
+  // The current Class XII CS sample paper uses 21×1, 7×2, 3×3, 4×4, 2×5 = 70.
+  return {marks:70,duration:180,mcq:21,veryShort:7,short:3,long:2,case:4,profile:"class-xii-computer-science",questionCount:37,caseBeforeLong:true};
+ }
+ if(className!=="Class 10"&&(seniorScience||seniorPractical)){
+  // Typical 70-mark science/practical-subject model: 16×1, 5×2, 7×3, 2×4, 3×5.
+  return {marks:70,duration:180,mcq:16,veryShort:5,short:7,long:3,case:2,profile:"senior-science",questionCount:33,caseBeforeLong:true};
+ }
+ if(className==="Class 10"&&skillSubject){return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2,profile:"class-x-skill",questionCount:23};}
+ if(className==="Class 10"&&canonical==="home science"){return {marks:70,duration:180,mcq:16,veryShort:4,short:5,long:3,case:4,profile:"class-x-home-science",questionCount:32};}
+ if(className!=="Class 10"&&skillSubject&&/(retail|tourism|beauty|front office|marketing|financial markets)/.test(text)){return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2,profile:"senior-skill",questionCount:23};}
+ if(className==="Class 10"&&/mathematics/.test(text)){return {marks:80,duration:180,mcq:20,veryShort:5,short:6,long:4,case:3,profile:"class-x-mathematics",questionCount:38};}
+ if(className==="Class 10"&&/(english|hindi|sanskrit|arabic|assamese|bengali|bhoti|bhutia|bodo|french|german|gujarati|japanese|kannada|kashmiri|kokborok|lepcha|malayalam|manipuri|marathi|mizo|nepali|odia|persian|punjabi|russian|santhali|sindhi|spanish|tamil|telugu|tibetan|urdu)/.test(text)){
+  return {marks:80,duration:180,mcq:10,veryShort:10,short:6,long:4,case:3,profile:"language-paper",questionCount:33};
+ }
+ let marks=80,duration=180;
+ if(className==="Class 10"&&text==="home science"){marks=70;}
+ else if(className!=="Class 10"&&/(physics|chemistry|biology|biotechnology|computer science|informatics practices|physical education)/.test(text)){marks=70;}
+ if(marks===80)return {marks:80,duration:180,mcq:20,veryShort:5,short:6,long:4,case:3,profile:"general-80",questionCount:38};
+ if(marks===70)return {marks:70,duration:180,mcq:16,veryShort:4,short:5,long:3,case:4,profile:"general-70",questionCount:32};
+ return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2,profile:"general-50",questionCount:23};
+}
+function cbseAnnualRubric(marks){
+ const items={
+  2:["1 mark: correct concept, fact or conclusion.","1 mark: relevant reason, evidence or working."],
+  3:["1 mark: identifies the relevant concept or method.","1 mark: uses accurate evidence, a formula or an explained step.","1 mark: gives a justified conclusion and checks the result."],
+  4:["1 mark: interprets the source or identifies the key issue.","1 mark: selects and applies the relevant concept.","1 mark: explains the reasoning with evidence or working.","1 mark: justifies the conclusion and notes a relevant implication."],
+  5:["1 mark: states the relevant concept, definition or approach.","2 marks: explains the key steps, evidence or analysis accurately.","1 mark: applies the concept to the given context or example.","1 mark: reaches a justified conclusion and checks assumptions."]
+ };
+ return items[marks]||["Award marks for accurate subject terminology, evidence, reasoning and a clear conclusion."];
+}
+function cbseAnnualPaperSourceRows(noteSources){
+ const concepts=[],problems=[],recalls=[],sections=[];
+ noteSources.forEach(function(item){
+  const chapter=String(item.chapter||"Chapter revision"),subject=String(item.subject||"");
+  (Array.isArray(item.points)?item.points:[]).forEach(function(point){if(typeof point==="string"&&point.trim())concepts.push({text:point.trim(),chapter:chapter,item:item,subject:subject});});
+  (Array.isArray(item.sections)?item.sections:[]).forEach(function(section){
+   if(section&&String(section.body||"").trim())sections.push({heading:String(section.heading||chapter),body:String(section.body),points:Array.isArray(section.points)?section.points.filter(function(p){return typeof p==="string";}):[],chapter:chapter,item:item,subject:subject});
+   (section&&Array.isArray(section.points)?section.points:[]).forEach(function(point){if(typeof point==="string"&&point.trim())concepts.push({text:point.trim(),chapter:chapter,item:item,subject:subject});});
+  });
+  (Array.isArray(item.practiceProblems)?item.practiceProblems:[]).forEach(function(problem){if(problem&&String(problem.question||"").trim()&&String(problem.answer||"").trim())problems.push({question:String(problem.question),answer:String(problem.answer),solution:String(problem.solution||""),chapter:chapter,item:item,subject:subject});});
+  (Array.isArray(item.recall)?item.recall:[]).forEach(function(prompt){if(typeof prompt==="string"&&prompt.trim())recalls.push({text:prompt.trim(),chapter:chapter,item:item,subject:subject});});
+  if(String(item.example||"").trim())sections.push({heading:"Worked example · "+chapter,body:String(item.example),points:[],chapter:chapter,item:item,subject:subject});
+ });
+ if(!concepts.length){
+  noteSources.forEach(function(item){(Array.isArray(item.points)?item.points:[]).forEach(function(point){concepts.push({text:String(point),chapter:String(item.chapter||"Revision"),item:item,subject:String(item.subject||"")});});});
+ }
+ return {concepts:concepts,problems:problems,recalls:recalls,sections:sections};
+}
+function buildCbseAnnualPaper(className, subject){
+ const cfg=cbseAnnualPaperConfig(className,subject);
+ const source=cbseAnnualSources(className,subject);
+ const rows=cbseAnnualPaperSourceRows(source.notes);
+ const fallback=source.fallback;
+ const conceptRows=rows.concepts.length?rows.concepts:[{text:"Use the supplied information to identify the key concept, explain a relevant method and justify the conclusion.",chapter:subject,item:source.notes[0]||{},subject:subject}];
+ const problemRows=rows.problems;
+ const choiceDistractors=[];
+ problemRows.forEach(function(problem){choiceDistractors.push({text:problem.answer,chapter:problem.chapter});});
+ rows.concepts.forEach(function(concept){choiceDistractors.push({text:concept.text,chapter:concept.chapter});});
+ const genericDistractors=[
+  "The conclusion can be selected without using the information in the question.",
+  "The stated conditions can be ignored without changing the result.",
+  "The claim must be accepted even when the evidence contradicts it."
+ ];
+ function distinctText(pool, correct, index, chapter){
+  const out=[],seen=new Set([cbseAnnualNormalize(correct)]);
+  for(let step=0;step<pool.length&&out.length<3;step++){
+   const candidate=pool[(index*5+step)%pool.length],text=String(candidate&&candidate.text||"").trim(),key=cbseAnnualNormalize(text);
+   if(!text||text.length>1000||seen.has(key)||candidate.chapter===chapter)continue;
+   seen.add(key);out.push(text);
+  }
+  genericDistractors.forEach(function(text){if(out.length<3&&!seen.has(cbseAnnualNormalize(text))){seen.add(cbseAnnualNormalize(text));out.push(text);}});
+  return out.slice(0,3);
+ }
+ const qs=[];
+ const sectionTitles={A:"Section A · Objective questions",B:"Section B · Very short answer",C:"Section C · Short answer",D:cfg.caseBeforeLong?"Section D · Case / source / output based questions":"Section D · Long answer",E:cfg.caseBeforeLong?"Section E · Long answer":"Section E · Case / source based questions"};
+ function sourceMeta(item){
+  return {subject:subject,chapter:String(item&&item.chapter||subject),topic:String(item&&item.chapter||"Mixed syllabus revision"),sourceType:"Competency",sourceLabel:fallback?"Original subject-format competency scaffold":"Original syllabus-mapped competency practice"};
+ }
+ function addMcq(index){
+  const problem=problemRows.length&&index<problemRows.length?problemRows[index%problemRows.length]:null;
+  const concept=conceptRows[index%conceptRows.length];
+  const chapter=problem?problem.chapter:concept.chapter;
+  const correct=problem?problem.answer:concept.text;
+  const stem=problem
+   ?"A student is working on "+chapter+": "+problem.question+" Which option is consistent with the worked answer?"
+   :"In the context of "+chapter+", which statement is most directly supported by the chapter's key ideas?";
+  const choices=[{text:correct,chapter:chapter}].concat(distinctText(choiceDistractors,correct,index,chapter).map(function(text){return {text:text,chapter:"Other chapter"};}));
+  while(choices.length<4)choices.push({text:genericDistractors[(index+choices.length)%genericDistractors.length],chapter:"Alternative"});
+  const answerPosition=index%4,options=[];
+  for(let slot=0;slot<4;slot++)options.push(String((slot===answerPosition?choices[0]:choices[slot<answerPosition?slot+1:slot]||choices[(slot+1)%choices.length]).text).slice(0,1000));
+  const explanation=problem?"Correct answer: "+correct+(problem.solution?"\nReasoning: "+problem.solution:""):"The chapter-aligned statement is: "+correct;
+  qs.push(Object.assign({q:stem,o:options,a:answerPosition,e:explanation.slice(0,4800),mark:1,negativeMark:0,sectionTitle:sectionTitles.A,questionFormat:"Competency MCQ"},sourceMeta(problem?problem.item:concept.item)));
+ }
+ function makeWritten(index,marks,kind,sectionTitle){
+  const item=source.notes[index%source.notes.length]||source.notes[0]||{};
+  const section=rows.sections.length?rows.sections[index%rows.sections.length]:null;
+  const problem=problemRows.length?problemRows[index%problemRows.length]:null;
+  const recall=rows.recalls.length?rows.recalls[index%rows.recalls.length]:null;
+  const points=Array.isArray(item.points)?item.points.filter(function(p){return typeof p==="string"&&p.trim();}):[];
+  const chapter=String(item.chapter||subject);
+  let question="",modelAnswer="",context="";
+  if(kind==="case"){
+   context=String((section&&section.body)||(item.example)||(item.intro)||conceptRows[index%conceptRows.length].text);
+   question="CASE / SOURCE STUDY — "+(section&&section.heading||chapter)+"\nRead the information below:\n"+context+"\nUsing evidence from the source and your knowledge of "+chapter+", answer the task: "+(problem?problem.question:(recall?recall.text:"Explain the relevant concept, justify your reasoning and state one implication."));
+   modelAnswer=(section&&section.body?section.body+"\n":"")+(problem?"Answer: "+problem.answer+"\n"+(problem.solution?"Reasoning: "+problem.solution+"\n":""):"")+(points.length?"Key points: "+points.slice(0,4).join("; "):"");
+  }else if(kind==="long"){
+   question=recall?recall.text:(problem?problem.question:"Explain and analyse the key ideas in "+chapter+". Connect at least two ideas, give relevant evidence or an example, and justify your conclusion.");
+   if(!/explain|analyse|analyze|compare|justify|discuss|evaluate|derive|describe|why|how|what/i.test(question))question="Explain and analyse: "+question;
+   question+="\nStructure a complete "+marks+"-mark response with reasoning, supporting detail and a clear conclusion.";
+   modelAnswer=(section&&section.body?section.body+"\n":"")+(problem?"Answer: "+problem.answer+"\n"+(problem.solution?"Working / reasoning: "+problem.solution+"\n":""):"")+(points.length?"Important points: "+points.slice(0,Math.min(5,points.length)).join("; "):"");
+  }else{
+   question=problem?problem.question:(recall?recall.text:"Explain the key idea in "+chapter+" and show how it applies to a specific example.");
+   modelAnswer=problem?"Answer: "+problem.answer+(problem.solution?"\nReasoning: "+problem.solution:""):(section&&section.body?section.body:points.slice(0,3).join("\n"));
+   if(marks>=3)question+="\nShow the important reasoning or evidence; a final statement alone is not sufficient.";
+  }
+  if(!modelAnswer.trim())modelAnswer="Expected response: define the relevant concept, use evidence from the syllabus-aligned source and justify the conclusion.";
+  qs.push(Object.assign({q:question.slice(0,3800),o:[],a:-1,e:modelAnswer.slice(0,4800),modelAnswer:modelAnswer.slice(0,4800),rubric:cbseAnnualRubric(marks),mark:marks,negativeMark:0,responseType:"written",sectionTitle:sectionTitle,questionFormat:kind==="case"?"Case / source based":kind==="long"?"Long answer":"Constructed response",caseContext:kind==="case",topic:chapter},sourceMeta(problem?problem.item:(section?section.item:item))));
+ }
+ for(let i=0;i<cfg.mcq;i++)addMcq(i);
+ for(let i=0;i<cfg.veryShort;i++)makeWritten(i,2,"short",sectionTitles.B);
+ for(let i=0;i<cfg.short;i++)makeWritten(i+cfg.veryShort,3,"short",sectionTitles.C);
+ if(cfg.caseBeforeLong){
+  for(let i=0;i<cfg.case;i++)makeWritten(i+cfg.veryShort+cfg.short,4,"case",sectionTitles.D);
+  for(let i=0;i<cfg.long;i++)makeWritten(i+cfg.veryShort+cfg.short+cfg.case,5,"long",sectionTitles.E);
+ }else{
+  for(let i=0;i<cfg.long;i++)makeWritten(i+cfg.veryShort+cfg.short,5,"long",sectionTitles.D);
+  for(let i=0;i<cfg.case;i++)makeWritten(i+cfg.veryShort+cfg.short+cfg.long,4,"case",sectionTitles.E);
+ }
+ const total=qs.reduce(function(sum,q){return sum+Number(q.mark||1);},0);
+ if(total!==cfg.marks)throw new Error("The annual-paper blueprint does not sum to the required maximum marks.");
+ const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
+ const id="cbse-annual-"+className.toLowerCase().replace(/\s+/g,"-")+"-"+slug;
+ return {
+  id:id,title:"CBSE-Style Annual Exam · "+className+" · "+subject,exam:"CBSE Annual",subject:subject,level:className,
+  duration:cfg.duration,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
+  desc:fallback?"Original subject-format competency scaffold because class-specific curated chapters were not available. Check coverage against the current official curriculum. This is not an official CBSE paper.":"Original syllabus-mapped competency model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
+  sourceScope:source.scope,subjectFormatFallback:fallback,qs:qs
+ };
+}
+function updateCbseAnnualPattern(){
+ const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject");
+ if(!classNode||!subjectNode)return;
+ const config=cbseAnnualPaperConfig(classNode.value,subjectNode.value);
+ const totalQuestions=config.mcq+config.veryShort+config.short+config.long+config.case;
+ const marks=$("cbseAnnualMarks"),duration=$("cbseAnnualDuration"),count=$("cbseAnnualQuestionCount"),competency=$("cbseAnnualCompetency");
+ if(marks)marks.textContent=config.marks+" marks";
+ if(duration)duration.textContent=(config.duration/60)+" hour"+(config.duration===60?"":"s");
+ if(count)count.textContent=totalQuestions+" questions";
+ if(competency)competency.textContent=config.profile==="class-x-science"?"Science · 39-question model":config.profile==="class-x-mathematics"?"Maths · 38-question model":config.profile==="class-xii-computer-science"?"CS · 37-question model":config.profile==="senior-science"?"Science · 33-question model":config.profile==="language-paper"?"Reading + language application":"Case + application";
+ const status=$("cbseAnnualStatus");
+ if(status){const source=cbseAnnualSources(classNode.value,subjectNode.value);status.textContent=source.fallback?"This subject will use an original subject-format competency scaffold. Verify chapter coverage against the current CBSE curriculum and your school syllabus.":"Class-specific curated chapter content is available for this selection. The paper will be an original practice model, not an official CBSE paper.";}
+}
+function initCbseAnnualBuilder(){
+ const classNode=$("cbseAnnualClass"),subjectNode=$("cbseAnnualSubject"),start=$("cbseAnnualStart"),downloadPaper=$("cbseAnnualDownloadPaper"),downloadKey=$("cbseAnnualDownloadKey"),status=$("cbseAnnualStatus");
+ if(!classNode||!subjectNode||!start||!downloadPaper||!downloadKey)return;
+ let currentPaper=null;
+ function loadSubjectOptions(){
+  const list=cbseAnnualSubjectOptions[classNode.value]||cbseClass10AnnualSubjects;
+  subjectNode.replaceChildren();
+  list.forEach(function(subject){const option=document.createElement("option");option.value=subject;option.textContent=subject;subjectNode.appendChild(option);});
+  if(list.includes("Mathematics (Standard)"))subjectNode.value="Mathematics (Standard)";
+  else subjectNode.selectedIndex=0;
+  currentPaper=null;
+  updateCbseAnnualPattern();
+ }
+ function getPaper(){
+  currentPaper=buildCbseAnnualPaper(classNode.value,subjectNode.value);
+  return currentPaper;
+ }
+ async function exportPaper(withKey){
+  const paper=getPaper();
+  const button=withKey?downloadKey:downloadPaper;
+  button.disabled=true;
+  button.textContent=withKey?"Preparing marking scheme…":"Preparing question paper…";
+  if(status)status.textContent="Generating a crisp, downloadable PDF locally. No student answers are uploaded.";
+  try{
+   await downloadCbseAnnualPaperPdf(paper,withKey);
+   if(status)status.textContent=(withKey?"Marking scheme":"Question paper")+" downloaded for "+paper.level+" · "+paper.subject+".";
+  }catch(error){
+   console.error("CBSE annual paper PDF failed:",error);
+   if(status)status.textContent="Could not generate the PDF. Check your internet connection and try again.";
+   toast("Annual paper PDF generation failed. Please retry.");
+  }finally{
+   button.disabled=false;
+   button.textContent=withKey?"Download marking scheme":"Download question paper PDF";
+  }
+ }
+ classNode.addEventListener("change",loadSubjectOptions);
+ subjectNode.addEventListener("change",function(){currentPaper=null;updateCbseAnnualPattern();});
+ start.addEventListener("click",function(){
+  let paper;
+  try{paper=getPaper();}catch(error){toast("Could not assemble this model paper. Please choose another subject.");return;}
+  const existing=questions.findIndex(function(test){return test.id===paper.id;});
+  if(existing>=0)questions[existing]=paper;else questions.push(paper);
+  renderTests();
+  if(status)status.textContent=(paper.subjectFormatFallback?"This subject uses an original subject-format competency scaffold because no class-specific curated chapter set was available. Check chapter coverage against the official syllabus. ":"Paper content is drawn from available class-specific curated chapter notes. ")+ "Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
+  startTest(paper.id);
+ });
+ downloadPaper.addEventListener("click",function(){exportPaper(false);});
+ downloadKey.addEventListener("click",function(){exportPaper(true);});
+ loadSubjectOptions();
+}
+
+
+function downloadCbseAnnualPaperPdf(paper,withKey){
+ if(!paper||!Array.isArray(paper.qs)||!paper.qs.length)throw new Error("The selected annual paper has no questions.");
+ if(typeof window.KP_LOAD_PDF_ENGINE!=="function")throw new Error("The direct PDF engine is unavailable.");
+ return window.KP_LOAD_PDF_ENGINE().then(function(engine){
+  const pdf=new engine.jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true,putOnlyUsedFonts:true});
+  const isKey=Boolean(withKey),title=paper.title+(isKey?" · Marking Scheme":" · Question Paper");
+  const subject=paper.subject||"",className=paper.level||"",margin=17;
+  const palette={ink:[38,27,57],muted:[112,98,131],purple:[105,61,183],blue:[48,112,210],teal:[19,139,130],line:[226,218,239],pale:[248,245,253],white:[255,255,255]};
+  let y=20,section="";
+  const size=function(){return {w:pdf.internal.pageSize.getWidth(),h:pdf.internal.pageSize.getHeight()};};
+  const color=function(method,values){method.apply(pdf,values);};
+  function pageStart(continued){
+   const d=size();
+   pdf.setFillColor(255,255,255);pdf.rect(0,0,d.w,d.h,"F");
+   pdf.setFont("helvetica","bold");pdf.setFontSize(7.2);color(pdf.setTextColor,palette.purple);
+   pdf.text("KAUSHALPATH  /  CBSE-STYLE ANNUAL PRACTICE",margin,9);
+   pdf.setFont("helvetica","normal");pdf.setFontSize(7);color(pdf.setTextColor,palette.muted);
+   pdf.text(className+" · "+subject+" · "+(isKey?"MARKING SCHEME":"QUESTION PAPER"),d.w-margin,9,{align:"right",maxWidth:d.w-margin*2-60});
+   color(pdf.setDrawColor,palette.line);pdf.setLineWidth(.25);pdf.line(margin,12,d.w-margin,12);
+   if(continued){pdf.setFont("helvetica","italic");pdf.setFontSize(8);color(pdf.setTextColor,palette.muted);pdf.text("Continued",margin,17);}
+   y=continued?23:19;section="";
+  }
+  function newPage(){pdf.addPage("a4","portrait");pageStart(true);}
+  function fitRoom(height){if(y+height>size().h-17)newPage();}
+  function addText(raw,opts){
+   opts=opts||{};const textValue=String(raw==null?"":raw).replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/[–—−]/g,"-").replace(/×/g,"x").replace(/÷/g,"/").replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≈/g,"~=").replace(/→/g,"->").replace(/π/g,"pi").replace(/θ/g,"theta").replace(/Ω/g,"ohm").replace(/\u00a0/g," ").trim();
+   if(!textValue)return;
+   const d=size(),fontSize=opts.fontSize||9,style=opts.style||"normal",maxW=d.w-margin*2-(opts.indent||0);
+   pdf.setFont("helvetica",style);pdf.setFontSize(fontSize);color(pdf.setTextColor,opts.color||palette.ink);
+   const lines=pdf.splitTextToSize(textValue,maxW),lineHeight=fontSize*.44;
+   const blockHeight=lines.length*lineHeight+(opts.after==null?2:opts.after)+(opts.before||0);
+   fitRoom(blockHeight);
+   if(opts.before)y+=opts.before;
+   if(opts.fill){
+    pdf.setFillColor.apply(pdf,opts.fill);
+    pdf.roundedRect(margin-1,y-3,maxW+2,Math.max(5,lines.length*lineHeight+4),1.2,1.2,"F");
+   }
+   pdf.text(lines,margin+(opts.indent||0),y,{lineHeightFactor:1.15,maxWidth:maxW});
+   y+=lines.length*lineHeight+(opts.after==null?2:opts.after);
+  }
+  function addSection(name){
+   if(!name||name===section)return;
+   section=name;
+   addText(name,{fontSize:11,style:"bold",color:palette.purple,before:3,after:4,fill:palette.pale});
+  }
+  function answerLabel(q){
+   if(q.responseType==="written")return "Suggested answer:\n"+String(q.modelAnswer||q.e||"Use the case evidence, show your reasoning and justify the conclusion.")+"\n\nIndicative marking rubric:\n"+(Array.isArray(q.rubric)?q.rubric.join("\n"):"Award marks for accurate concepts, evidence, reasoning and a clear conclusion.");
+   const choice=Array.isArray(q.o)&&Number.isInteger(q.a)&&q.a>=0?q.o[q.a]:"";
+   return "Correct answer: "+(choice||"Not available")+"\nExplanation: "+String(q.e||"Review the relevant chapter concept.");
+  }
+  pageStart(false);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(16);color(pdf.setTextColor,palette.ink);
+  const titleLines=pdf.splitTextToSize(title,size().w-margin*2);pdf.text(titleLines,margin,y);y+=titleLines.length*7+3;
+  addText("Maximum marks: "+paper.maxMarks+"    Time allowed: "+(paper.duration/60)+" hour"+(paper.duration===60?"":"s"),{fontSize:9,style:"bold",color:palette.blue,after:3});
+  addText(isKey
+   ?"Marking scheme and suggested answers. Accept equivalent correct reasoning and syllabus-appropriate wording; this is an original practice model, not an official CBSE key."
+   :"Instructions: Attempt every question. Read any source or case before answering. Show calculations/reasoning where relevant. This is an original KaushalPath practice model, not an official CBSE paper.",{fontSize:8.5,color:palette.muted,after:5});
+  paper.qs.forEach(function(q,index){
+   addSection(q.sectionTitle||"Section A · Objective questions");
+   const marks=Number(q.mark)||1;
+   addText("Q"+(index+1)+". ["+marks+" mark"+(marks===1?"":"s")+"] "+q.q,{fontSize:9.1,style:"bold",color:palette.ink,before:2,after:2});
+   if(Array.isArray(q.o)&&q.o.length){
+    q.o.forEach(function(option,optionIndex){
+     addText(String.fromCharCode(65+optionIndex)+". "+option,{fontSize:8.5,indent:3,after:1,color:[65,57,80]});
+    });
+   }else if(!isKey){
+    const answerLines=marks>=4?3:marks>=3?2:1;
+    for(let line=0;line<answerLines;line++){fitRoom(5);color(pdf.setDrawColor,palette.line);pdf.line(margin+2,y+1,size().w-margin-2,y+1);y+=5;}
+   }
+   if(isKey){
+    addText(answerLabel(q),{fontSize:8.4,indent:2,color:palette.teal,before:2,after:4,fill:[242,250,247]});
+   }else{
+    addText("Marks: "+marks,{fontSize:7.4,color:palette.muted,after:3});
+   }
+  });
+  const total=pdf.getNumberOfPages();
+  for(let p=1;p<=total;p++){
+   pdf.setPage(p);const d=size();
+   color(pdf.setDrawColor,palette.line);pdf.setLineWidth(.25);pdf.line(margin,d.h-13,d.w-margin,d.h-13);
+   pdf.setFont("helvetica","normal");pdf.setFontSize(7);color(pdf.setTextColor,palette.muted);
+   pdf.text("KaushalPath · Original CBSE-style model paper",margin,d.h-8);
+   pdf.text("Page "+p+" of "+total,d.w-margin,d.h-8,{align:"right"});
+  }
+  const blob=pdf.output("blob");
+  if(!(blob instanceof Blob)||blob.size<1000)throw new Error("The generated PDF is unexpectedly small.");
+  const url=URL.createObjectURL(blob),anchor=document.createElement("a");
+  const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
+  anchor.href=url;anchor.download="CBSE-"+className.replace(/\s+/g,"-")+"-"+slug+"-Annual-"+(isKey?"Marking-Scheme":"Question-Paper")+".pdf";
+  anchor.style.display="none";document.body.appendChild(anchor);anchor.click();anchor.remove();
+  window.setTimeout(function(){URL.revokeObjectURL(url);},30000);
+  return {filename:anchor.download,pages:total,size:blob.size};
+ });
+}
+
 function renderTests(){
  const grid=$("testGrid");grid.innerHTML="";
  questions.forEach(function(t,index){
@@ -235,10 +636,10 @@ function renderTests(){
   card.className="test-card"+(t.fullLength?" full-length-test-card":"");
   card.style.setProperty("--kp-card-index",String(Math.min(index,12)));
   card.dataset.exam=t.exam;
-  const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";
-  const kind=t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
+  const cls=t.exam==="NEET UG"?"teal":(t.exam==="CBSE"||t.exam==="CBSE Annual")?"orange":"";
+  const kind=t.annualExam?"CBSE-style annual model paper · competency + written responses":t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
   const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);
-  const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
+  const marking=t.annualExam?"Objective marks automatic; written responses self-marked":t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
   let sourceLinks="";
   if(t.official) sourceLinks='<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>';
   else if(t.fullLength && t.exam==="JEE Main") sourceLinks='<div class="test-source-links"><a href="https://jeemain.nta.nic.in/2026/" target="_blank" rel="noopener noreferrer">Official JEE Main papers and syllabus ↗</a></div>';
@@ -831,9 +1232,17 @@ function saveHistory(item){const list=getHistory();list.unshift(item);const save
 function getFocusSessions(){const stored=readLocalJSON(FOCUS_KEY,[]);return Array.isArray(stored)?stored.filter(function(s){return s&&typeof s.date==="string"&&Number.isFinite(Date.parse(s.date))&&Number.isFinite(Number(s.seconds))&&Number(s.seconds)>=60&&Number(s.seconds)<=7200&&s.mode==="focus";}).slice(-100):[];}
 function saveFocusSessions(list){return writeLocalJSON(FOCUS_KEY,list.slice(-100));}
 function clearSavedTest(){try{localStorage.removeItem(ACTIVE_TEST_KEY);}catch(e){}}
+function questionIsAnswered(question,answer){
+ if(question&&question.responseType==="written")return typeof answer==="string"&&answer.trim().length>0;
+ return Number.isInteger(answer)&&answer>=0&&Array.isArray(question&&question.o)&&answer<question.o.length;
+}
 function validTestSnapshot(test,expectedId){
  if(!test||typeof test!=="object"||test.id!==expectedId||typeof test.title!=="string"||!test.title.trim()||test.title.length>180||typeof test.exam!=="string"||test.exam.length>80||typeof test.level!=="string"||test.level.length>80||!Number.isFinite(Number(test.duration))||Number(test.duration)<1||Number(test.duration)>240||!Number.isFinite(Number(test.mark))||Number(test.mark)<0||Number(test.mark)>100||!Number.isFinite(Number(test.negativeMark))||Number(test.negativeMark)<0||Number(test.negativeMark)>100||!Array.isArray(test.qs)||test.qs.length<1||test.qs.length>100)return false;
- return test.qs.every(function(q){return q&&typeof q.q==="string"&&q.q.length>0&&q.q.length<=4000&&Array.isArray(q.o)&&q.o.length>=2&&q.o.length<=8&&q.o.every(function(o){return typeof o==="string"&&o.length<=1200;})&&Number.isInteger(q.a)&&q.a>=0&&q.a<q.o.length&&typeof q.e==="string"&&q.e.length<=5000&&(q.mark==null||(Number.isFinite(Number(q.mark))&&Number(q.mark)>=0&&Number(q.mark)<=100))&&(q.negativeMark==null||(Number.isFinite(Number(q.negativeMark))&&Number(q.negativeMark)>=0&&Number(q.negativeMark)<=100));});
+ return test.qs.every(function(q){
+  if(!q||typeof q.q!=="string"||!q.q.length||q.q.length>4000||typeof q.e!=="string"||q.e.length>5000||(q.mark!=null&&(!Number.isFinite(Number(q.mark))||Number(q.mark)<0||Number(q.mark)>100))||(q.negativeMark!=null&&(!Number.isFinite(Number(q.negativeMark))||Number(q.negativeMark)<0||Number(q.negativeMark)>100)))return false;
+  if(q.responseType==="written")return Array.isArray(q.o)&&q.o.length===0&&q.a===-1&&typeof (q.modelAnswer||q.e)==="string"&&String(q.modelAnswer||q.e).length<=5000&&Array.isArray(q.rubric)&&q.rubric.every(function(line){return typeof line==="string"&&line.length<=1000;});
+  return Array.isArray(q.o)&&q.o.length>=2&&q.o.length<=8&&q.o.every(function(o){return typeof o==="string"&&o.length<=1200;})&&Number.isInteger(q.a)&&q.a>=0&&q.a<q.o.length;
+ });
 }
 function getSavedTest(){
  const saved=readLocalJSON(ACTIVE_TEST_KEY,null);if(!saved||typeof saved!=="object")return null;
@@ -842,16 +1251,16 @@ function getSavedTest(){
  if(!test||!Number.isFinite(Number(saved.endAt))){clearSavedTest();return null;}
  const index=Number(saved.index),answers={};
  if(!Number.isInteger(index)||index<0||index>=test.qs.length){clearSavedTest();return null;}
- if(saved.answers&&typeof saved.answers==="object")Object.keys(saved.answers).forEach(function(key){const qi=Number(key),answer=Number(saved.answers[key]);if(Number.isInteger(qi)&&qi>=0&&qi<test.qs.length&&Number.isInteger(answer)&&answer>=0&&answer<test.qs[qi].o.length)answers[qi]=answer;});
+ if(saved.answers&&typeof saved.answers==="object")Object.keys(saved.answers).forEach(function(key){const qi=Number(key);if(!Number.isInteger(qi)||qi<0||qi>=test.qs.length)return;const question=test.qs[qi],raw=saved.answers[key];if(question.responseType==="written"){if(typeof raw==="string"&&raw.length<=12000)answers[qi]=raw;}else{const answer=Number(raw);if(Number.isInteger(answer)&&answer>=0&&answer<question.o.length)answers[qi]=answer;}});
  return {testId:test.id,test:test,answers:answers,index:index,endAt:Number(saved.endAt)};
 }
-function saveActiveTest(){if(!active||!active.test)return;const ok=writeLocalJSON(ACTIVE_TEST_KEY,{testId:active.test.id,testSnapshot:active.test.id.indexOf("review-")===0?active.test:null,answers:active.answers,index:active.index,endAt:active.endAt,updatedAt:Date.now()});if(!ok)toast("Autosave is unavailable in this browser. Keep this tab open.");refreshResumeBanner();}
+function saveActiveTest(){if(!active||!active.test)return;const ok=writeLocalJSON(ACTIVE_TEST_KEY,{testId:active.test.id,testSnapshot:(active.test.id.indexOf("review-")===0||active.test.annualExam)?active.test:null,answers:active.answers,index:active.index,endAt:active.endAt,updatedAt:Date.now()});if(!ok)toast("Autosave is unavailable in this browser. Keep this tab open.");refreshResumeBanner();}
 function refreshResumeBanner(){
  const banner=$("resumeTestBanner");if(!banner)return;if(active){banner.classList.add("hidden");return;}const saved=getSavedTest(),title=$("resumeTestTitle"),detail=$("resumeTestDetail");
  if(!saved){banner.classList.add("hidden");return;}
  const test=questions.find(function(t){return t.id===saved.testId;});if(!test){banner.classList.add("hidden");return;}
  if(title)title.textContent=test.title;
- const remaining=Math.max(0,Math.ceil((saved.endAt-Date.now())/1000)),answered=Object.keys(saved.answers).length;
+ const remaining=Math.max(0,Math.ceil((saved.endAt-Date.now())/1000)),answered=test.qs.reduce(function(total,q,index){return total+(questionIsAnswered(q,saved.answers[index])?1:0);},0);
  if(detail)detail.textContent=remaining===0?"Time has expired. Resume to submit your saved answers.":answered+" of "+test.qs.length+" answers saved · Question "+(saved.index+1)+" of "+test.qs.length+" · time remaining "+String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0")+".";
  banner.classList.remove("hidden");
 }
@@ -1180,12 +1589,97 @@ function initPlanner(){
 
 function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
-function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");const sourceKind=t.official?"Official sample-paper question":q.sourceType==="PYQ"?"Previous-year question":t.exam==="CBSE"?"Original foundation practice":"Competency-based practice";const sourceLabel=t.official?"CBSE Class XII Computer Science · Official SQP 2026–27":(q.sourceLabel||"Syllabus-mapped competency practice");const sourceMarkup='<div class="question-source"><span class="question-source-badge '+(t.official?"official":q.sourceType==="PYQ"?"pyq":"competency")+'">'+safe(sourceKind+" · "+sourceLabel)+'</span>'+(q.subject?'<span class="question-topic">'+safe(q.subject)+(q.topic?" · "+safe(q.topic):"")+'</span>':"")+(q.sourceUrl?'<a href="'+safe(q.sourceUrl)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>':"")+'</div>';root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div>'+sourceMarkup+'<div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":t.fullLength?(t.exam==="NEET UG"?"Full NEET-length mock: 180 questions in 180 minutes, with 45 Physics, 45 Chemistry and 90 Biology questions.":"Extended JEE practice mock: 90 questions in 180 minutes; official JEE Main Paper 1 currently uses 75 questions."):"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted.")+'</p>';updateTimer();}
+function renderQuestion(){
+ if(!active)return;
+ const t=active.test,q=t.qs[active.index],selected=active.answers[active.index],root=$("examWorkspace");
+ const written=q.responseType==="written";
+ const sourceKind=t.official?"Official sample-paper question":q.sourceType==="PYQ"?"Previous-year question":t.annualExam?"Original competency-based annual model":"Competency-based practice";
+ const sourceLabel=t.official?"CBSE Class XII Computer Science · Official SQP 2026–27":(q.sourceLabel||(t.annualExam?"Original KaushalPath model · not an official CBSE paper":"Syllabus-mapped competency practice"));
+ const sourceMarkup='<div class="question-source"><span class="question-source-badge '+(t.official?"official":q.sourceType==="PYQ"?"pyq":"competency")+'">'+safe(sourceKind+" · "+sourceLabel)+'</span>'+(q.subject?'<span class="question-topic">'+safe(q.subject)+(q.topic?" · "+safe(q.topic):"")+'</span>':"")+(q.sourceUrl?'<a href="'+safe(q.sourceUrl)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>':"")+'</div>';
+ const sectionMarkup=q.sectionTitle?'<div class="annual-section-label">'+safe(q.sectionTitle)+' · '+Number(q.mark||1)+' mark'+(Number(q.mark)===1?"":"s")+'</div>':"";
+ const responseMarkup=written
+  ?'<div class="written-answer-wrap"><label class="written-answer-label" for="writtenAnswer">Your answer <span>Up to 12,000 characters</span></label><textarea id="writtenAnswer" data-written-answer maxlength="12000" rows="'+(Number(q.mark)>=4?8:Number(q.mark)>=3?6:4)+'" aria-label="Your written answer" placeholder="Write your reasoning, evidence, working and final conclusion here...">'+safe(typeof selected==="string"?selected:"")+'</textarea><p class="written-answer-help">Your response is saved in this browser as you type. After submission, compare it with the suggested answer and marking rubric, then award yourself marks honestly.</p><p class="tiny"><span data-answer-length>'+(typeof selected==="string"?selected.length:0)+'</span> characters · '+Number(q.mark||1)+' marks available</p></div>'
+  :'<div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div>';
+ const answeredCount=t.qs.reduce(function(total,item,index){return total+(questionIsAnswered(item,active.answers[index])?1:0);},0);
+ const maxScore=Number.isFinite(Number(q.mark))?Number(q.mark):Number(t.mark)||1;
+ root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3><p class="tiny">'+answeredCount+' of '+t.qs.length+' questions answered</p></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div>'+sourceMarkup+sectionMarkup+'<div class="question '+(written?"written-question":"")+'" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div>'+responseMarkup+'<div class="question-nav" aria-label="Question navigation">'+t.qs.map(function(item,i){const done=questionIsAnswered(item,active.answers[i]);return '<button type="button" class="qnav '+(done?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+(done?", answered":"")+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+' aria-label="Previous question">← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.annualExam?"Model paper only — written responses are self-marked against the downloadable rubric; objective questions are marked automatically.":t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":t.fullLength?(t.exam==="NEET UG"?"Full NEET-length mock: 180 questions in 180 minutes, with 45 Physics, 45 Chemistry and 90 Biology questions.":"Extended JEE practice mock: 90 questions in 180 minutes; official JEE Main Paper 1 currently uses 75 questions."):"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted.")+'</p>';
+ updateTimer();
+}
 function openMockTestWindow(id){const test=questions.find(function(q){return q.id===id&&q.fullLength;});if(!test){startTest(id);return;}const child=window.open("about:blank","_blank","popup=yes,width=1280,height=960,resizable=yes,scrollbars=yes");if(!child){toast("Your browser blocked the mock-test window. Allow pop-ups for this site, then click Start test again.");return;}const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?")){child.close();return;}if(pending)clearSavedTest();const url=new URL(window.location.href);url.searchParams.set("kpMockTest",test.id);url.hash="#tests";try{child.location.replace(url.toString());child.focus();}catch(error){child.close();toast("Could not open the mock-test window. Allow pop-ups for this site and try again.");}}
 $("testGrid").addEventListener("click",function(e){const b=e.target.closest("[data-start]");if(!b)return;const t=questions.find(function(q){return q.id===b.dataset.start;});if(t&&t.fullLength)openMockTestWindow(t.id);else startTest(b.dataset.start);});
-$("examWorkspace").addEventListener("click",function(e){if(!active)return;const ans=e.target.closest("[data-answer]"),jump=e.target.closest("[data-jump]");if(ans){active.answers[active.index]=Number(ans.dataset.answer);saveActiveTest();renderQuestion();return;}if(jump){active.index=Number(jump.dataset.jump);saveActiveTest();renderQuestion();return;}if(e.target.closest("#prevQ")){active.index=Math.max(0,active.index-1);saveActiveTest();renderQuestion();return;}if(e.target.closest("#nextQ")){if(active.index===active.test.qs.length-1){toast("Review your answers, then finish the test.");}else{active.index++;saveActiveTest();renderQuestion();}return;}if(e.target.closest("#finishQ")){const unanswered=active.test.qs.length-Object.keys(active.answers).length;if(unanswered&&!confirm("You still have "+unanswered+" unanswered question(s). Finish this test anyway?"))return;finishTest(false);}});
-function finishTest(auto){if(!active)return;clearInterval(tick);tick=null;const t=active.test;let correct=0,wrong=0,blank=0;const answers=active.answers;const review=t.qs.map(function(q,i){const chosen=answers[i];if(chosen===undefined)blank++;else if(chosen===q.a)correct++;else wrong++;return {question:q.q,options:q.o,chosen:chosen,correct:q.a,explanation:q.e,subject:typeof q.subject==="string"?q.subject:(typeof t.subject==="string"?t.subject:""),chapter:typeof q.chapter==="string"?q.chapter:"",topic:typeof q.topic==="string"?q.topic:"",questionId:typeof q.id==="string"?q.id:(typeof q.questionId==="string"?q.questionId:""),sourceType:typeof q.sourceType==="string"?q.sourceType:"",mark:Number.isFinite(q.mark)?q.mark:t.mark,negativeMark:Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1))};});const score=t.qs.reduce(function(total,q,i){const chosen=answers[i],marks=Number.isFinite(q.mark)?q.mark:t.mark,penalty=Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1));return total+(chosen===undefined?0:chosen===q.a?marks:-penalty);},0);const max=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const result={id:t.id,title:t.title,exam:t.exam,level:t.level,date:new Date().toLocaleString(),correct:correct,wrong:wrong,blank:blank,score:score,max:max,percentage:Math.round(Math.max(0,score)/max*100),review:review};saveHistory(result);clearSavedTest();active=null;renderResult(result,auto);}
-function renderResult(r,auto){const missedCount=r.review.filter(function(q){return q.chosen===undefined||q.chosen!==q.correct;}).length;const root=$("resultWorkspace");root.classList.remove("hidden");$("examWorkspace").classList.add("hidden");root.innerHTML='<div class="kicker">Your result</div><h2 style="margin-top:7px">'+safe(r.title)+'</h2><p class="tiny">'+(auto==="tab-switch"?"Automatically submitted because you switched tabs or left the mock-test window. ":auto?"Time ended automatically. ":"")+"Completed "+safe(r.date)+'</p><div class="result-score">'+r.score+' <span style="font-size:1.1rem;color:var(--muted);font-weight:700">/ '+r.max+'</span></div><div class="result-grid"><div class="result-metric"><strong>'+r.percentage+'%</strong><span>Percentage (clamped at 0)</span></div><div class="result-metric"><strong>'+r.correct+'</strong><span>Correct</span></div><div class="result-metric"><strong>'+r.wrong+'</strong><span>Incorrect</span></div><div class="result-metric"><strong>'+r.blank+'</strong><span>Unattempted</span></div></div><div class="actions">'+(missedCount?'<button class="btn btn-purple" id="retryMissed">Practice missed questions ('+missedCount+')</button>':"")+'<button class="btn btn-blue" id="downloadJson">Download result JSON</button><button class="btn btn-light" id="downloadCsv">Download result CSV</button><button class="btn btn-light" id="printResult">Print / save PDF</button><button class="btn btn-light" id="closeResult">Back to tests</button></div><h3 style="margin-top:25px">Answer review and explanations</h3><div id="answerReview"></div>';const review=$("answerReview");r.review.forEach(function(q,i){const div=document.createElement("div");div.className="review-item";const status=q.chosen===undefined?"Not attempted":q.chosen===q.correct?"Correct":"Incorrect";div.innerHTML='<strong>'+(i+1)+". "+safe(q.question)+'</strong><p class="'+(q.chosen===q.correct?"correct":q.chosen===undefined?"":"incorrect")+'">'+status+(q.chosen===undefined?"":" · Your answer: "+String.fromCharCode(65+q.chosen))+' · Correct answer: '+String.fromCharCode(65+q.correct)+" — "+safe(q.options[q.correct])+'</p><p class="tiny">'+safe(q.explanation)+'</p>';review.appendChild(div);});if(missedCount){$("retryMissed").addEventListener("click",function(){const missed=r.review.filter(function(q){return q.chosen===undefined||q.chosen!==q.correct;});const retryTest={id:"review-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7),title:"Targeted review · "+r.title,exam:r.exam,level:"Targeted review",duration:Math.max(3,Math.ceil(missed.length*1.5)),mark:r.exam==="CBSE"?1:4,negativeMark:r.exam==="CBSE"?0:1,desc:"Focused retake of "+missed.length+" missed or unanswered question(s).",qs:missed.map(function(q){return {q:q.question,o:q.options,a:q.correct,e:String(q.explanation||"Review the underlying concept from your notes."),mark:Number.isFinite(q.mark)?q.mark:(r.exam==="CBSE"?1:4),negativeMark:Number.isFinite(q.negativeMark)?q.negativeMark:(r.exam==="CBSE"?0:1)};})};questions.push(retryTest);startTest(retryTest.id);});}root.scrollIntoView({behavior:"smooth",block:"start"});$("downloadJson").addEventListener("click",function(){download("kaushalpath-result.json",JSON.stringify(r,null,2),"application/json");});$("downloadCsv").addEventListener("click",function(){download("kaushalpath-result.csv",resultCsv(r),"text/csv");});$("printResult").addEventListener("click",function(){window.print();});$("closeResult").addEventListener("click",function(){root.classList.add("hidden");if(document.body.classList.contains("mock-test-window"))document.body.classList.remove("mock-test-window");$("tests").scrollIntoView({behavior:"smooth"});});}
+$("examWorkspace").addEventListener("input",function(e){if(!active)return;const field=e.target.closest("[data-written-answer]");if(!field)return;active.answers[active.index]=String(field.value||"").slice(0,12000);saveActiveTest();const item=field.closest(".written-answer-wrap");if(item){const count=item.querySelector("[data-answer-length]");if(count)count.textContent=String(active.answers[active.index].length)+" characters";}});
+$("examWorkspace").addEventListener("click",function(e){if(!active)return;const ans=e.target.closest("[data-answer]"),jump=e.target.closest("[data-jump]");if(ans){active.answers[active.index]=Number(ans.dataset.answer);saveActiveTest();renderQuestion();return;}if(jump){active.index=Number(jump.dataset.jump);saveActiveTest();renderQuestion();return;}if(e.target.closest("#prevQ")){active.index=Math.max(0,active.index-1);saveActiveTest();renderQuestion();return;}if(e.target.closest("#nextQ")){if(active.index===active.test.qs.length-1){toast("Review your answers, then finish the test.");}else{active.index++;saveActiveTest();renderQuestion();}return;}if(e.target.closest("#finishQ")){const unanswered=active.test.qs.reduce(function(total,q,index){return total+(questionIsAnswered(q,active.answers[index])?0:1);},0);if(unanswered&&!confirm("You still have "+unanswered+" unanswered question(s). Finish this test anyway?"))return;finishTest(false);}});
+function finishTest(auto){
+ if(!active)return;
+ clearInterval(tick);tick=null;
+ const t=active.test,answers=active.answers;
+ let correct=0,wrong=0,blank=0,objectiveScore=0,objectiveMax=0,writtenCount=0;
+ const review=t.qs.map(function(q,i){
+  const chosen=answers[i],written=q.responseType==="written",marks=Number.isFinite(q.mark)?q.mark:(Number(t.mark)||1),penalty=Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1));
+  if(written){writtenCount++;if(!questionIsAnswered(q,chosen))blank++;return {
+   question:q.q,options:[],chosen:typeof chosen==="string"?chosen:"",correct:-1,explanation:String(q.modelAnswer||q.e||""),modelAnswer:String(q.modelAnswer||q.e||""),rubric:Array.isArray(q.rubric)?q.rubric:[],
+   responseType:"written",sectionTitle:String(q.sectionTitle||""),questionFormat:String(q.questionFormat||"Constructed response"),
+   subject:typeof q.subject==="string"?q.subject:(typeof t.subject==="string"?t.subject:""),chapter:typeof q.chapter==="string"?q.chapter:"",topic:typeof q.topic==="string"?q.topic:"",questionId:typeof q.id==="string"?q.id:"",sourceType:typeof q.sourceType==="string"?q.sourceType:"",
+   mark:marks,negativeMark:0
+  };}
+  objectiveMax+=marks;
+  if(chosen===undefined){blank++;}
+  else if(chosen===q.a){correct++;objectiveScore+=marks;}
+  else{wrong++;objectiveScore-=penalty;}
+  return {question:q.q,options:q.o,chosen:chosen,correct:q.a,explanation:q.e,subject:typeof q.subject==="string"?q.subject:(typeof t.subject==="string"?t.subject:""),chapter:typeof q.chapter==="string"?q.chapter:"",topic:typeof q.topic==="string"?q.topic:"",questionId:typeof q.id==="string"?q.id:(typeof q.questionId==="string"?q.questionId:""),sourceType:typeof q.sourceType==="string"?q.sourceType:"",mark:marks,negativeMark:penalty,responseType:"mcq"};
+ });
+ const max=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:(Number(t.mark)||1));},0);
+ const result={id:t.id,title:t.title,exam:t.exam,level:t.level,date:new Date().toLocaleString(),correct:correct,wrong:wrong,blank:blank,score:objectiveScore,max:max,percentage:writtenCount?null:Math.round(Math.max(0,objectiveScore)/max*100),objectiveScore:objectiveScore,objectiveMax:objectiveMax,pendingWritten:writtenCount>0,review:review};
+ clearSavedTest();active=null;
+ if(!result.pendingWritten)saveHistory(result);
+ renderResult(result,auto);
+}
+function renderResult(r,auto){
+ const pending=Boolean(r.pendingWritten),writtenQuestions=r.review.map(function(q,index){return {q:q,index:index};}).filter(function(item){return item.q.responseType==="written";});
+ const ungradedWritten=writtenQuestions.filter(function(item){return !Number.isInteger(item.q.selfMark);}).length;
+ const missedCount=r.review.filter(function(q){return q.responseType!=="written"&&(q.chosen===undefined||q.chosen!==q.correct);}).length;
+ const root=$("resultWorkspace");root.classList.remove("hidden");$("examWorkspace").classList.add("hidden");
+ const headlineScore=pending?String(r.objectiveScore)+" / "+String(r.objectiveMax)+" objective marks":String(r.score)+" / "+String(r.max);
+ const percentageMarkup=pending?'<strong>Pending</strong><span>Written answers need self-marking</span>':'<strong>'+r.percentage+'%</strong><span>Overall percentage</span>';
+ root.innerHTML='<div class="kicker">'+(pending?"Objective score · written marking required":"Your result")+'</div><h2 style="margin-top:7px">'+safe(r.title)+'</h2><p class="tiny">'+(auto==="tab-switch"?"Automatically submitted because you switched tabs or left the mock-test window. ":auto?"Time ended automatically. ":"")+"Completed "+safe(r.date)+'</p><div class="result-score">'+headlineScore+'</div>'+(pending?'<p class="written-marking-notice">The multiple-choice questions are scored automatically. For each written answer, compare your response with the model answer and rubric, then award yourself marks from 0 to the question maximum. Your final result is saved only after all written questions have been marked.</p>':"")+'<div class="result-grid"><div class="result-metric"><strong>'+r.correct+'</strong><span>Objective correct</span></div><div class="result-metric"><strong>'+r.wrong+'</strong><span>Objective incorrect</span></div><div class="result-metric"><strong>'+r.blank+'</strong><span>Unattempted objective / written</span></div><div class="result-metric">'+percentageMarkup+'</div></div><div class="actions">'+(missedCount?'<button class="btn btn-purple" id="retryMissed">Practice missed questions ('+missedCount+')</button>':"")+(pending?'<button class="btn btn-purple" id="finalizeWrittenMarking" '+(ungradedWritten?"disabled":"")+'>'+(ungradedWritten?"Mark all written questions first":"Finalize and save result")+'</button>':"")+'<button class="btn btn-blue" id="downloadJson">Download result JSON</button><button class="btn btn-light" id="downloadCsv">Download result CSV</button><button class="btn btn-light" id="printResult">Print / save PDF</button><button class="btn btn-light" id="closeResult">Back to tests</button></div><h3 style="margin-top:25px">Answer review and explanations</h3><div id="answerReview"></div>';
+ const review=$("answerReview");
+ r.review.forEach(function(q,i){
+  const div=document.createElement("div");div.className="review-item";
+  if(q.responseType==="written"){
+   const answered=typeof q.chosen==="string"&&q.chosen.trim().length>0;
+   const mark=Number(q.mark)||1;
+   const selected=Number.isInteger(q.selfMark)?q.selfMark:null;
+   div.innerHTML='<div class="written-review-head"><span class="question-source-badge competency">Written · '+mark+' marks</span><span class="written-review-status">'+(selected===null?"Needs self-marking":"Awarded "+selected+" / "+mark)+'</span></div><strong>'+(i+1)+". "+safe(q.question)+'</strong><h4>Your response</h4><p class="written-student-answer">'+safe(answered?q.chosen:"No answer was entered.")+'</p><h4>Suggested answer / key points</h4><p class="written-model-answer">'+safe(q.modelAnswer||q.explanation)+'</p><h4>Indicative marking rubric</h4><ul class="written-rubric">'+(Array.isArray(q.rubric)?q.rubric:[]).map(function(line){return "<li>"+safe(line)+"</li>";}).join("")+'</ul><div class="written-self-mark"><strong>Marks awarded (0–'+mark+')</strong><div class="written-self-mark-options">'+Array.from({length:mark+1},function(_,value){return '<button type="button" class="btn '+(selected===value?"btn-purple":"btn-light")+'" data-self-mark-question="'+i+'" data-self-mark="'+value+'" aria-pressed="'+(selected===value?"true":"false")+'">'+value+'</button>';}).join("")+'</div></div>';
+   Array.from(div.querySelectorAll("[data-self-mark-question]")).forEach(function(button){button.addEventListener("click",function(){q.selfMark=Number(button.dataset.selfMark);renderResult(r,auto);});});
+  }else{
+   const status=q.chosen===undefined?"Not attempted":q.chosen===q.correct?"Correct":"Incorrect";
+   div.innerHTML='<strong>'+(i+1)+". "+safe(q.question)+'</strong><p class="'+(q.chosen===q.correct?"correct":q.chosen===undefined?"":"incorrect")+'">'+status+(q.chosen===undefined?"":" · Your answer: "+String.fromCharCode(65+q.chosen))+' · Correct answer: '+String.fromCharCode(65+q.correct)+" — "+safe(q.options[q.correct])+'</p><p class="tiny">'+safe(q.explanation)+'</p>';
+  }
+  review.appendChild(div);
+ });
+ if(pending&&$("finalizeWrittenMarking")){
+  $("finalizeWrittenMarking").addEventListener("click",function(){
+   const written=r.review.filter(function(q){return q.responseType==="written";});
+   if(written.some(function(q){return !Number.isInteger(q.selfMark)||q.selfMark<0||q.selfMark>(Number(q.mark)||1);})){toast("Mark every written question before finalizing.");return;}
+   const writtenScore=written.reduce(function(sum,q){return sum+Number(q.selfMark);},0);
+   r.score=Number(r.objectiveScore||0)+writtenScore;r.max=written.reduce(function(sum,q){return sum+(Number(q.mark)||1);},Number(r.objectiveMax||0));
+   r.percentage=Math.round(Math.max(0,r.score)/Math.max(1,r.max)*100);r.pendingWritten=false;
+   saveHistory(r);renderResult(r,auto);toast("Final annual-exam result saved to My Results.");
+  });
+ }
+ if(missedCount&&$("retryMissed")){
+  $("retryMissed").addEventListener("click",function(){
+   const missed=r.review.filter(function(q){return q.responseType!=="written"&&(q.chosen===undefined||q.chosen!==q.correct);});
+   const retryTest={id:"review-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7),title:"Targeted review · "+r.title,exam:r.exam,level:"Targeted review",duration:Math.max(3,Math.ceil(missed.length*1.5)),mark:r.exam==="CBSE"?1:4,negativeMark:r.exam==="CBSE"?0:1,desc:"Focused retake of "+missed.length+" missed or unanswered question(s).",qs:missed.map(function(q){return {q:q.question,o:q.options,a:q.correct,e:String(q.explanation||"Review the underlying concept from your notes."),mark:Number.isFinite(q.mark)?q.mark:(r.exam==="CBSE"?1:4),negativeMark:Number.isFinite(q.negativeMark)?q.negativeMark:(r.exam==="CBSE"?0:1)};})};
+   questions.push(retryTest);startTest(retryTest.id);
+  });
+ }
+ $("downloadJson").addEventListener("click",function(){download("kaushalpath-result.json",JSON.stringify(r,null,2),"application/json");});
+ $("downloadCsv").addEventListener("click",function(){download("kaushalpath-result.csv",resultCsv(r),"text/csv");});
+ $("printResult").addEventListener("click",function(){window.print();});
+ $("closeResult").addEventListener("click",function(){root.classList.add("hidden");if(document.body.classList.contains("mock-test-window"))document.body.classList.remove("mock-test-window");$("tests").scrollIntoView({behavior:"smooth"});});
+ root.scrollIntoView({behavior:"smooth",block:"start"});
+}
 function download(name,content,type){const blob=new Blob([content],{type:type+";charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);}
 function resultCsv(r){return [["Test","Exam","Date","Correct","Incorrect","Unattempted","Score","Maximum","Percent"],[r.title,r.exam,r.date,r.correct,r.wrong,r.blank,r.score,r.max,r.percentage]].map(function(row){return row.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(",");}).join("\r\n");}
 $("exportHistory").addEventListener("click",function(){const history=getHistory();if(!history.length){toast("No history to export yet.");return;}const rows=[["Test","Exam","Date","Correct","Incorrect","Unattempted","Score","Maximum","Percent"]];history.forEach(function(r){rows.push([r.title,r.exam,r.date,r.correct,r.wrong,r.blank,r.score,r.max,r.percentage]);});download("kaushalpath-history.csv",rows.map(function(row){return row.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(",");}).join("\r\n"),"text/csv");});
@@ -1195,7 +1689,7 @@ async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
 document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library","#planner":"Study Planner"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();initCbseAnnualBuilder();
 
 
 let pendingPwaInstall = null;

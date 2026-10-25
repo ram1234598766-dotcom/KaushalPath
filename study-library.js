@@ -2374,6 +2374,8 @@ function toast(message) {
     }
   } catch (error) {}
 
+  window.KP_LOAD_PDF_ENGINE = loadChapterPdfEngine;
+  window.KP_ANNUAL_PAPER_CATALOG = notes;
   window.KP_STUDY_NOTE_INDEX = notes.map((item, index) => ({
     index,
     level: String(item.level || ""),
