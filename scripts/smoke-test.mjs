@@ -81,7 +81,7 @@ assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should
 assert.match(studyLibrary, /downloadButton\.addEventListener\("click", startPrint\)/, "chapter export should use the browser print renderer");
 assert.ok(studyLibrary.includes("printTarget.print()") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF printing must use native vector output with a full landscape map followed by portrait notes");
 assert.doesNotMatch(studyLibrary, /html2pdf\(\)\.set\(|html2canvas:/, "chapter export should not rasterize or crop the mind map in a PDF canvas");
-assert.match(studyLibrary, /const pageTitle = chapter\s*\?\s*\(chapter\.chapter \|\| "Chapter"\) \+ " · Complete Chapter Notes"/, "the chapter PDF title should be defined before the packet HTML is built");
+assert.ok(studyLibrary.includes("const pageTitle = fileStem;"), "the PDF save dialog should use a chapter-specific suggested filename");
 assert.ok(studyLibrary.includes("<title>' + esc(pageTitle) + '</title><style>'"), "the chapter PDF HTML should use its defined title");
 assert.doesNotMatch(studyLibrary, /esc\(title\)/, "the chapter PDF generator must not reference an undefined title variable");
 assert.match(studyLibrary, /id="chapterPdfContent"/, "only the chapter content should be included in the exported PDF");
@@ -511,6 +511,6 @@ assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF exp
 assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
 assert.ok(studyLibrary.includes("printTarget.print()"), "native browser printing should preserve vector text and mind-map graphics");
 assert.ok(studyLibrary.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;"), "the landscape map should not inherit a portrait width constraint");
-assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Print or save the chapter with the complete landscape map and crisp, selectable text."'), "the chapter preview should describe the native high-quality print flow");
+assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Click Download PDF, then choose “Save as PDF” in the print dialog and click Save. Your map and notes remain crisp and selectable."'), "the chapter preview should clearly explain how to save the PDF");
 assert.doesNotMatch(studyLibrary, /html2pdf|html2canvas|runDownload/, "the chapter export must not retain its old raster download implementation");
 assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter filename construction must tolerate incomplete chapter metadata");
