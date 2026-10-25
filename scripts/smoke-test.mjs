@@ -218,8 +218,9 @@ for (const asset of offlineAssets) {
   assert.ok(vercel.builds.some((build) => build.src === asset && build.use === "@vercel/static"), asset + " must be explicitly published by Vercel");
 }
 
-assert.equal(vercel.builds.some(b => b.src === "local-ai.js"), false, "the model runtime should not be sent to the browser");
-assert.doesNotMatch(JSON.stringify(vercel), /esm\.sh|huggingface\.co|cdn-lfs/, "browser policy should not include unused local-model origins");
+assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "the consent-gated local model controller should be published to the browser");
+assert.match(JSON.stringify(vercel), /esm\.sh/, "CSP should allow the pinned WebLLM runtime after local mode is selected");
+assert.match(JSON.stringify(vercel), /huggingface\.co/, "CSP should allow model-weight downloads after explicit local installation consent");
 assert.ok(vercel.builds.some(b => b.src === "api/study-guide.mjs" && b.use === "@vercel/node"), "AI endpoint should be deployed as a Node function");
 assert.ok(existsSync(new URL("../api/study-guide.mjs", import.meta.url)), "Vercel AI route exists");
 assert.ok(existsSync(new URL("../index.html", import.meta.url)), "Vercel homepage exists at the root");
