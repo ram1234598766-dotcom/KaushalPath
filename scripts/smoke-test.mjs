@@ -522,6 +522,11 @@ assert.match(app, /card\.style\.setProperty\("--kp-card-index"/, "test cards sho
 assert.match(studyLibrary, /createAndDownloadChapterPdf\(/, "the Download PDF action should invoke the direct file generator");
 assert.match(studyLibrary, /await engine\.svg2pdf\(svg, pdf, options\)/, "the PDF map must remain vector-rendered");
 assert.ok(!studyLibrary.includes("printTarget.print()"), "Download PDF must not invoke the browser print dialog");
+assert.match(studyLibrary, /downloadButton\.addEventListener\("click", startDownload\)/, "the Download PDF button should launch the real file-generation path");
+assert.match(studyLibrary, /previewShell\.addEventListener\("keydown", \(event\) => \{\s*if \(event\.key === "Escape"\)/, "the PDF preview should close on Escape");
+assert.match(studyLibrary, /document\.body\.style\.overflow = "hidden"/, "the PDF preview should lock background scrolling while open");
+assert.match(studyLibrary, /document\.body\.style\.overflow = previousBodyOverflow/, "closing the preview should restore the page scroll state");
+
 
 assert.doesNotMatch(studyLibrary, /html2pdf|html2canvas|runDownload/, "the chapter export must not retain its old raster download implementation");
 assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter filename construction must tolerate incomplete chapter metadata");
