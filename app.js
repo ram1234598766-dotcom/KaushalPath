@@ -1250,11 +1250,11 @@ function activateWorkspaceView(view,clicked){
  const clickedExam=clicked&&clicked.dataset.showExam;document.querySelectorAll(".side-link").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
  document.querySelectorAll(".mobile-dock [data-view]").forEach(function(link){const matchesExam=link.dataset.showExam?link.dataset.showExam===clickedExam||(target==="tests"&&!clickedExam&&link.dataset.showExam==="all"):true;link.classList.toggle("active",link.dataset.view===target&&matchesExam);});
  const visibleNodes=target==="overview"?overviewNodes:[$(target)];
- const reducedMotion=Boolean(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+ const shouldReduceMotion=Boolean(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
  visibleNodes.forEach(function(node){
   if(!node||node.classList.contains("view-hidden"))return;
   node.classList.remove("kp-view-enter");
-  if(reducedMotion)return;
+  if(shouldReduceMotion)return;
   void node.offsetWidth;
   node.classList.add("kp-view-enter");
  });
