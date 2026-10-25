@@ -1931,6 +1931,26 @@
       pdf.setProperties({ title, subject: level + " · " + subject, author: "KaushalPath", creator: "KaushalPath Study Hub" });
     }
 
+    let pdfFontFamily = "helvetica";
+    if (status) status.textContent = "Preparing the PDF engine and text fonts…";
+    try {
+      const fontResponse = await fetch("https://cdn.jsdelivr.net/gh/notofonts/noto-fonts@main/unhinted/ttf/NotoSans/NotoSans-Regular.ttf", {
+        mode: "cors", credentials: "omit", cache: "force-cache"
+      });
+      if (!fontResponse.ok) throw new Error("The Unicode font could not be downloaded.");
+      const fontBytes = new Uint8Array(await fontResponse.arrayBuffer());
+      let fontBinary = "";
+      const fontChunkSize = 0x8000;
+      for (let offset = 0; offset < fontBytes.length; offset += fontChunkSize) {
+        fontBinary += String.fromCharCode(...fontBytes.subarray(offset, Math.min(offset + fontChunkSize, fontBytes.length)));
+      }
+      pdf.addFileToVFS("NotoSans-Regular.ttf", btoa(fontBinary));
+      pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+      pdfFontFamily = "NotoSans";
+    } catch (fontError) {
+      console.warn("Using built-in PDF fonts because the Unicode font was unavailable.", fontError);
+    }
+
     const margin = 14;
     const palette = {
       ink: [38, 27, 57], muted: [111, 96, 130], purple: [105, 61, 183],
@@ -1949,11 +1969,11 @@
       const size = pageSize();
       pdf.setFillColor(255, 255, 255);
       pdf.rect(0, 0, size.width, size.height, "F");
-      pdf.setFont("helvetica", "bold");
+      pdf.setFont(pdfFontFamily, pdfFontFamily === "NotoSans" ? "normal" : "bold");
       pdf.setFontSize(7.5);
       setColor(palette.purple, pdf.setTextColor);
       pdf.text("KAUSHALPATH  /  CHAPTER NOTES", margin, 9);
-      pdf.setFont("helvetica", "normal");
+      pdf.setFont(pdfFontFamily, "normal");
       setColor(palette.muted, pdf.setTextColor);
       const head = (continued ? title + " · continued" : title) + "  |  " + level + " · " + subject;
       pdf.text(head, size.width - margin, 9, { align: "right", maxWidth: size.width - margin * 2 - 52 });
@@ -1982,16 +2002,28 @@
       const size = pageSize();
       const maxWidth = size.width - margin * 2;
       const indent = block.kind === "list" || /^[-•] /.test(text) ? 3 : 0;
-      const textValue = text.replace(/’/g, "'").replace(/[“”]/g, '"').replace(/[–—−]/g, "-")
-        .replace(/×/g, "x").replace(/÷/g, "/").replace(/≤/g, "<=").replace(/≥/g, ">=")
-        .replace(/≈/g, "~=").replace(/→/g, "->").replace(/π/g, "pi").replace(/θ/g, "theta")
-        .replace(/λ/g, "lambda").replace(/μ/g, "mu").replace(/Ω/g, "ohm").replace(/∝/g, "proportional to");
+      let textValue = text.replace(/’/g, "'").replace(/[“”]/g, '"').replace(/[–—−]/g, "-");
+      if (pdfFontFamily === "helvetica") {
+        textValue = textValue
+          .replace(/×/g, "x").replace(/÷/g, "/").replace(/≤/g, "<=").replace(/≥/g, ">=")
+          .replace(/≈/g, "~=").replace(/→/g, "->").replace(/↔/g, "<->").replace(/±/g, "+/-")
+          .replace(/π/g, "pi").replace(/θ/g, "theta").replace(/λ/g, "lambda").replace(/μ/g, "mu")
+          .replace(/Ω/g, "ohm").replace(/∝/g, "proportional to").replace(/√/g, "sqrt ")
+          .replace(/∑/g, "sum").replace(/∫/g, "integral").replace(/∞/g, "infinity")
+          .replace(/·/g, ".").replace(/°/g, " degrees").replace(/∂/g, "d")
+          .replace(/[₀₁₂₃₄₅₆₇₈₉]/g, (symbol) => String("₀₁₂₃₄₅₆₇₈₉".indexOf(symbol)))
+          .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (symbol) => "^" + String("⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(symbol)))
+          .replace(/α/g, "alpha").replace(/β/g, "beta").replace(/γ/g, "gamma")
+          .replace(/δ/g, "delta").replace(/Δ/g, "Delta").replace(/ε/g, "epsilon")
+          .replace(/ρ/g, "rho").replace(/σ/g, "sigma").replace(/τ/g, "tau")
+          .replace(/φ/g, "phi").replace(/ψ/g, "psi").replace(/ω/g, "omega");
+      }
       const lines = pdf.splitTextToSize(textValue, maxWidth - indent);
       const lineHeight = style.size * 0.43;
       const height = lines.length * lineHeight + style.before + style.after + (block.kind === "h2" ? 2 : 0);
       if (y + height > size.height - 16) addPortraitPage(true);
       y += style.before;
-      pdf.setFont("helvetica", style.font);
+      pdf.setFont(pdfFontFamily, pdfFontFamily === "NotoSans" ? "normal" : style.font);
       pdf.setFontSize(style.size);
       setColor(style.color, pdf.setTextColor);
       if (block.kind === "h2") {
@@ -2028,21 +2060,35 @@
         const size = pageSize();
         pdf.setFillColor(255, 255, 255);
         pdf.rect(0, 0, size.width, size.height, "F");
-        pdf.setFont("helvetica", "bold");
+        pdf.setFont(pdfFontFamily, pdfFontFamily === "NotoSans" ? "normal" : "bold");
         pdf.setFontSize(12);
         setColor(palette.ink, pdf.setTextColor);
         pdf.text(title, 9, 10, { maxWidth: size.width - 18 });
-        pdf.setFont("helvetica", "normal");
+        pdf.setFont(pdfFontFamily, "normal");
         pdf.setFontSize(7.2);
         setColor(palette.muted, pdf.setTextColor);
         pdf.text(level + " · " + subject + " · COMPLETE CONCEPT MAP", 9, 16);
         const options = { x: 7.5, y: 20, width: size.width - 15, height: size.height - 29 };
-        if (typeof engine.svg2pdf === "function") {
-          await engine.svg2pdf(svg, pdf, options);
-        } else if (typeof pdf.svg === "function") {
-          await pdf.svg(svg, options);
-        } else {
-          throw new Error("Vector map support could not be initialized.");
+        const vectorSvg = svg.cloneNode(true);
+        vectorSvg.querySelectorAll("[filter]").forEach((node) => node.removeAttribute("filter"));
+        vectorSvg.querySelectorAll("text, tspan").forEach((node) => {
+          node.setAttribute("font-family", pdfFontFamily);
+          if (pdfFontFamily === "NotoSans") node.setAttribute("font-weight", "normal");
+        });
+        const svgMount = sourceDocument.createElement("div");
+        svgMount.style.cssText = "position:absolute;left:-100000px;top:0;width:1600px;height:960px;overflow:visible;pointer-events:none";
+        svgMount.appendChild(vectorSvg);
+        sourceDocument.body.appendChild(svgMount);
+        try {
+          if (typeof engine.svg2pdf === "function") {
+            await engine.svg2pdf(vectorSvg, pdf, options);
+          } else if (typeof pdf.svg === "function") {
+            await pdf.svg(vectorSvg, options);
+          } else {
+            throw new Error("Vector map support could not be initialized.");
+          }
+        } finally {
+          svgMount.remove();
         }
         pageKind = "landscape";
       } else {
@@ -2064,7 +2110,7 @@
       setColor(palette.line, pdf.setDrawColor);
       pdf.setLineWidth(0.25);
       pdf.line(margin, size.height - 10, size.width - margin, size.height - 10);
-      pdf.setFont("helvetica", "normal");
+      pdf.setFont(pdfFontFamily, "normal");
       pdf.setFontSize(7);
       setColor(palette.muted, pdf.setTextColor);
       pdf.text("KaushalPath · " + title, margin, size.height - 5);
@@ -2118,7 +2164,7 @@ function printNotes(items) {
         return;
       }
       if (event.key !== "Tab") return;
-      const candidates = [downloadButton, closeButton, printFrame].filter((node) => node && !node.disabled);
+      const candidates = [downloadButton, printButton, closeButton, printFrame].filter((node) => node && !node.disabled);
       if (!candidates.length) return;
       const first = candidates[0], last = candidates[candidates.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -2147,7 +2193,7 @@ function printNotes(items) {
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
     const qualityHint = document.createElement("span");
-    qualityHint.textContent = "The PDF starts with the complete chapter mind map on a landscape page, followed by detailed portrait notes. Click Download PDF to save the actual .pdf file directly — no print dialog. The map stays crisp and selectable.";
+    qualityHint.textContent = "Download PDF saves a real .pdf file directly. Print / Save PDF opens the browser print dialog as a separate option. The first page is the full landscape map, followed by portrait notes with selectable text.";
     qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
     guidance.append(heading, status, qualityHint);
 
@@ -2158,12 +2204,18 @@ function printNotes(items) {
     downloadButton.className = "btn btn-purple";
     downloadButton.textContent = "Download PDF";
     downloadButton.disabled = true;
+    const printButton = document.createElement("button");
+    printButton.type = "button";
+    printButton.className = "btn btn-light";
+    printButton.textContent = "Print / Save PDF";
+    printButton.setAttribute("aria-label", "Print the chapter preview or save it with the browser print dialog");
+
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "btn btn-light";
     closeButton.textContent = "Close preview";
     closeButton.addEventListener("click", closePreview);
-    controls.append(downloadButton, closeButton);
+    controls.append(downloadButton, printButton, closeButton);
     toolbar.append(guidance, controls);
 
     const printFrame = document.createElement("iframe");
@@ -2183,6 +2235,19 @@ function printNotes(items) {
       toast("I couldn’t open the chapter preview. Refresh the page and try again.");
       return;
     }
+
+    const startPrint = () => {
+      try {
+        const printWindow = printTarget && printTarget.document && printTarget.document.defaultView;
+        if (!printWindow) throw new Error("The chapter print preview is not available.");
+        printWindow.focus();
+        printWindow.print();
+      } catch (error) {
+        status.textContent = "The print dialog could not open. Use your browser menu and choose Print.";
+        toast("Print is unavailable in this browser window. Use the browser menu and choose Print.");
+      }
+    };
+    printButton.addEventListener("click", startPrint);
 
     const startDownload = async () => {
       if (downloadButton.dataset.generating === "true") return;
@@ -2292,8 +2357,8 @@ function printNotes(items) {
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
       downloadButton.disabled = false;
       downloadButton.textContent = "Download PDF";
-      status.textContent = "Preview ready. Click Download PDF to save the .pdf file directly — no print dialog needed. The map and notes remain crisp and selectable.";
-      toast("Chapter notes are ready. Click Download PDF to save the actual file.");
+      status.textContent = "Preview ready. Download PDF saves a real file directly; Print / Save PDF is a separate browser-print option. The map and notes remain crisp and selectable.";
+      toast("Chapter notes are ready. Use Download PDF for a direct file, or Print / Save PDF for the browser print dialog.");
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
       status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
