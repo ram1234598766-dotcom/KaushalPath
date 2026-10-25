@@ -54,6 +54,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ncert-biology-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ncert-physics-chapter-notes.js",
       "use": "@vercel/static"
     },
