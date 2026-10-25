@@ -810,6 +810,11 @@ body.mock-test-window #resultWorkspace{max-width:1200px;margin:0 auto!important;
   <div class="panel planner-metric"><span>Planned time</span><strong id="plannerPlannedMinutes">0m</strong><small>For unfinished tasks</small></div>
   <div class="panel planner-metric"><span>Completed</span><strong id="plannerCompletedCount">0</strong><small>Tasks you have finished</small></div>
  </div>
+ <section class="panel" id="smartSystemPanel" aria-labelledby="smartSystemTitle" style="margin:18px 0 20px">
+  <div class="planner-board-head"><div><div class="kicker">SMART STUDY LOOP</div><h3 id="smartSystemTitle">Turn practice into a practical next step.</h3><p class="tiny">Topic analysis runs on this device. Community benchmarks are optional reads; your individual history is never sent.</p></div><div class="actions"><button type="button" class="btn btn-light" id="smartAnalyzeBtn">Analyze my practice</button><button type="button" class="btn btn-purple" id="smartCreateTaskBtn" disabled>Make a 25-minute task</button></div></div>
+  <p id="smartSystemStatus" class="tiny" role="status" aria-live="polite">Your local weakness analysis will appear here.</p>
+  <div id="smartSystemTopics" class="smart-topic-results"></div>
+ </section>
  <div class="planner-layout">
   <form class="panel planner-form" id="plannerTaskForm">
    <div class="kicker">ADD A STUDY TASK</div><h3>Make the next step clear.</h3><p class="tiny">Aim for a task you can actually finish, not a perfect timetable.</p>
@@ -872,5 +877,6 @@ body.mock-test-window #resultWorkspace{max-width:1200px;margin:0 auto!important;
 <script src="/question-bank.js" defer></script>
 <script src="/local-ai.js" defer></script>
 <script src="/app.js" defer></script>
+<script src="/smart-system-client.js" defer></script>
 </body>
 </html>
