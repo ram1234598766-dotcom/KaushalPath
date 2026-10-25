@@ -506,3 +506,12 @@ assert.match(smartClient, /kp-results/, "Smart System must read the existing loc
 assert.match(smartClient, /kp-planner-tasks/, "Smart System must keep planner writes local");
 assert.ok(smartClient.includes("/api/v2/analytics/benchmarks"), "Smart System UI must request aggregate community benchmarks");
 assert.ok(vercel.builds.some(b => b.src === "smart-system-client.js" && b.use === "@vercel/static"), "Vercel must publish Smart System UI client");
+
+assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF export should fall back to a simpler per-chapter layout if rich rendering fails");
+assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
+assert.ok(studyLibrary.includes("Timed out while loading the PDF library."), "the PDF library loader must have a bounded timeout");
+assert.ok(studyLibrary.includes('script.dataset.loaded === "true"'), "the PDF library loader must handle a script that already finished loading");
+assert.ok(studyLibrary.includes('scale: 1, useCORS: true'), "PDF generation should use a memory-conscious canvas scale");
+assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Download PDF or use Print / Save PDF."'), "preview readiness should be separate from PDF generation");
+assert.doesNotMatch(studyLibrary, /window\.setTimeout\(runDownload,\s*0\)/, "PDF generation must wait for an explicit download action instead of automatically consuming memory");
+assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter filename construction must tolerate incomplete chapter metadata");
