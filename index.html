@@ -789,6 +789,43 @@ body.mock-test-window .mobile-dock{display:none!important}
  .command-result-type{display:none}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* Motion and interaction polish: short, purposeful, and never required to use the app. */
+:root{scrollbar-gutter:stable}
+::selection{background:#e5d7ff;color:#2a1744}
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #9572e7;outline-offset:3px;box-shadow:0 0 0 5px #9572e722}
+.btn{transition:transform .16s cubic-bezier(.2,.75,.25,1),box-shadow .18s ease,background-color .18s ease,border-color .18s ease,color .18s ease}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(0) scale(.985)}
+.path-card,.notes-card,.test-card,.resource-card,.library-card,.stat,.panel{transition:transform .22s cubic-bezier(.2,.75,.25,1),box-shadow .22s ease,border-color .22s ease}
+.path-card:hover,.notes-card:hover,.test-card:hover,.resource-card:hover,.library-card:hover{transform:translateY(-2px)}
+.notes-card,.test-card{animation:kp-card-enter 340ms cubic-bezier(.2,.75,.25,1) both;animation-delay:calc(var(--kp-card-index,0) * 24ms)}
+.dashboard-metrics .stat{animation:kp-card-enter 380ms cubic-bezier(.2,.75,.25,1) both}
+.dashboard-metrics .stat:nth-child(2){animation-delay:35ms}
+.dashboard-metrics .stat:nth-child(3){animation-delay:70ms}
+.dashboard-metrics .stat:nth-child(4){animation-delay:105ms}
+.kp-view-enter{animation:kp-view-enter 280ms cubic-bezier(.2,.75,.25,1) both}
+.kp-note-detail-enter{animation:kp-detail-enter 260ms cubic-bezier(.2,.75,.25,1) both}
+.notes-pdf-preview-shell{animation:kp-overlay-enter 180ms ease-out both}
+.notes-pdf-preview-shell>div:first-child{animation:kp-toolbar-enter 240ms cubic-bezier(.2,.75,.25,1) both}
+.mobile-dock{transform:translateY(0);transition:box-shadow .2s ease,border-color .2s ease}
+.mobile-dock a{transition:background-color .16s ease,color .16s ease,transform .16s ease}
+.mobile-dock a:active{transform:scale(.96)}
+.side-link{transition:background-color .16s ease,color .16s ease,padding-left .16s ease}
+.command-result{transition:background-color .14s ease,border-color .14s ease,transform .14s ease}
+.command-result:hover{transform:translateX(2px)}
+.progress span{transition:width .4s cubic-bezier(.2,.75,.25,1)}
+@keyframes kp-view-enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kp-detail-enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kp-overlay-enter{from{opacity:0}to{opacity:1}}
+@keyframes kp-toolbar-enter{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kp-card-enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(hover:none){.path-card:hover,.notes-card:hover,.test-card:hover,.resource-card:hover,.library-card:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){
+ .kp-view-enter,.kp-note-detail-enter,.notes-pdf-preview-shell,.notes-pdf-preview-shell>div:first-child,.notes-card,.test-card,.dashboard-metrics .stat{animation:none!important}
+ .path-card:hover,.notes-card:hover,.test-card:hover,.resource-card:hover,.library-card:hover,.btn:hover:not(:disabled),.command-result:hover{transform:none!important}
+ .progress span{transition:none!important}
+}
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
