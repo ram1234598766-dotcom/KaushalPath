@@ -12,7 +12,7 @@
   const uniqueQuestions = (items) => {
     const seen = new Set();
     return items.filter((item) => {
-      const key = String(item.q || "").toLowerCase().replace(/\\s+/g, " ").trim();
+      const key = String(item.q || "").toLowerCase().replace(/\s+/g, " ").trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
