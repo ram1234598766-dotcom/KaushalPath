@@ -15,6 +15,8 @@ const staticFiles = [
   "school-humanities-commerce-guides.js",
   "formula-cheat-sheets.js",
   "exam-prep-notes.js",
+  "cbse-english-chapter-notes.js",
+  "cbse-commerce-computing-hindi-chapters.js",
   "jee-neet-chapter-notes.js",
   "cbse-maths-deep-notes.js",
   "cbse-physics-chemistry-deep-notes.js",
