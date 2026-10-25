@@ -7,6 +7,8 @@ const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "ut
 const questionBank = readFileSync(new URL("../question-bank.js", import.meta.url), "utf8");
 const studyLibrary = readFileSync(new URL("../study-library.js", import.meta.url), "utf8");
 const examPrepNotes = readFileSync(new URL("../exam-prep-notes.js", import.meta.url), "utf8");
+const formulaSheets = readFileSync(new URL("../formula-cheat-sheets.js", import.meta.url), "utf8");
+const schoolGuides = readFileSync(new URL("../school-chapter-guides.js", import.meta.url), "utf8");
 const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -41,11 +43,18 @@ assert.match(html, /id="localAiPrefer"/, "local model preference must be explici
 assert.match(html, /value="JEE Main"/, "the notes library should filter detailed JEE Main notes");
 assert.match(html, /value="NEET UG"/, "the notes library should filter detailed NEET UG notes");
 assert.ok(html.indexOf('src="/exam-prep-notes.js"') < html.indexOf('src="/study-library.js"'), "exam note data must load before the library renderer");
-assert.match(html, /180 note packs/, "the notes catalogue should reflect 119 core packs plus 61 detailed exam entries");
+assert.match(html, /211 detailed notes & cheat sheets/, "the notes catalogue should reflect 119 core packs + 61 JEE/NEET packs + 17 CBSE master guides + 14 formula sheets");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
 assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
 assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/, "deep-dive notes should include dedicated JEE and NEET views");
 assert.match(examPrepNotes, /workedExamples/, "exam notes should include stepwise examples and problem methods");
+assert.equal((formulaSheets.match(/const .* = sheet\(/g) || []).length, 14, "formula cheat sheets should cover CBSE classes and JEE/NEET");
+assert.equal((schoolGuides.match(/const g[0-9]+[A-Za-z0-9]* = guide\(/g) || []).length, 17, "core CBSE chapters should have expanded master guides");
+assert.match(formulaSheets, /Common trap:/, "formula cards should name common mistakes");
+assert.match(formulaSheets, /Units\/notation:/, "formula cards should explain units and notation");
+assert.match(studyLibrary, /Explained formula cheat sheet/, "the chapter reader should show formula cards with explanations");
+assert.match(studyLibrary, /FORMULA CHEAT SHEET/, "PDF and saved-text notes should preserve explained formula cards");
+
 assert.match(examPrepNotes, /commonMistakes/, "exam notes should cover common mistakes");
 assert.match(studyLibrary, /Detailed concept explanations/, "the note reader should render expanded concept sections");
 assert.match(studyLibrary, /ADDITIONAL WORKED METHODS/, "the PDF export should include detailed worked methods");
@@ -63,7 +72,9 @@ assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Pol
 assert.match(vercel.headers[0].headers.find(h => h.key === "Content-Security-Policy").value, /worker-src 'self' blob:/);
 assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "Vercel should publish the local inference controller");
 assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@vercel/static"), "Vercel should publish the expanded exam notes");
-assert.match(serviceWorker, /kaushalpath-shell-v3/, "service worker cache should be bumped to include local model controls");
+assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
+assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
+assert.match(serviceWorker, /kaushalpath-shell-v4/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
