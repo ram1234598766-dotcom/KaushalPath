@@ -6,13 +6,14 @@ const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const output = resolve(root, "dist");
 const configPath = resolve(root, "wrangler.toml");
 const config = await readFile(configPath, "utf8");
-if (!/^name = "kaushalpath"$/m.test(config)) {
+const configLines = config.split(/\r?\n/).map((line) => line.trim());
+if (!configLines.includes('name = "kaushalpath"')) {
   throw new Error('Cloudflare build must target the existing "kaushalpath" Worker.');
 }
-if (!/^main = "cloudflare-worker\\.mjs"$/m.test(config)) {
+if (!configLines.includes('main = "cloudflare-worker.mjs"')) {
   throw new Error('wrangler.toml must declare cloudflare-worker.mjs as the Worker entry point.');
 }
-if (/^\\[assets\\]/m.test(config)) {
+if (configLines.includes("[assets]")) {
   throw new Error('Do not enable Wrangler static-asset uploads for this Worker: KaushalPath serves its allowlisted public files through the existing Worker, avoiding the previous unauthorized /workers/assets/upload failure.');
 }
 const deploymentFiles = [
