@@ -627,28 +627,28 @@
 
   function noteText(item) {
     const deepSections = (item.sections || []).map((section) =>
-      String(section.heading || "Detailed concept") + "\\n" + String(section.body || "") +
-      (Array.isArray(section.points) && section.points.length ? "\\n" + section.points.map((x) => "- " + x).join("\\n") : "")
+      String(section.heading || "Detailed concept") + "\n" + String(section.body || "") +
+      (Array.isArray(section.points) && section.points.length ? "\n" + section.points.map((x) => "- " + x).join("\n") : "")
     );
     const worked = (item.workedExamples || []).map((example, index) =>
-      (index + 1) + ". " + String(example.title || "Worked method") + "\\n" +
-      (example.steps || []).map((x, i) => "   " + (i + 1) + ". " + x).join("\\n")
+      (index + 1) + ". " + String(example.title || "Worked method") + "\n" +
+      (example.steps || []).map((x, i) => "   " + (i + 1) + ". " + x).join("\n")
     );
     return [
       item.level + " · " + item.subject,
       item.chapter,
       item.intro,
       ...deepSections,
-      "KEY IDEAS\\n" + item.points.map((x) => "- " + x).join("\\n"),
-      item.formulas.length ? "FORMULAS / RULES\\n" + item.formulas.map((x) => "- " + x).join("\\n") : "",
-      "WORKED EXAMPLE\\n" + item.example,
-      worked.length ? "ADDITIONAL WORKED METHODS\\n" + worked.join("\\n\\n") : "",
-      item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\\n" + item.commonMistakes.map((x) => "- " + x).join("\\n") : "",
-      item.examFocus && item.examFocus.length ? "EXAM APPROACH\\n" + item.examFocus.map((x) => "- " + x).join("\\n") : "",
-      item.glossary && item.glossary.length ? "GLOSSARY\\n" + item.glossary.map((x) => "- " + x).join("\\n") : "",
-      "QUICK SELF-CHECK\\n" + item.recall.map((x, i) => (i + 1) + ". " + x).join("\\n"),
+      "KEY IDEAS\n" + item.points.map((x) => "- " + x).join("\n"),
+      item.formulas.length ? "FORMULAS / RULES\n" + item.formulas.map((x) => "- " + x).join("\n") : "",
+      "WORKED EXAMPLE\n" + item.example,
+      worked.length ? "ADDITIONAL WORKED METHODS\n" + worked.join("\n\n") : "",
+      item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\n" + item.commonMistakes.map((x) => "- " + x).join("\n") : "",
+      item.examFocus && item.examFocus.length ? "EXAM APPROACH\n" + item.examFocus.map((x) => "- " + x).join("\n") : "",
+      item.glossary && item.glossary.length ? "GLOSSARY\n" + item.glossary.map((x) => "- " + x).join("\n") : "",
+      "QUICK SELF-CHECK\n" + item.recall.map((x, i) => (i + 1) + ". " + x).join("\n"),
       "Source note: " + String(item.sourceNote || NOTE_SOURCE)
-    ].filter(Boolean).join("\\n\\n");
+    ].filter(Boolean).join("\n\n");
   }
   let activeNote = null;
   function filteredNotes() {
