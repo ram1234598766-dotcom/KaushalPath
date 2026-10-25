@@ -316,23 +316,41 @@ function cbseAnnualFallbackNotes(className, subject){
 function cbseAnnualSources(className, subject){
  const catalog=Array.isArray(window.KP_ANNUAL_PAPER_CATALOG)?window.KP_ANNUAL_PAPER_CATALOG:[];
  const family=cbseAnnualFamily(subject);
- const requested=cbseAnnualCanonical(subject);
  const classNotes=catalog.filter(function(item){return item&&item.level===className;});
  const exact=classNotes.filter(function(item){return family.includes(cbseAnnualCanonical(item.subject));});
- if(exact.length)return {notes:exact,scope:"class-specific",fallback:false};
- const crossClass=catalog.filter(function(item){return item&&family.includes(cbseAnnualCanonical(item.subject));});
- if(crossClass.length)return {notes:crossClass,scope:"available curated chapter content",fallback:false};
- return {notes:cbseAnnualFallbackNotes(className,subject),scope:"subject-format scaffold",fallback:true};
+ if(exact.length)return {notes:exact,scope:"class-specific curated chapters",fallback:false};
+ // Do not silently pull another class's notes into this paper.
+ return {notes:cbseAnnualFallbackNotes(className,subject),scope:"subject-format competency scaffold",fallback:true};
 }
 function cbseAnnualPaperConfig(className, subject){
- const text=cbseAnnualNormalize(subject);
+ const text=cbseAnnualNormalize(subject),canonical=cbseAnnualCanonical(subject);
+ const seniorScience=["physics","chemistry","biology","biotechnology"].includes(canonical);
+ const seniorPractical=["computer science","informatics practices","physical education"].includes(canonical);
+ const skillSubject=/(computer applications|information technology|artificial intelligence|retail|financial markets|tourism|beauty wellness|front office|marketing and sales|ncc)/.test(text);
+ if(className==="Class 10"&&canonical==="science"){
+  return {marks:80,duration:180,mcq:20,veryShort:6,short:7,long:3,case:3,profile:"class-x-science",questionCount:39};
+ }
+ if(className==="Class 12"&&canonical==="computer science"){
+  // The current Class XII CS sample paper uses 21×1, 7×2, 3×3, 4×4, 2×5 = 70.
+  return {marks:70,duration:180,mcq:21,veryShort:7,short:3,long:2,case:4,profile:"class-xii-computer-science",questionCount:37,caseBeforeLong:true};
+ }
+ if(className!=="Class 10"&&(seniorScience||seniorPractical)){
+  // Typical 70-mark science/practical-subject model: 16×1, 5×2, 7×3, 2×4, 3×5.
+  return {marks:70,duration:180,mcq:16,veryShort:5,short:7,long:3,case:2,profile:"senior-science",questionCount:33,caseBeforeLong:true};
+ }
+ if(className==="Class 10"&&skillSubject){return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2,profile:"class-x-skill",questionCount:23};}
+ if(className==="Class 10"&&canonical==="home science"){return {marks:70,duration:180,mcq:16,veryShort:4,short:5,long:3,case:4,profile:"class-x-home-science",questionCount:32};}
+ if(className!=="Class 10"&&skillSubject&&/(retail|tourism|beauty|front office|marketing|financial markets)/.test(text)){return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2,profile:"senior-skill",questionCount:23};}
+ if(className==="Class 10"&&/mathematics/.test(text)){return {marks:80,duration:180,mcq:20,veryShort:5,short:6,long:4,case:3,profile:"class-x-mathematics",questionCount:38};}
+ if(className==="Class 10"&&/(english|hindi|sanskrit|arabic|assamese|bengali|bhoti|bhutia|bodo|french|german|gujarati|japanese|kannada|kashmiri|kokborok|lepcha|malayalam|manipuri|marathi|mizo|nepali|odia|persian|punjabi|russian|santhali|sindhi|spanish|tamil|telugu|tibetan|urdu)/.test(text)){
+  return {marks:80,duration:180,mcq:10,veryShort:10,short:6,long:4,case:3,profile:"language-paper",questionCount:33};
+ }
  let marks=80,duration=180;
- if(className==="Class 10"&&/(computer applications|information technology|artificial intelligence|retail|financial markets|tourism|beauty wellness|front office|marketing and sales|ncc)/.test(text)){marks=50;duration=120;}
- else if(className==="Class 10"&&text==="home science"){marks=70;duration=180;}
- else if(className!=="Class 10"&&/(physics|chemistry|biology|biotechnology|computer science|informatics practices|physical education)/.test(text)){marks=70;duration=180;}
- if(marks===80)return {marks:80,duration:180,mcq:20,veryShort:5,short:6,long:4,case:3};
- if(marks===70)return {marks:70,duration:180,mcq:16,veryShort:4,short:5,long:3,case:4};
- return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2};
+ if(className==="Class 10"&&text==="home science"){marks=70;}
+ else if(className!=="Class 10"&&/(physics|chemistry|biology|biotechnology|computer science|informatics practices|physical education)/.test(text)){marks=70;}
+ if(marks===80)return {marks:80,duration:180,mcq:20,veryShort:5,short:6,long:4,case:3,profile:"general-80",questionCount:38};
+ if(marks===70)return {marks:70,duration:180,mcq:16,veryShort:4,short:5,long:3,case:4,profile:"general-70",questionCount:32};
+ return {marks:50,duration:120,mcq:10,veryShort:5,short:4,long:2,case:2,profile:"general-50",questionCount:23};
 }
 function cbseAnnualRubric(marks){
  const items={
@@ -387,7 +405,7 @@ function buildCbseAnnualPaper(className, subject){
   return out.slice(0,3);
  }
  const qs=[];
- const sectionTitles={A:"Section A · Objective questions",B:"Section B · Very short answer",C:"Section C · Short answer",D:"Section D · Long answer",E:"Section E · Case / source based questions"};
+ const sectionTitles={A:"Section A · Objective questions",B:"Section B · Very short answer",C:"Section C · Short answer",D:cfg.caseBeforeLong?"Section D · Case / source / output based questions":"Section D · Long answer",E:cfg.caseBeforeLong?"Section E · Long answer":"Section E · Case / source based questions"};
  function sourceMeta(item){
   return {subject:subject,chapter:String(item&&item.chapter||subject),topic:String(item&&item.chapter||"Mixed syllabus revision"),sourceType:"Competency",sourceLabel:fallback?"Original subject-format competency scaffold":"Original syllabus-mapped competency practice"};
  }
@@ -403,14 +421,11 @@ function buildCbseAnnualPaper(className, subject){
   while(choices.length<4)choices.push({text:genericDistractors[(index+choices.length)%genericDistractors.length],chapter:"Alternative"});
   const answerPosition=index%4,options=[];
   for(let slot=0;slot<4;slot++)options.push(String((slot===answerPosition?choices[0]:choices[slot<answerPosition?slot+1:slot]||choices[(slot+1)%choices.length]).text).slice(0,1000));
-  const explanation=problem
-   ?"Correct answer: "+correct+(problem.solution?"\nReasoning: "+problem.solution:"")
-   :"The chapter-aligned statement is: "+correct;
+  const explanation=problem?"Correct answer: "+correct+(problem.solution?"\nReasoning: "+problem.solution:""):"The chapter-aligned statement is: "+correct;
   qs.push(Object.assign({q:stem,o:options,a:answerPosition,e:explanation.slice(0,4800),mark:1,negativeMark:0,sectionTitle:sectionTitles.A,questionFormat:"Competency MCQ"},sourceMeta(problem?problem.item:concept.item)));
  }
  function makeWritten(index,marks,kind,sectionTitle){
   const item=source.notes[index%source.notes.length]||source.notes[0]||{};
-  const itemSections=Array.isArray(item.sections)?item.sections:[];
   const section=rows.sections.length?rows.sections[index%rows.sections.length]:null;
   const problem=problemRows.length?problemRows[index%problemRows.length]:null;
   const recall=rows.recalls.length?rows.recalls[index%rows.recalls.length]:null;
@@ -432,20 +447,18 @@ function buildCbseAnnualPaper(className, subject){
    if(marks>=3)question+="\nShow the important reasoning or evidence; a final statement alone is not sufficient.";
   }
   if(!modelAnswer.trim())modelAnswer="Expected response: define the relevant concept, use evidence from the syllabus-aligned source and justify the conclusion.";
-  const metadata=sourceMeta(problem?problem.item:(section?section.item:item));
-  qs.push(Object.assign({
-   q:question.slice(0,3800),o:[],a:-1,e:modelAnswer.slice(0,4800),modelAnswer:modelAnswer.slice(0,4800),
-   rubric:cbseAnnualRubric(marks),mark:marks,negativeMark:0,responseType:"written",
-   sectionTitle:sectionTitle,questionFormat:kind==="case"?"Case / source based":kind==="long"?"Long answer":"Constructed response",
-   caseContext:kind==="case",topic:chapter
-  },metadata));
+  qs.push(Object.assign({q:question.slice(0,3800),o:[],a:-1,e:modelAnswer.slice(0,4800),modelAnswer:modelAnswer.slice(0,4800),rubric:cbseAnnualRubric(marks),mark:marks,negativeMark:0,responseType:"written",sectionTitle:sectionTitle,questionFormat:kind==="case"?"Case / source based":kind==="long"?"Long answer":"Constructed response",caseContext:kind==="case",topic:chapter},sourceMeta(problem?problem.item:(section?section.item:item))));
  }
- const sectionTitlesUnused=sectionTitles;
  for(let i=0;i<cfg.mcq;i++)addMcq(i);
  for(let i=0;i<cfg.veryShort;i++)makeWritten(i,2,"short",sectionTitles.B);
  for(let i=0;i<cfg.short;i++)makeWritten(i+cfg.veryShort,3,"short",sectionTitles.C);
- for(let i=0;i<cfg.long;i++)makeWritten(i+cfg.veryShort+cfg.short,5,"long",sectionTitles.D);
- for(let i=0;i<cfg.case;i++)makeWritten(i+cfg.veryShort+cfg.short+cfg.long,4,"case",sectionTitles.E);
+ if(cfg.caseBeforeLong){
+  for(let i=0;i<cfg.case;i++)makeWritten(i+cfg.veryShort+cfg.short,4,"case",sectionTitles.D);
+  for(let i=0;i<cfg.long;i++)makeWritten(i+cfg.veryShort+cfg.short+cfg.case,5,"long",sectionTitles.E);
+ }else{
+  for(let i=0;i<cfg.long;i++)makeWritten(i+cfg.veryShort+cfg.short,5,"long",sectionTitles.D);
+  for(let i=0;i<cfg.case;i++)makeWritten(i+cfg.veryShort+cfg.short+cfg.long,4,"case",sectionTitles.E);
+ }
  const total=qs.reduce(function(sum,q){return sum+Number(q.mark||1);},0);
  if(total!==cfg.marks)throw new Error("The annual-paper blueprint does not sum to the required maximum marks.");
  const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
@@ -511,7 +524,7 @@ function initCbseAnnualBuilder(){
   const existing=questions.findIndex(function(test){return test.id===paper.id;});
   if(existing>=0)questions[existing]=paper;else questions.push(paper);
   renderTests();
-  if(status)status.textContent="Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
+  if(status)status.textContent=(paper.subjectFormatFallback?"This subject uses an original subject-format competency scaffold because no class-specific curated chapter set was available. Check chapter coverage against the official syllabus. ":"Paper content is drawn from available class-specific curated chapter notes. ")+ "Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
   startTest(paper.id);
  });
  downloadPaper.addEventListener("click",function(){exportPaper(false);});
