@@ -70,3 +70,10 @@ Built-in questions are original practice samples, not a verified archive of auth
 - [NTA downloads](https://nta.ac.in/Downloads)
 
 - Images are decoded, pixel-limited, orientation-corrected and re-encoded server-side; PNG/WebP are preserved where possible, vector/other formats are normalized, and damaged image bytes are rejected.
+
+
+## Individual full-chapter notes
+
+The study library loads separate original chapter deep-dives for Class 10 Science/Mathematics, Class 11 and 12 Mathematics, Chemistry, Physics and Biology, plus dedicated JEE Main and NEET UG revision entries. Each chapter uses explanations, formula/reaction or process cards, worked examples, common mistakes, recall prompts and a full chapter print-to-PDF flow. Coverage is substantial but should be checked against the active 2026–27 CBSE/NTA syllabus and prescribed NCERT edition; it is not a claim that every language/elective/vocational chapter is complete.
+
+Official references: [NCERT textbook catalogue](https://ncert.nic.in/textbook.php) · [CBSE curriculum 2026–27](https://cbseacademic.nic.in/curriculum_2027.html).
