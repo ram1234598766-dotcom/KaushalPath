@@ -102,7 +102,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v13"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v14"), "PWA cache must be bumped for new chapter assets");
 assert.ok(vercel.builds.some(b => b.src === "cbse-maths-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-maths-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-physics-chemistry-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-physics-chemistry-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-biology-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-biology-deep-notes.js");
@@ -170,14 +170,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v13/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v14/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v13/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v14/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -194,7 +194,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v13/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v14/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
