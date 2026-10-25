@@ -1261,7 +1261,7 @@ function refreshResumeBanner(){
  const test=questions.find(function(t){return t.id===saved.testId;});if(!test){banner.classList.add("hidden");return;}
  if(title)title.textContent=test.title;
  const remaining=Math.max(0,Math.ceil((saved.endAt-Date.now())/1000)),answered=test.qs.reduce(function(total,q,index){return total+(questionIsAnswered(q,saved.answers[index])?1:0);},0);
- if(detail)detail.textContent=remaining===0?"Time has expired. Resume to submit your saved answers.":answered+" of "+test.qs.length+" answers saved · Question "+(saved.index+1)+" of "+test.qs.length+" · time remaining "+String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0")+".";
+ if(detail)detail.textContent=test.timed===false?"Self-paced sample test · no timer.":remaining===0?"Time has expired. Resume to submit your saved answers.":answered+" of "+test.qs.length+" answers saved · Question "+(saved.index+1)+" of "+test.qs.length+" · time remaining "+String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0")+".";
  banner.classList.remove("hidden");
 }
 function renderHistory(){
