@@ -1,3 +1,26 @@
 name = "kaushalpath"
 main = "cloudflare-worker.mjs"
 compatibility_date = "2026-10-25"
+
+[vars]
+FRONTEND_ORIGINS = "https://kaushal-path.vercel.app,https://kaushalpath.kaushalpath.workers.dev,http://localhost:5173,http://localhost:4173"
+ANALYTICS_WRITE_ENABLED = "true"
+D1_CATALOG_FALLBACK_ENABLED = "true"
+D1_BENCHMARKS_ENABLED = "true"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kaushalpath-smart"
+database_id = "966d4fa5-1d71-4c5a-bbce-9fbad8caaba1"
+migrations_dir = "smart-system/migrations"
+
+[[kv_namespaces]]
+binding = "STATIC_DATA"
+id = "d7176559631b47bca4a369633f5bbc2f"
+
+[[ratelimits]]
+name = "ANALYTICS_RATE_LIMITER"
+namespace_id = "5271934"
+  [ratelimits.simple]
+  limit = 30
+  period = 60
