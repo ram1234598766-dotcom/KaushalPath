@@ -44,6 +44,6 @@ if (missing.length) {
   console.error("Cloudflare static build is missing required files: " + missing.join(", "));
   process.exitCode = 1;
 } else {
-  console.log("Cloudflare Pages static build ready: " + staticFiles.length + " assets copied to dist/.");
-  console.log("Pages Function functions/api/study-guide.js is deployed separately by Cloudflare Pages.");
+  console.log("Cloudflare Workers static-asset build ready: " + staticFiles.length + " assets copied to dist/.");
+  console.log("Worker entry point cloudflare-worker.mjs routes /api/study-guide to the existing Vercel-backed proxy.");
 }
