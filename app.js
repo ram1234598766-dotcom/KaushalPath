@@ -510,6 +510,7 @@ function initCbseAnnualBuilder(){
   try{paper=getPaper();}catch(error){toast("Could not assemble this model paper. Please choose another subject.");return;}
   const existing=questions.findIndex(function(test){return test.id===paper.id;});
   if(existing>=0)questions[existing]=paper;else questions.push(paper);
+  renderTests();
   if(status)status.textContent="Started "+paper.title+". Objective marks are automatic; written responses are self-marked against the answer guide after submission.";
   startTest(paper.id);
  });
@@ -620,10 +621,10 @@ function renderTests(){
   card.className="test-card"+(t.fullLength?" full-length-test-card":"");
   card.style.setProperty("--kp-card-index",String(Math.min(index,12)));
   card.dataset.exam=t.exam;
-  const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";
-  const kind=t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
+  const cls=t.exam==="NEET UG"?"teal":(t.exam==="CBSE"||t.exam==="CBSE Annual")?"orange":"";
+  const kind=t.annualExam?"CBSE-style annual model paper · competency + written responses":t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
   const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);
-  const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
+  const marking=t.annualExam?"Objective marks automatic; written responses self-marked":t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
   let sourceLinks="";
   if(t.official) sourceLinks='<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>';
   else if(t.fullLength && t.exam==="JEE Main") sourceLinks='<div class="test-source-links"><a href="https://jeemain.nta.nic.in/2026/" target="_blank" rel="noopener noreferrer">Official JEE Main papers and syllabus ↗</a></div>';
