@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaushalpath-shell-v5";
+const CACHE_NAME = "kaushalpath-shell-v6";
 const SHELL_FILES = [
   "/",
   "/index.html",
@@ -13,6 +13,11 @@ const SHELL_FILES = [
   "/manifest.webmanifest",
   "/app-icon.svg",
   "/offline.html"
+
+  "/cbse-maths-deep-notes.js",
+  "/cbse-physics-chemistry-deep-notes.js",
+  "/cbse-biology-deep-notes.js",
+  "/cbse-remaining-chapter-notes.js",
 ];
 const STATIC_FILES = new Set([
   "/app.js",
@@ -24,6 +29,11 @@ const STATIC_FILES = new Set([
   "/question-bank.js",
   "/manifest.webmanifest",
   "/app-icon.svg"
+
+  "/cbse-maths-deep-notes.js",
+  "/cbse-physics-chemistry-deep-notes.js",
+  "/cbse-biology-deep-notes.js",
+  "/cbse-remaining-chapter-notes.js",
 ]);
 
 self.addEventListener("install", (event) => {
