@@ -1910,10 +1910,8 @@
       .replace(/[^a-zA-Z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 90) || "KaushalPath-Chapter-Notes";
-    const fileName = fileStem + ".pdf";
-    const pageTitle = chapter
-      ? (chapter.chapter || "Chapter") + " · Complete Chapter Notes"
-      : "KaushalPath · Complete Chapter Notes";
+    // Native print-to-PDF uses the page title as the suggested downloaded filename.
+    const pageTitle = fileStem;
 
     try {
       // One chapter includes the concept map and twelve revision sections.
@@ -1980,8 +1978,8 @@
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
       downloadButton.disabled = false;
       downloadButton.textContent = "Download PDF";
-      status.textContent = "Preview ready. Print or save the chapter with the complete landscape map and crisp, selectable text.";
-      toast("Chapter notes are ready. Choose Print / Save PDF, then select Save as PDF.");
+      status.textContent = "Preview ready. Click Download PDF, then choose “Save as PDF” in the print dialog and click Save. Your map and notes remain crisp and selectable.";
+      toast("Chapter notes are ready. Click Download PDF, then choose Save as PDF in the print dialog.");
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
       status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
