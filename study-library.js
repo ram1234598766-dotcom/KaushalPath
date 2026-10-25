@@ -615,23 +615,23 @@
     return String(value || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
   }
   const chapterAliases = {
-    "class 10|science|magnetic effects of current": "magnetic effects of electric current",
-    "class 11|chemistry|atomic structure": "structure of atom",
-    "class 11|chemistry|chemical bonding": "chemical bonding and molecular structure",
-    "class 11|chemistry|thermodynamics": "chemical thermodynamics",
-    "class 12|physics|electrostatics": "electric charges and fields",
-    "class 12|physics|electromagnetic induction and ac": "electromagnetic induction",
-    "class 12|physics|ray and wave optics": "ray optics and optical instruments",
-    "class 12|chemistry|solutions and electrochemistry": "solutions"
+    "class10|science|magneticeffectsofcurrent": "magneticeffectsofelectriccurrent",
+    "class11|chemistry|atomicstructure": "structureofatom",
+    "class11|chemistry|chemicalbonding": "chemicalbondingandmolecularstructure",
+    "class11|chemistry|thermodynamics": "chemicalthermodynamics",
+    "class12|physics|electrostatics": "electricchargesandfields",
+    "class12|physics|electromagneticinductionandac": "electromagneticinduction",
+    "class12|physics|rayandwaveoptics": "rayopticsandopticalinstruments",
+    "class12|chemistry|solutionsandelectrochemistry": "solutions",
+    "class11|physics|oscillationsandwaves": "oscillations"
   };
   function chapterKey(item) {
     if (!item || typeof item !== "object") return "";
-    const base = String(item.level || "").toLowerCase().trim() + "|" +
-      String(item.subject || "").toLowerCase().trim() + "|" + normaliseChapterTitle(item.chapter);
-    const aliasTitle = chapterAliases[base];
-    return String(item.level || "").toLowerCase().trim() + "|" +
-      String(item.subject || "").toLowerCase().trim() + "|" +
-      normaliseChapterTitle(aliasTitle || item.chapter);
+    const level = normaliseChapterTitle(item.level);
+    const subject = normaliseChapterTitle(item.subject);
+    const title = normaliseChapterTitle(item.chapter);
+    const base = level + "|" + subject + "|" + title;
+    return level + "|" + subject + "|" + (chapterAliases[base] || title);
   }
   function hasRichContent(item) {
     return Boolean(item && (
