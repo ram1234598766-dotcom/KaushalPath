@@ -56,23 +56,6 @@ assert.ok(gravitation.formulaCheatSheet.length >= 4, "Gravitation needs several 
 assert.ok(gravitation.workedExamples.length >= 3, "Gravitation needs multiple step-by-step worked examples");
 assert.ok(gravitation.practiceProblems.length >= 4, "Gravitation needs practice with answers and reasoning");
 
-const subjectCoverage = [
-  ["Class 10", "Mathematics", 8],
-  ["Class 11", "Mathematics", 8],
-  ["Class 12", "Mathematics", 8],
-  ["Class 10", "Science", 8],
-  ["Class 11", "Physics", 6],
-  ["Class 12", "Physics", 6],
-  ["Class 11", "Chemistry", 6],
-  ["Class 12", "Chemistry", 6],
-  ["Class 11", "Biology", 6],
-  ["Class 12", "Biology", 6]
-];
-for (const [level, subject, minimum] of subjectCoverage) {
-  const count = coverageNotes.filter(note => note.level === level && note.subject === subject).length;
-  assert.ok(count >= minimum, level + " " + subject + " expected at least " + minimum + " individual chapters; found " + count);
-}
-
 const ncertSandbox = { window: {} };
 for (const filename of ["ncert-physics-chapter-notes.js","ncert-chemistry-chapter-notes.js","ncert-mathematics-chapter-notes.js","ncert-biology-chapter-notes.js"]) {
   const source = readFileSync(new URL("../" + filename, import.meta.url), "utf8");
@@ -96,6 +79,24 @@ for (const note of supplementalNotes) {
   }
 }
 const coverageNotes = cbseNotes.concat(supplementalNotes);
+
+const subjectCoverage = [
+  ["Class 10", "Mathematics", 8],
+  ["Class 11", "Mathematics", 8],
+  ["Class 12", "Mathematics", 8],
+  ["Class 10", "Science", 8],
+  ["Class 11", "Physics", 6],
+  ["Class 12", "Physics", 6],
+  ["Class 11", "Chemistry", 6],
+  ["Class 12", "Chemistry", 6],
+  ["Class 11", "Biology", 6],
+  ["Class 12", "Biology", 6]
+];
+for (const [level, subject, minimum] of subjectCoverage) {
+  const count = coverageNotes.filter(note => note.level === level && note.subject === subject).length;
+  assert.ok(count >= minimum, level + " " + subject + " expected at least " + minimum + " individual chapters; found " + count);
+}
+
 const gravitationSupplement = supplementalNotes.find(note => note.level === "Class 11" && note.subject === "Physics" && note.chapter === "Gravitation");
 assert.ok(gravitationSupplement && gravitationSupplement.formulaCheatSheet.length >= 3, "supplemental Gravitation note must contain explained formula cards");
 
