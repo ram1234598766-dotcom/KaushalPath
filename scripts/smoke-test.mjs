@@ -86,7 +86,7 @@ assert.ok(studyLibrary.includes("<title>' + esc(pageTitle) + '</title><style>'")
 assert.doesNotMatch(studyLibrary, /esc\(title\)/, "the chapter PDF generator must not reference an undefined title variable");
 assert.match(studyLibrary, /id="chapterPdfContent"/, "only the chapter content should be included in the exported PDF");
 assert.ok(studyLibrary.includes('downloadButton.textContent = "Download PDF"'), "the chapter notes preview should expose an explicit Download PDF action");
-assert.ok(studyLibrary.includes("The print dialog didn’t open."), "the preview should explain how to recover if native printing fails");
+assert.ok(studyLibrary.includes("The PDF could not be generated. Check your internet connection"), "direct PDF failures should explain a safe retry path");
 assert.match(studyLibrary, /Preparing your PDF/, "PDF generation should show progress instead of appearing unresponsive");
 assert.ok(studyLibrary.includes("function mapPalette(index)") && studyLibrary.includes("stroke-width=\"7\"") && studyLibrary.includes("stroke-width=\"2.1\""), "mind maps should use distinct colorful curved main and sub-branches");
 assert.ok(studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("mindmap-svg"), "the chapter mind map should print as a landscape SVG cover page");
@@ -510,7 +510,7 @@ assert.ok(vercel.builds.some(b => b.src === "smart-system-client.js" && b.use ==
 assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF export should fall back to a simpler per-chapter layout if rich rendering fails");
 assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
 assert.ok(studyLibrary.includes("await engine.svg2pdf(svg, pdf, options)") && studyLibrary.includes('pdf.output("blob")'), "the Download PDF action must create a real PDF blob with a vector map");
-assert.doesNotMatch(studyLibrary, /printTarget\\.print\\(\\)/, "Download PDF must not open the browser print dialog");
+assert.ok(!studyLibrary.includes("printTarget.print()"), "Download PDF must not open the browser print dialog");
 assert.ok(studyLibrary.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;"), "the landscape map should not inherit a portrait width constraint");
 assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Click Download PDF to save the .pdf file directly — no print dialog needed. The map and notes remain crisp and selectable."'), "the chapter preview should explain that Download PDF saves a real file directly");
 assert.doesNotMatch(studyLibrary, /html2pdf|html2canvas|runDownload/, "the chapter export must not retain its old raster download implementation");
