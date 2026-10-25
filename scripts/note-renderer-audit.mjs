@@ -67,6 +67,7 @@ globalThis.__label = mapSvgLabel(
 `;
 runInNewContext(harness, sandbox, { timeout: 10000 });
 
+assert.ok(source.includes("const fontSize = 11.4;"), "mind map labels should remain readable at PDF size");
 assert.ok(sandbox.__map.includes('class="note-page mindmap-page"'), "the first page must be the chapter mind map");
 assert.ok(sandbox.__map.includes("mindmap-svg"), "the mind map must be a real scalable SVG");
 assert.ok(sandbox.__map.includes('stroke="#3678E8"') && sandbox.__map.includes('stroke="#13A89E"') &&
