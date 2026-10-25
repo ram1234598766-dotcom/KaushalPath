@@ -1820,7 +1820,265 @@
       '<h2>Worked practice</h2>' + practiceContentHtml(item) +
       '<p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
   }
-    function printNotes(items) {
+    
+  // PDF libraries load only when a student explicitly requests a file. Chapter
+  // content itself stays local; no notes or student data are uploaded.
+  let chapterPdfEnginePromise = null;
+  async function loadChapterPdfEngine() {
+    if (!chapterPdfEnginePromise) {
+      chapterPdfEnginePromise = Promise.all([
+        import("https://cdn.jsdelivr.net/npm/jspdf@4.2.1/+esm"),
+        import("https://cdn.jsdelivr.net/npm/svg2pdf.js@2.8.1/+esm")
+      ]).then(([jspdfModule, svgModule]) => {
+        const jsPDF = jspdfModule.jsPDF || (jspdfModule.default && jspdfModule.default.jsPDF) || jspdfModule.default;
+        const svg2pdf = svgModule.svg2pdf || (svgModule.default && svgModule.default.svg2pdf) ||
+          (typeof svgModule.default === "function" ? svgModule.default : null);
+        if (typeof jsPDF !== "function") throw new Error("The PDF generator could not be initialized.");
+        return { jsPDF, svg2pdf };
+      }).catch((error) => {
+        chapterPdfEnginePromise = null;
+        throw error;
+      });
+    }
+    return chapterPdfEnginePromise;
+  }
+
+  function chapterPdfText(value) {
+    return String(value == null ? "" : value)
+      .replace(/[\\u200B-\\u200D\\uFEFF]/g, "")
+      .replace(/\\s+/g, " ")
+      .trim();
+  }
+
+  function collectChapterPdfBlocks(article) {
+    const blocks = [];
+    const headingTags = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
+    const structuralTags = new Set(["ARTICLE", "SECTION", "DIV", "MAIN", "UL", "OL", "LI", "P", "H1", "H2", "H3", "H4", "H5", "H6"]);
+    const ignoredTags = new Set(["SVG", "SCRIPT", "STYLE", "NOSCRIPT"]);
+    const add = (node, kind, prefix) => {
+      const text = chapterPdfText(node && node.textContent);
+      if (!text) return;
+      const parentClasses = node && node.parentElement ? node.parentElement.className : "";
+      const className = String((node && node.className) || "") + " " + String(parentClasses || "");
+      blocks.push({
+        kind,
+        text: (prefix || "") + text,
+        tone: /formula-trap|common-mistake|common-mistakes|kp-common-mistake/.test(className) ? "warning" :
+          /kp-key-ideas|practice-answer/.test(className) ? "highlight" :
+          /formula-card|kp-formula/.test(className) ? "formula" : ""
+      });
+    };
+    const visit = (node, prefix) => {
+      if (!node || node.nodeType !== 1) return;
+      const tag = String(node.tagName || "").toUpperCase();
+      if (!tag || ignoredTags.has(tag) || node.classList && node.classList.contains("map-caption")) return;
+      if (headingTags.has(tag)) { add(node, tag.toLowerCase(), prefix || ""); return; }
+      if (tag === "P") { add(node, "paragraph", prefix || ""); return; }
+      if (tag === "LI") {
+        const children = Array.from(node.children || []);
+        const meaningful = children.filter((child) => structuralTags.has(String(child.tagName || "").toUpperCase()));
+        if (meaningful.length) {
+          meaningful.forEach((child, index) => visit(child, index === 0 ? (prefix || "- ") : "   "));
+        } else {
+          add(node, "list", prefix || "- ");
+        }
+        return;
+      }
+      if (tag === "UL" || tag === "OL") {
+        Array.from(node.children || []).forEach((child) => {
+          if (String(child.tagName || "").toUpperCase() === "LI") visit(child, "- ");
+          else visit(child, "");
+        });
+        return;
+      }
+      const children = Array.from(node.children || []);
+      if (!children.length) {
+        if (tag !== "SPAN" && tag !== "STRONG" && tag !== "EM" && tag !== "B" && tag !== "I") add(node, "paragraph", prefix || "");
+        return;
+      }
+      // A wrapper made only of inline children is a single text block. For a
+      // structural wrapper, recurse so headings, lists and explanations keep
+      // their visual hierarchy rather than being flattened into one paragraph.
+      if (children.every((child) => !structuralTags.has(String(child.tagName || "").toUpperCase()))) {
+        add(node, "paragraph", prefix || "");
+        return;
+      }
+      children.forEach((child, index) => visit(child, index === 0 ? (prefix || "") : ""));
+    };
+    Array.from(article.children || []).forEach((child) => visit(child, ""));
+    return blocks;
+  }
+
+  async function createAndDownloadChapterPdf(sourceDocument, items, fileName, status, button) {
+    const engine = await loadChapterPdfEngine();
+    const articles = Array.from(sourceDocument.querySelectorAll("#chapterPdfContent > article.note-page"));
+    if (!articles.length) throw new Error("No chapter pages were found in the preview.");
+    const chapter = items.length === 1 && items[0] && typeof items[0] === "object" ? items[0] : null;
+    const title = String((chapter && (chapter.chapter || chapter.title)) || "KaushalPath Study Notes");
+    const subject = String((chapter && chapter.subject) || "Study Hub");
+    const level = String((chapter && chapter.level) || "Revision notes");
+    const pdf = new engine.jsPDF({
+      orientation: "landscape", unit: "mm", format: "a4",
+      compress: true, putOnlyUsedFonts: true
+    });
+    if (typeof pdf.setProperties === "function") {
+      pdf.setProperties({ title, subject: level + " · " + subject, author: "KaushalPath", creator: "KaushalPath Study Hub" });
+    }
+
+    const margin = 14;
+    const palette = {
+      ink: [38, 27, 57], muted: [111, 96, 130], purple: [105, 61, 183],
+      line: [226, 218, 239], pale: [248, 245, 253], gold: [244, 184, 55],
+      blue: [48, 112, 210], teal: [19, 139, 130], red: [193, 82, 65],
+      white: [255, 255, 255]
+    };
+    let pageKind = "landscape";
+    let y = 0;
+
+    function pageSize() {
+      return { width: pdf.internal.pageSize.getWidth(), height: pdf.internal.pageSize.getHeight() };
+    }
+    function setColor(color, setter) { setter.apply(pdf, color); }
+    function drawNotesHeader(continued) {
+      const size = pageSize();
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, size.width, size.height, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7.5);
+      setColor(palette.purple, pdf.setTextColor);
+      pdf.text("KAUSHALPATH  /  CHAPTER NOTES", margin, 9);
+      pdf.setFont("helvetica", "normal");
+      setColor(palette.muted, pdf.setTextColor);
+      const head = (continued ? title + " · continued" : title) + "  |  " + level + " · " + subject;
+      pdf.text(head, size.width - margin, 9, { align: "right", maxWidth: size.width - margin * 2 - 52 });
+      setColor(palette.line, pdf.setDrawColor);
+      pdf.setLineWidth(0.25);
+      pdf.line(margin, 12, size.width - margin, 12);
+      y = 18;
+    }
+    function addPortraitPage(continued) {
+      pdf.addPage("a4", "portrait");
+      pageKind = "portrait";
+      drawNotesHeader(Boolean(continued));
+    }
+    function drawTextBlock(block) {
+      const text = chapterPdfText(block.text);
+      if (!text) return;
+      const styles = {
+        h1: { size: 16.5, color: palette.ink, font: "bold", before: 1.5, after: 2.5 },
+        h2: { size: 11.6, color: palette.purple, font: "bold", before: 3, after: 2 },
+        h3: { size: 10.2, color: palette.blue, font: "bold", before: 2.5, after: 1.5 },
+        h4: { size: 9.6, color: palette.teal, font: "bold", before: 2.2, after: 1 },
+        paragraph: { size: 9.1, color: palette.ink, font: "normal", before: 0.7, after: 2 },
+        list: { size: 8.8, color: palette.ink, font: "normal", before: 0.3, after: 1.4 }
+      };
+      const style = styles[block.kind] || styles.paragraph;
+      const size = pageSize();
+      const maxWidth = size.width - margin * 2;
+      const indent = block.kind === "list" || /^[-•] /.test(text) ? 3 : 0;
+      const textValue = text.replace(/’/g, "'").replace(/[“”]/g, '"').replace(/[–—−]/g, "-")
+        .replace(/×/g, "x").replace(/÷/g, "/").replace(/≤/g, "<=").replace(/≥/g, ">=")
+        .replace(/≈/g, "~=").replace(/→/g, "->").replace(/π/g, "pi").replace(/θ/g, "theta")
+        .replace(/λ/g, "lambda").replace(/μ/g, "mu").replace(/Ω/g, "ohm").replace(/∝/g, "proportional to");
+      const lines = pdf.splitTextToSize(textValue, maxWidth - indent);
+      const lineHeight = style.size * 0.43;
+      const height = lines.length * lineHeight + style.before + style.after + (block.kind === "h2" ? 2 : 0);
+      if (y + height > size.height - 16) addPortraitPage(true);
+      y += style.before;
+      pdf.setFont("helvetica", style.font);
+      pdf.setFontSize(style.size);
+      setColor(style.color, pdf.setTextColor);
+      if (block.kind === "h2") {
+        pdf.setFillColor(247, 244, 253);
+        pdf.rect(margin - 1, y - 2.4, maxWidth + 2, height - style.before - style.after + 1, "F");
+      } else if (block.tone === "warning" || block.tone === "formula" || block.tone === "highlight") {
+        const fill = block.tone === "warning" ? [255, 244, 230] : block.tone === "formula" ? [246, 241, 255] : [239, 250, 246];
+        const edge = block.tone === "warning" ? palette.red : block.tone === "formula" ? palette.purple : palette.teal;
+        pdf.setFillColor.apply(pdf, fill);
+        pdf.rect(margin - 1, y - 2, maxWidth + 2, lines.length * lineHeight + 2, "F");
+        setColor(edge, pdf.setDrawColor);
+        pdf.setLineWidth(0.7);
+        pdf.line(margin - 1, y - 2, margin - 1, y - 2 + lines.length * lineHeight + 2);
+        setColor(style.color, pdf.setTextColor);
+      }
+      pdf.text(lines, margin + indent, y, { lineHeightFactor: 1.1, maxWidth: maxWidth - indent });
+      y += lines.length * lineHeight + style.after;
+    }
+
+    for (let index = 0; index < articles.length; index += 1) {
+      const article = articles[index];
+      const isMap = article.classList.contains("mindmap-page");
+      if (index > 0) {
+        if (isMap) {
+          pdf.addPage("a4", "landscape");
+          pageKind = "landscape";
+        } else {
+          addPortraitPage(false);
+        }
+      }
+      if (isMap) {
+        const svg = article.querySelector("svg.mindmap-svg");
+        if (!svg) throw new Error("The chapter map is missing from the preview.");
+        const size = pageSize();
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, size.width, size.height, "F");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        setColor(palette.ink, pdf.setTextColor);
+        pdf.text(title, 9, 10, { maxWidth: size.width - 18 });
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.2);
+        setColor(palette.muted, pdf.setTextColor);
+        pdf.text(level + " · " + subject + " · COMPLETE CONCEPT MAP", 9, 16);
+        const options = { x: 7.5, y: 20, width: size.width - 15, height: size.height - 29 };
+        if (typeof engine.svg2pdf === "function") {
+          await engine.svg2pdf(svg, pdf, options);
+        } else if (typeof pdf.svg === "function") {
+          await pdf.svg(svg, options);
+        } else {
+          throw new Error("Vector map support could not be initialized.");
+        }
+        pageKind = "landscape";
+      } else {
+        if (pageKind !== "portrait") {
+          // Safety path for a compact export that does not start with a map.
+          pdf.addPage("a4", "portrait");
+          pageKind = "portrait";
+          drawNotesHeader(false);
+        }
+        collectChapterPdfBlocks(article).forEach(drawTextBlock);
+      }
+      if (status) status.textContent = "Creating your PDF… page " + (index + 1) + " of " + articles.length;
+    }
+
+    const totalPages = pdf.getNumberOfPages();
+    for (let page = 1; page <= totalPages; page += 1) {
+      pdf.setPage(page);
+      const size = pageSize();
+      setColor(palette.line, pdf.setDrawColor);
+      pdf.setLineWidth(0.25);
+      pdf.line(margin, size.height - 10, size.width - margin, size.height - 10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      setColor(palette.muted, pdf.setTextColor);
+      pdf.text("KaushalPath · " + title, margin, size.height - 5);
+      pdf.text("Page " + page + " of " + totalPages, size.width - margin, size.height - 5, { align: "right" });
+    }
+    const blob = pdf.output("blob");
+    if (!(blob instanceof Blob) || blob.size < 1200) throw new Error("The generated PDF file is unexpectedly small.");
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName.endsWith(".pdf") ? fileName : fileName + ".pdf";
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return { pages: totalPages, size: blob.size, filename: anchor.download };
+  }
+
+function printNotes(items) {
     if (!Array.isArray(items) || !items.length) {
       toast("Choose a chapter first, then I’ll prepare the notes for you.");
       return;
