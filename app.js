@@ -613,7 +613,7 @@ function initLocalAiControls(){
    if(label)label.textContent=Number.isFinite(p.progress)?Math.round(p.progress*100)+"% · "+String(p.text||"Loading saved model"):String(p.text||"Loading saved model…");
    updateLocalAiStatus(String(p.text||"Loading saved local model…"),"loading");
   }}).then(function(result){
-   updateLocalAiStatus(result.label+" is ready. Text-only prompts will run locally.","ready");
+   updateLocalAiStatus(result.fallback?"The larger model did not fit; "+result.label+" was loaded instead. Text-only questions will run locally.":result.label+" is ready. Text-only prompts will run locally.","ready");
    if(installButton){installButton.textContent="Local model ready ✓";installButton.disabled=true;}
    const bar=document.getElementById("localAiProgress");if(bar)bar.value=1;
   }).catch(function(error){
