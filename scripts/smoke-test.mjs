@@ -80,6 +80,17 @@ assert.equal((ncertOtherChapterNotes.match(/guide\("Class /g) || []).length, 28,
 assert.match(ncertOtherChapterNotes, /Nationalism in India/, "History should include individual chapter explanations");
 assert.match(ncertOtherChapterNotes, /SQL and Relational Databases/, "Computer Science should include detailed database chapters");
 assert.match(ncertOtherChapterNotes, /Journal, Ledger and Trial Balance/, "Accountancy should include detailed individual chapters");
+assert.match(studyLibrary, /Guided practice with worked answers/, "chapter reader should show the guided questions and explanations in the notes data");
+assert.match(studyLibrary, /practice-card/, "PDF print/export should include guided practice cards");
+assert.match(studyLibrary, /GUIDED PRACTICE WITH ANSWERS/, "saved chapter notes should include practice questions and explanations");
+assert.match(studyLibrary, /NCERT PROCESS & FACT SHEET/, "Biology notes should label fact cards appropriately rather than formula-only sheets");
+assert.ok(html.indexOf('src="/ncert-mathematics-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "Maths note data must load before renderer");
+assert.ok(html.indexOf('src="/ncert-biology-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "Biology note data must load before renderer");
+assert.ok(html.indexOf('src="/ncert-other-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "other subject data must load before renderer");
+for (const asset of ["ncert-mathematics-chapter-notes.js","ncert-biology-chapter-notes.js","ncert-other-chapter-notes.js","ncert-physics-chapter-notes.js","ncert-chemistry-chapter-notes.js"]) {
+  assert.ok(serviceWorker.includes('"' + "/" + asset + '"'), asset + " must be cached in the offline shell");
+  assert.ok(vercel.builds.some(b => b.src === asset && b.use === "@vercel/static"), asset + " must be deployed as a static asset");
+}
 assert.match(ncertBiologyChapterNotes, /practiceQuestions/, "Biology notes should include guided practice with explanations");
 assert.match(ncertBiologyChapterNotes, /Molecular Basis of Inheritance/, "Biology notes should cover key Class 12 chapters individually");
 assert.match(ncertPhysicsChapterNotes, /formulaCheatSheet/, "Physics chapter notes should include explanatory formula cards");
