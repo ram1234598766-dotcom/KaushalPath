@@ -1214,7 +1214,7 @@
     ["What vector is normal to a plane?","Why do two non-parallel lines in 3D sometimes fail to intersect?","What does the scalar triple product measure in skew-line distance?"],
     ["Direction vector: parallel to a line.","Normal vector: perpendicular to a plane.","Skew lines: non-parallel, non-intersecting lines." ]);
   mathematics3DLinesJEE.practiceQuestions = [
-    {question:"Find distance from (1,2,3) to plane x+2y+2z-9=0.",answer:"0.",explanation:"1+4+6-9=2, so distance is 2/sqrt(1+4+4)=2/3. (The point is not on the plane.)"},
+    {question:"Find distance from (1,2,3) to plane x+2y+2z-9=0.",answer:"2/3 units.",explanation:"The plane-expression value is 1+4+6-9=2 and the normal magnitude is sqrt(1+4+4)=3, so distance=2/3."},
     {question:"What condition shows two 3D lines are parallel?",answer:"Their direction vectors are scalar multiples.",explanation:"Parallel directions are linearly dependent; this alone does not make the two lines coincide."}
   ];
 
