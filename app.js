@@ -587,7 +587,7 @@ async function enableLocalAiFromUserAction(){
   if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Ready · cached model reused on future visits where browser storage persists";
   if(document.getElementById("localAiProgress"))document.getElementById("localAiProgress").value=1;
  }catch(error){
-  updateLocalAiStatus(String(error&&error.message||error)+" No prompt was automatically sent to the cloud. You can switch to cloud AI explicitly below.","error");
+  updateLocalAiStatus(!local.isPreferred()?"Cloud AI remains selected. Local setup did not finish. "+String(error&&error.message||error):String(error&&error.message||error)+" No prompt was automatically sent to the cloud. You can switch to cloud AI explicitly below.","error");
   if(install){install.disabled=false;install.textContent="Retry local model setup";}
   if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Setup did not finish";
  }finally{localAiLoadingUi=false;refreshLocalAiCapabilities();}
@@ -605,6 +605,7 @@ function initLocalAiControls(){
  if(cloud)cloud.addEventListener("click",function(){
   local.setPreferred(false);if(preference)preference.checked=false;
   updateLocalAiStatus("Cloud AI selected. Text prompts will use the server; attachments and web research also use the cloud route.","");
+  if(!chatBusy&&typeof local.unload==="function")local.unload().then(function(){updateLocalAiStatus("Cloud AI selected. The local model has been unloaded from GPU memory; its cached files remain available for a later opt-in.","");refreshLocalAiCapabilities();}).catch(function(){updateLocalAiStatus("Cloud AI selected. A local GPU session could not be unloaded cleanly; close or refresh this tab if memory remains constrained.","error");});
   toast("Cloud AI selected for text-only questions.");
  });
  window.addEventListener("kp-local-ai-error",function(event){
