@@ -121,7 +121,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v23"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v24"), "PWA cache must be bumped for new chapter assets");
 assert.ok(questionBank.includes("window.KP_FULL_LENGTH_QUESTION_BANK = fullLengthBank"), "the question bank must expose full-length JEE and NEET question pools");
 assert.ok(questionBank.includes("questionsPerTest: 90") && questionBank.includes("questionsPerTest: 180"), "the configured mock lengths must be 90 for JEE and 180 for NEET");
 assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("selectRotated(subjects.Mathematics,30") && app.includes("selectRotated(subjects.Biology,90"), "the app must assemble the requested subject-balanced mock tests");
