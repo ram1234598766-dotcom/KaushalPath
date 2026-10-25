@@ -81,11 +81,11 @@ assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should
 assert.match(studyLibrary, /downloadButton\.addEventListener\("click", startPrint\)/, "chapter export should use the browser print renderer");
 assert.ok(studyLibrary.includes("printTarget.print()") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF printing must use native vector output with a full landscape map followed by portrait notes");
 assert.doesNotMatch(studyLibrary, /html2pdf\(\)\.set\(|html2canvas:/, "chapter export should not rasterize or crop the mind map in a PDF canvas");
-assert.match(studyLibrary, /const pageTitle = chapter\s*\?\s*\(chapter\.chapter \|\| "Chapter"\) \+ " · Complete Chapter Notes"/, "the chapter PDF title should be defined before the packet HTML is built");
+assert.ok(studyLibrary.includes("const pageTitle = fileStem;"), "the PDF save dialog should use a chapter-specific suggested filename");
 assert.ok(studyLibrary.includes("<title>' + esc(pageTitle) + '</title><style>'"), "the chapter PDF HTML should use its defined title");
 assert.doesNotMatch(studyLibrary, /esc\(title\)/, "the chapter PDF generator must not reference an undefined title variable");
 assert.match(studyLibrary, /id="chapterPdfContent"/, "only the chapter content should be included in the exported PDF");
-assert.ok(studyLibrary.includes("Print / Save PDF"), "the chapter notes preview should expose the print/save action");
+assert.ok(studyLibrary.includes('downloadButton.textContent = "Download PDF"'), "the chapter notes preview should expose an explicit Download PDF action");
 assert.ok(studyLibrary.includes("The print dialog didn’t open."), "the preview should explain how to recover if native printing fails");
 assert.match(studyLibrary, /Preparing your PDF/, "PDF generation should show progress instead of appearing unresponsive");
 assert.ok(studyLibrary.includes("function mapPalette(index)") && studyLibrary.includes("stroke-width=\"7\"") && studyLibrary.includes("stroke-width=\"2.1\""), "mind maps should use distinct colorful curved main and sub-branches");
@@ -121,7 +121,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v23"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v24"), "PWA cache must be bumped for new chapter assets");
 assert.ok(questionBank.includes("window.KP_FULL_LENGTH_QUESTION_BANK = fullLengthBank"), "the question bank must expose full-length JEE and NEET question pools");
 assert.ok(questionBank.includes("questionsPerTest: 90") && questionBank.includes("questionsPerTest: 180"), "the configured mock lengths must be 90 for JEE and 180 for NEET");
 assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("selectRotated(subjects.Mathematics,30") && app.includes("selectRotated(subjects.Biology,90"), "the app must assemble the requested subject-balanced mock tests");
@@ -244,14 +244,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v23/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v24/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v23/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v24/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -268,7 +268,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v23/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v24/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
@@ -511,6 +511,6 @@ assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF exp
 assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
 assert.ok(studyLibrary.includes("printTarget.print()"), "native browser printing should preserve vector text and mind-map graphics");
 assert.ok(studyLibrary.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;"), "the landscape map should not inherit a portrait width constraint");
-assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Print or save the chapter with the complete landscape map and crisp, selectable text."'), "the chapter preview should describe the native high-quality print flow");
+assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Click Download PDF, then choose “Save as PDF” in the print dialog and click Save. Your map and notes remain crisp and selectable."'), "the chapter preview should clearly explain how to save the PDF");
 assert.doesNotMatch(studyLibrary, /html2pdf|html2canvas|runDownload/, "the chapter export must not retain its old raster download implementation");
 assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter filename construction must tolerate incomplete chapter metadata");

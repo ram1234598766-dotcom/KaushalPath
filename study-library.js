@@ -1855,7 +1855,7 @@
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
     const qualityHint = document.createElement("span");
-    qualityHint.textContent = "The complete chapter mind map prints on a landscape first page; detailed notes follow on portrait pages. Choose “Save as PDF” in the browser print dialog for crisp text and vector graphics.";
+    qualityHint.textContent = "Click Download PDF, then choose “Save as PDF” as the destination in your browser’s print dialog and select Save. The complete landscape mind map stays crisp, followed by detailed portrait notes.";
     qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
     guidance.append(heading, status, qualityHint);
 
@@ -1864,7 +1864,7 @@
     const downloadButton = document.createElement("button");
     downloadButton.type = "button";
     downloadButton.className = "btn btn-purple";
-    downloadButton.textContent = "Preparing preview…";
+    downloadButton.textContent = "Download PDF";
     downloadButton.disabled = true;
     const closeButton = document.createElement("button");
     closeButton.type = "button";
@@ -1897,8 +1897,8 @@
         printTarget.focus();
         printTarget.print();
       } catch (error) {
-        status.textContent = "The print dialog didn’t open. Try the browser menu or reopen the preview.";
-        toast("The print dialog didn’t open. Use your browser’s Print menu or reopen the preview.");
+        status.textContent = "The print dialog didn’t open. Use your browser menu, choose Print, then Save as PDF.";
+        toast("The print dialog didn’t open. Use your browser’s Print menu, then choose Save as PDF.");
       }
     };
     downloadButton.addEventListener("click", startPrint);
@@ -1910,10 +1910,8 @@
       .replace(/[^a-zA-Z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 90) || "KaushalPath-Chapter-Notes";
-    const fileName = fileStem + ".pdf";
-    const pageTitle = chapter
-      ? (chapter.chapter || "Chapter") + " · Complete Chapter Notes"
-      : "KaushalPath · Complete Chapter Notes";
+    // Native print-to-PDF uses the page title as the suggested downloaded filename.
+    const pageTitle = fileStem;
 
     try {
       // One chapter includes the concept map and twelve revision sections.
@@ -1979,9 +1977,9 @@
       const chapterContent = printTarget.document.getElementById("chapterPdfContent");
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
       downloadButton.disabled = false;
-      downloadButton.textContent = "Print / Save PDF";
-      status.textContent = "Preview ready. Print or save the chapter with the complete landscape map and crisp, selectable text.";
-      toast("Chapter notes are ready. Choose Print / Save PDF, then select Save as PDF.");
+      downloadButton.textContent = "Download PDF";
+      status.textContent = "Preview ready. Click Download PDF, then choose “Save as PDF” in the print dialog and click Save. Your map and notes remain crisp and selectable.";
+      toast("Chapter notes are ready. Click Download PDF, then choose Save as PDF in the print dialog.");
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
       status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
