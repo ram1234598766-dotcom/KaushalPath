@@ -634,30 +634,46 @@ async function sendChat(raw,regenerate){
   chatHistory.push({role:"user",content:question});lastChatPrompt=question;const displayedQuestion=question+(lastChatAttachment?"\n\n"+attachmentLabel(lastChatAttachment):"");chatAddMessage("user",displayedQuestion);recordChatMessage("user",displayedQuestion);
  }else if(chatHistory.length&&chatHistory[chatHistory.length-1].role==="assistant")chatHistory.pop();
  const attachmentForRequest=lastChatAttachment,webSearch=Boolean($("chatWebSearch")&&$("chatWebSearch").checked);
+ const localApi=window.KP_LOCAL_AI,localPreferred=Boolean(localApi&&localApi.isPreferred());
+ const needsCloudForThisRequest=Boolean(attachmentForRequest||webSearch);
+ const useLocal=localPreferred&&!needsCloudForThisRequest;
+ if(localPreferred&&needsCloudForThisRequest)updateLocalAiStatus("This request includes a file or web research, so it will use the cloud route. Text-only questions can use the local model.","");
  chatBusy=true;activeChatController=new AbortController();
  const controller=activeChatController,send=$("chatSend"),input=$("chatInput"),stop=$("chatStop"),messages=$("chatMessages");
- send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent="Connecting to the study assistant…";
+ send.disabled=true;send.textContent="Generating…";input.disabled=true;stop.disabled=false;messages.setAttribute("aria-busy","true");$("chatStatus").textContent=useLocal?"Preparing private on-device inference…":(needsCloudForThisRequest?"Connecting to cloud AI for file/research support…":"Connecting to the cloud study assistant…");
  enableChatTools(Boolean(lastChatAnswer));
  const node=chatAddMessage("assistant",""),messageBox=node.closest(".chat-message");
+ const routeLabel=messageBox&&messageBox.querySelector(".chat-message-label");
+ if(routeLabel)routeLabel.textContent=useLocal?"On-device AI · private":(localPreferred&&needsCloudForThisRequest?"KaushalPath AI · cloud required":"KaushalPath AI · cloud");
  node.innerHTML='<span class="chat-typing" role="status"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span class="chat-typing-copy">Preparing your answer…</span></span>';messageBox.classList.add("is-pending");
  let waiting=true,answer="";
  try{
   const level=$("chatClass").value,subject=$("chatSubject").value,mode=$("chatMode").value;
   const prompt=makePrompt(level,subject,"",mode,question);
   renderSourceLinks($("chatSources"),[]);
-  answer=await streamStudyRequest(Object.assign({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),webSearch:webSearch,searchQuery:question,userPrompt:question},attachmentPayload(attachmentForRequest)),function(delta){
+  const onText=function(delta){
    const shouldFollow=messages.scrollHeight-messages.scrollTop-messages.clientHeight<120;
    if(waiting){node.innerHTML="";waiting=false;messageBox.classList.remove("is-pending");const copyButton=messageBox.querySelector("[data-copy-message]");if(copyButton)copyButton.disabled=false;}
    answer+=delta;renderMarkdownInto(node,answer);
    if(shouldFollow)messages.scrollTop=messages.scrollHeight;
-   $("chatStatus").textContent="Writing your answer · "+answer.length+" characters";
-  },controller.signal,function(status){$("chatStatus").textContent=status;},function(sources){renderSourceLinks($("chatSources"),sources);});
+   $("chatStatus").textContent=(useLocal?"Generating on this device · ":"Writing your answer · ")+answer.length+" characters";
+  };
+  if(useLocal){
+   if(!localApi.isReady()){
+    $("chatStatus").textContent="Loading the selected on-device model…";
+    await localApi.load({onProgress:function(p){updateLocalAiStatus(String(p.text||"Preparing local model…"),"loading");$("chatStatus").textContent=String(p.text||"Preparing local model…");}});
+   }
+   if(!localApi.isReady())throw new Error("The local model is not ready. Retry setup or choose cloud AI. This request was not sent to the cloud.");
+   answer=await localApi.respond({prompt:prompt,mode:mode,history:chatHistory.slice(0,-1).slice(-6),signal:controller.signal,onToken:onText});
+  }else{
+   answer=await streamStudyRequest(Object.assign({prompt:prompt,mode:mode,urls:[],messages:chatHistory.slice(0,-1).slice(-6),webSearch:webSearch,searchQuery:question,userPrompt:question},attachmentPayload(attachmentForRequest)),onText,controller.signal,function(status){$("chatStatus").textContent=status;},function(sources){renderSourceLinks($("chatSources"),sources);});
+  }
   if(!String(answer||"").trim()){
    waiting=false;messageBox.classList.remove("is-pending");node.textContent="The assistant returned an empty response. Please try again.";node.classList.add("chat-message-error");lastChatAnswer="";$("chatStatus").textContent="No answer received";enableChatTools(false);return;
   }
   messageBox.dataset.rawAnswer=answer;
   lastChatAnswer=answer;chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-10);recordChatMessage("assistant",answer);
-  $("chatStatus").textContent=needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready";
+  $("chatStatus").textContent=useLocal?"Answer ready · on-device inference; your text prompt stayed on this device":(needsCloudForThisRequest?"Answer ready · cloud used for file or research support":(needsRemoteTools(Object.assign({webSearch:webSearch,userPrompt:question},attachmentPayload(attachmentForRequest)))?"Answer ready · sources checked":"Answer ready"));
   enableChatTools(Boolean(answer));
  }catch(err){
   messageBox.classList.remove("is-pending");
