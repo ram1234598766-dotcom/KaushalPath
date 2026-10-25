@@ -1834,36 +1834,69 @@
         resolve(window.html2pdf);
         return;
       }
+
       let script = document.querySelector('script[data-kp-html2pdf="true"]');
       if (script && script.dataset.failed === "true") {
         script.remove();
         script = null;
       }
+
+      let settled = false;
+      let timeoutId = 0;
+      const cleanup = () => {
+        if (!script) return;
+        script.removeEventListener("load", onLoad);
+        script.removeEventListener("error", onError);
+      };
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) window.clearTimeout(timeoutId);
+        cleanup();
+        callback(value);
+      };
       const onLoad = () => {
-        script.dataset.loaded = "true";
-        if (typeof window.html2pdf === "function") resolve(window.html2pdf);
-        else reject(new Error("The PDF library loaded without its export function."));
+        if (typeof window.html2pdf === "function") {
+          if (script) script.dataset.loaded = "true";
+          finish(resolve, window.html2pdf);
+        } else {
+          if (script) script.dataset.failed = "true";
+          finish(reject, new Error("The PDF library loaded without its export function."));
+        }
       };
       const onError = () => {
-        script.dataset.failed = "true";
-        reject(new Error("The PDF library could not be loaded."));
+        if (script) script.dataset.failed = "true";
+        finish(reject, new Error("The PDF library could not be loaded."));
       };
-      if (script) {
-        script.addEventListener("load", onLoad, { once: true });
-        script.addEventListener("error", onError, { once: true });
+
+      let shouldAppend = false;
+      if (!script) {
+        script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js";
+        script.async = true;
+        script.dataset.kpHtml2pdf = "true";
+        shouldAppend = true;
+      }
+
+      if (script.dataset.loaded === "true") {
+        onLoad();
         return;
       }
-      script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js";
-      script.async = true;
-      script.dataset.kpHtml2pdf = "true";
-      script.addEventListener("load", onLoad, { once: true });
-      script.addEventListener("error", onError, { once: true });
-      document.head.appendChild(script);
+
+      script.addEventListener("load", onLoad);
+      script.addEventListener("error", onError);
+      timeoutId = window.setTimeout(() => {
+        if (script) script.dataset.failed = "true";
+        finish(reject, new Error("Timed out while loading the PDF library."));
+      }, 12000);
+
+      if (shouldAppend) document.head.appendChild(script);
+      else if (script.readyState === "complete") onLoad();
     });
 
-    const chapter = items.length === 1 ? items[0] : null;
-    const fileStem = (chapter ? chapter.chapter : "KaushalPath-Chapter-Notes")
+    const chapter = items.length === 1 && items[0] && typeof items[0] === "object" ? items[0] : null;
+    const fileStemSource = String((chapter && chapter.chapter) || (chapter && chapter.title) || "KaushalPath-Chapter-Notes");
+    const fileStem = fileStemSource
       .normalize("NFKD")
       .replace(/[^a-zA-Z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
@@ -1876,9 +1909,52 @@
     try {
       // One chapter includes the concept map and twelve revision sections.
       // The bulk export stays compact so exporting several chapters remains practical.
+      const fallbackValue = (value) => {
+        if (value == null) return "";
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+        if (typeof value === "object") return String(value.heading || value.title || value.question || value.body || value.text || "Review this item in the Study Hub.");
+        return "";
+      };
+      const fallbackList = (values) => {
+        const list = Array.isArray(values) ? values : [];
+        if (!list.length) return '<p class="empty-note">No separate entries are available in this subsection.</p>';
+        return "<ul>" + list.slice(0, 250).map((value) => "<li>" + esc(fallbackValue(value)) + "</li>").join("") + "</ul>";
+      };
+      const fallbackChapterPage = (item) => {
+        const source = item && typeof item === "object" ? item : {};
+        const subjectLine = [fallbackValue(source.level), fallbackValue(source.subject)].filter(Boolean).join(" · ");
+        return '<article class="note-page compact-note-page"><p class="eyebrow">' +
+          esc(subjectLine || "KaushalPath Study Hub") + '</p><h1>' +
+          esc(fallbackValue(source.chapter) || "Chapter notes") + '</h1><p class="intro">' +
+          esc(fallbackValue(source.intro)) + '</p><h2>Key ideas</h2>' + fallbackList(source.points) +
+          '<h2>Formulas & rules</h2>' + fallbackList(source.formulas) +
+          '<h2>Worked example</h2><p>' + esc(fallbackValue(source.example)) + '</p>' +
+          '<h2>Recall prompts</h2>' + fallbackList(source.recall) +
+          '<p class="source">' + esc(fallbackValue(source.sourceNote) || NOTE_SOURCE) + '</p></article>';
+      };
+      const renderChapterSafely = (item, index, completePacket) => {
+        const source = item && typeof item === "object" ? item : {};
+        try {
+          return completePacket
+            ? fullChapterPacket(source)
+            : renderMindMapPage(source) + compactChapterHtml(source);
+        } catch (error) {
+          console.warn("Detailed chapter rendering failed; using safe fallback.", {
+            index,
+            chapter: fallbackValue(source.chapter),
+            message: error && error.message ? error.message : "Unknown chapter-rendering error"
+          });
+          try {
+            return fallbackChapterPage(source);
+          } catch (fallbackError) {
+            console.error("Fallback chapter rendering failed.", fallbackError);
+            return '<article class="note-page compact-note-page"><h1>Chapter notes</h1><p>Some formatting could not be prepared. Return to the Study Hub and use Print / Save PDF to try a simpler export.</p></article>';
+          }
+        }
+      };
       const sections = items.length === 1
-        ? fullChapterPacket(items[0])
-        : items.map((item) => renderMindMapPage(item) + compactChapterHtml(item)).join("");
+        ? renderChapterSafely(items[0], 0, true)
+        : items.map((item, index) => renderChapterSafely(item, index, false)).join("");
 
       const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(pageTitle) + '</title><style>' +
         'html{color-scheme:light}*{box-sizing:border-box}body{font:10pt/1.48 Arial,Helvetica,sans-serif;color:#211735;max-width:800px;margin:0 auto;padding:0}h1{font-size:21pt;line-height:1.12;margin:6px 0 10px;break-after:avoid}h2{font-size:12pt;line-height:1.2;margin:12px 0 5px;border-bottom:1px solid #e2d8f2;padding-bottom:3px;break-after:avoid}h3{font-size:10pt;margin:9px 0 4px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:7pt;font-weight:bold;margin:0 0 5px}.intro{font-size:10pt;color:#594b6f}.note-page{page-break-after:always;break-after:page;min-height:262mm;padding:0 1mm;position:relative}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 4px;break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line;margin:5px 0 7px}.source{border-top:1px solid #ddd;padding-top:5px;font-size:7pt;color:#6e6678;margin-top:12px}.content-block{margin:8px 0 12px;break-inside:avoid}.formula-card{border:1px solid #e0d4f0;border-left:3px solid #7545dd;border-radius:5px;padding:6px 9px;margin:6px 0;break-inside:avoid}.formula-trap{background:#fff4e6;padding:5px 7px;border-radius:4px}.empty-note{color:#695c79;font-style:italic}.mindmap-page{display:flex;flex-direction:column}.map-subtitle{color:#594b6f;font-size:8pt;margin-bottom:7px}.map-center{border:2px solid #7650d9;border-radius:10px;background:#f3edff;text-align:center;padding:8px;margin:4px auto 0;width:76%;display:flex;flex-direction:column;gap:2px}.map-center span{font-size:6.5pt;letter-spacing:.12em;font-weight:bold;color:#6540ae}.map-center strong{font-size:13pt}.map-center small{font-size:7pt;color:#594b6f}.map-stem{width:2px;height:10px;background:#9a83cc;margin:0 auto}.mindmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;align-content:start}.map-branch{border:1px solid #dcd3ea;border-radius:6px;padding:5px 6px;break-inside:avoid;min-width:0}.map-branch h2{font-size:8pt;margin:0 0 4px;border-bottom:0;padding:0}.map-dot{display:inline-block;width:6px;height:6px;background:#7952d8;border-radius:100%;margin:0 5px 1px 0}.map-nodes{display:flex;flex-wrap:wrap;gap:3px}.map-node{display:inline-block;border:1px solid #ece5f7;border-radius:4px;padding:2px 4px;font-size:6.4pt;line-height:1.22;max-width:100%;overflow-wrap:anywhere}.branch-1 .map-dot{background:#347fd1}.branch-2 .map-dot{background:#078b85}.branch-3 .map-dot{background:#d58a26}.branch-4 .map-dot{background:#cb5b82}.branch-5 .map-dot{background:#4f9670}.branch-6 .map-dot{background:#7b8290}.map-footnote{font-size:6.5pt;color:#6e6678;border-top:1px solid #e3dcec;padding-top:5px;margin-top:6px}.mindmap-page{page:chapter-map;min-height:0!important;padding:0!important;display:flex;flex-direction:column;gap:2mm;break-after:page!important;page-break-after:always!important}.map-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2mm;font-size:8pt;font-weight:700;color:#4F46A5;letter-spacing:.06em}.map-caption-label{font-size:7pt;color:#68758D;letter-spacing:.03em}.mindmap-svg{display:block;width:100%;height:auto;max-height:166mm;overflow:visible}.packet-page,.compact-note-page{page:chapter-notes}@page chapter-map{size:A4 landscape;margin:7mm 8mm}@page chapter-notes{size:A4 portrait;margin:12mm 13mm}@page{size:A4 portrait;margin:12mm 13mm}@media screen{body{padding:20px;background:#f8f6fb}.print-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:800px;margin:0 auto 18px;padding:16px 18px;background:#fff;border:1px solid #e5def0;border-radius:12px;box-shadow:0 3px 18px #20123a12}.print-controls p{margin:5px 0 0;color:#675a78;font-size:10pt}.print-controls button{border:0;border-radius:9px;padding:11px 16px;background:#6740bd;color:#fff;font-weight:700;font-size:10pt;cursor:pointer}.note-page{background:#fff;box-shadow:0 2px 18px #20123a12;margin:0 auto 20px;max-width:800px;padding:24px}.mindmap-page{max-width:1200px!important;padding:18px!important}.mindmap-svg{max-height:none}.map-caption{margin-bottom:6px}}@media print{.print-controls{display:none!important}}' +
@@ -1891,6 +1967,9 @@
 
       const chapterContent = printTarget.document.getElementById("chapterPdfContent");
       if (!chapterContent) throw new Error("The chapter PDF content was not created.");
+      downloadButton.disabled = false;
+      downloadButton.textContent = "Download PDF";
+      status.textContent = "Preview ready. Download PDF or use Print / Save PDF.";
 
       const runDownload = async () => {
         downloadButton.disabled = true;
@@ -1903,7 +1982,7 @@
             filename: fileName,
             image: { type: "jpeg", quality: 0.96 },
             html2canvas: {
-              scale: 1.35, useCORS: true, allowTaint: false,
+              scale: 1, useCORS: true, allowTaint: false,
               backgroundColor: "#ffffff", logging: false, scrollY: 0
             },
             jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
@@ -1923,14 +2002,16 @@
       };
       downloadButton.addEventListener("click", runDownload);
 
-      // Start the file export as soon as the chapter preview is ready.
-      toast("Preparing your chapter PDF…");
-      window.setTimeout(runDownload, 0);
+      // Create the PDF only after the student chooses Download PDF. Avoid
+      // competing with preview construction on phones and memory-limited devices.
+      toast("Your chapter notes are ready. Choose Download PDF or Print / Save PDF.");
     } catch (error) {
       console.error("Chapter PDF export failed:", error);
       status.textContent = "I couldn’t prepare these notes. Close this preview, refresh the Study Hub and try again.";
+      downloadButton.disabled = true;
+      printButton.disabled = true;
       const errorBox = document.createElement("p");
-      errorBox.textContent = "Something went wrong while preparing this chapter. Please try again after refreshing the page.";
+      errorBox.textContent = "The chapter preview could not be prepared. Any chapter with a formatting issue now falls back to a simpler layout; if this message persists, refresh the Study Hub and try again.";
       errorBox.style.cssText = "padding:12px;color:#932a42;background:#fff2f4;border-radius:8px";
       previewShell.insertBefore(errorBox, printFrame);
       toast("I couldn’t prepare this chapter PDF. Refresh the Study Hub and try again.");
