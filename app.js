@@ -530,6 +530,100 @@ function chatAddMessage(role,text){
 function enableChatTools(enabled){
  ["chatCopy","chatPdf","chatText","chatSpeak","chatRegenerate","chatSave"].forEach(function(id){$(id).disabled=!enabled;});
 }
+function updateLocalAiStatus(message,kind){
+ const text=document.getElementById("localAiStatus"),badge=document.getElementById("localAiBadge");
+ if(text)text.textContent=String(message||"");
+ if(badge){
+  badge.classList.toggle("is-ready",kind==="ready");
+  badge.classList.toggle("is-loading",kind==="loading");
+  badge.textContent=kind==="ready"?"Ready on device":kind==="loading"?"Downloading model…":kind==="error"?"Unavailable":(window.KP_LOCAL_AI&&window.KP_LOCAL_AI.isPreferred()?"Local preferred":"Not installed");
+ }
+}
+function refreshLocalAiCapabilities(){
+ const local=window.KP_LOCAL_AI;if(!local)return;
+ const c=local.capabilities();
+ const model=document.getElementById("localAiModel"),memory=document.getElementById("localAiMemory"),reason=document.getElementById("localAiDeviceReason");
+ const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer"),progress=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
+ if(model)model.textContent=c.modelLabel;
+ if(memory)memory.textContent=c.memory?("Browser RAM hint: "+c.memory+" GB · logical CPU cores: "+(c.cores||"not reported")):"Browser RAM hint is unavailable · logical CPU cores: "+(c.cores||"not reported");
+ if(reason)reason.textContent=c.reason+" Selected model estimate: "+c.estimatedGpuMemory+".";
+ if(install)install.disabled=!c.canRun;
+ if(preference){preference.checked=local.isPreferred();preference.disabled=!c.canRun;}
+ if(progress&&!local.isReady())progress.value=0;
+ if(label&&!local.isReady())label.textContent="Model will download after you enable it";
+ if(local.isReady()){
+  updateLocalAiStatus("Local inference is ready. Text-only prompts can run on this device; attached files and web research still require the cloud route.","ready");
+  if(install){install.textContent="Local model ready ✓";install.disabled=true;}
+  if(label)label.textContent="Model loaded for this session";
+ }else if(!c.canRun){
+  updateLocalAiStatus(c.reason+" You can continue using cloud AI.","error");
+ }
+}
+let localAiLoadingUi=false;
+async function enableLocalAiFromUserAction(){
+ const local=window.KP_LOCAL_AI;if(!local){updateLocalAiStatus("The local AI module did not initialise. Refresh the page and retry.","error");return;}
+ const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer");
+ if(!local.capabilities().canRun){refreshLocalAiCapabilities();return;}
+ local.setPreferred(true);if(preference)preference.checked=true;
+ if(install){install.disabled=true;install.textContent="Preparing model…";}
+ localAiLoadingUi=true;updateLocalAiStatus("Downloading model files if they are not cached, then preparing WebGPU memory. Keep this tab open.","loading");
+ try{
+  const result=await local.load({onProgress:function(p){
+   const bar=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
+   if(bar&&Number.isFinite(p.progress))bar.value=Math.max(0,Math.min(1,p.progress));
+   if(label)label.textContent=Number.isFinite(p.progress)?Math.round(p.progress*100)+"% · "+String(p.text||"Preparing model"):String(p.text||"Preparing model…");
+   updateLocalAiStatus(String(p.text||"Preparing on-device model…"),"loading");
+  }});
+  updateLocalAiStatus(result.label+" is loaded. Text-only questions now run locally when the preference is enabled.","ready");
+  if(install){install.textContent="Local model ready ✓";install.disabled=true;}
+  if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Ready · cached model reused on future visits where browser storage persists";
+  if(document.getElementById("localAiProgress"))document.getElementById("localAiProgress").value=1;
+ }catch(error){
+  updateLocalAiStatus(String(error&&error.message||error)+" No prompt was automatically sent to the cloud. You can switch to cloud AI explicitly below.","error");
+  if(install){install.disabled=false;install.textContent="Retry local model setup";}
+  if(document.getElementById("localAiProgressLabel"))document.getElementById("localAiProgressLabel").textContent="Setup did not finish";
+ }finally{localAiLoadingUi=false;refreshLocalAiCapabilities();}
+}
+function initLocalAiControls(){
+ const local=window.KP_LOCAL_AI;if(!local)return;
+ refreshLocalAiCapabilities();
+ const install=document.getElementById("localAiInstall"),preference=document.getElementById("localAiPrefer"),cloud=document.getElementById("localAiUseCloud");
+ if(install)install.addEventListener("click",enableLocalAiFromUserAction);
+ if(preference)preference.addEventListener("change",function(){
+  local.setPreferred(preference.checked);
+  if(preference.checked){enableLocalAiFromUserAction();}
+  else{updateLocalAiStatus("Cloud AI is selected by default. Your downloaded model files are not removed; you can enable local preference again any time.","");refreshLocalAiCapabilities();}
+ });
+ if(cloud)cloud.addEventListener("click",function(){
+  local.setPreferred(false);if(preference)preference.checked=false;
+  updateLocalAiStatus("Cloud AI selected. Text prompts will use the server; attachments and web research also use the cloud route.","");
+  toast("Cloud AI selected for text-only questions.");
+ });
+ window.addEventListener("kp-local-ai-error",function(event){
+  if(!localAiLoadingUi)updateLocalAiStatus(String(event.detail&&event.detail.message||"The saved local model could not be restored. Use Retry local model setup."),"error");
+ });
+ // Restore on-device AI only after the learner explicitly opted in during a previous visit.
+ if(local.isPreferred()&&local.capabilities().canRun&&!local.isReady()){
+  updateLocalAiStatus("Restoring your previously enabled local model. If its cache was cleared, model files may need to download again.","loading");
+  const installButton=document.getElementById("localAiInstall");
+  if(installButton){installButton.disabled=true;installButton.textContent="Loading saved model…";}
+  local.load({onProgress:function(p){
+   const bar=document.getElementById("localAiProgress"),label=document.getElementById("localAiProgressLabel");
+   if(bar&&Number.isFinite(p.progress))bar.value=Math.max(0,Math.min(1,p.progress));
+   if(label)label.textContent=Number.isFinite(p.progress)?Math.round(p.progress*100)+"% · "+String(p.text||"Loading saved model"):String(p.text||"Loading saved model…");
+   updateLocalAiStatus(String(p.text||"Loading saved local model…"),"loading");
+  }}).then(function(result){
+   updateLocalAiStatus(result.label+" is ready. Text-only prompts will run locally.","ready");
+   if(installButton){installButton.textContent="Local model ready ✓";installButton.disabled=true;}
+   const bar=document.getElementById("localAiProgress");if(bar)bar.value=1;
+  }).catch(function(error){
+   updateLocalAiStatus(String(error&&error.message||error)+" Use Retry local model setup, or switch to cloud AI.","error");
+   if(installButton){installButton.disabled=false;installButton.textContent="Retry local model setup";}
+  });
+ }
+}
+initLocalAiControls();
+
 async function sendChat(raw,regenerate){
  const question=String(raw||"").trim();if(!question||chatBusy)return;
  if(activeChatController)activeChatController.abort();
