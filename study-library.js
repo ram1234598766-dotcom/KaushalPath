@@ -1039,17 +1039,6 @@
   function enrichIndividualChapter(item) {
     // Only expand the original, short individual chapter cards; deep guide and cheat-sheet records stay untouched.
     if (item.depth === "detailed" || (item.sections && item.sections.length >= 4)) return item;
-    const candidates = schoolGuides.concat(humanitiesGuides).filter((guide) => guide.level === item.level && guide.subject === item.subject);
-    const topicSections = candidates.flatMap((guide) => (guide.sections || []).map((section) => ({ section, source: guide.chapter, score: sectionScore(item, section) })));
-    const ranked = topicSections.filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
-    const linkedSections = [];
-    const seenHeadings = new Set();
-    ranked.forEach((x) => {
-      if (linkedSections.length < 4 && !seenHeadings.has(x.section.heading)) {
-        seenHeadings.add(x.section.heading);
-        linkedSections.push({heading:"Related topic · " + x.section.heading, body:x.section.body});
-      }
-    });
     const formulaSheet = formulaSheets.filter((sheet) => sheet.level === item.level && sheet.subject === item.subject)
       .sort((a,b) => guideMatchScore(item,b)-guideMatchScore(item,a))[0];
     const currentAlias = chapterAliasList(item);
@@ -1073,14 +1062,11 @@
       Object.assign(item, override, {depth:"detailed"});
       return item;
     }
-    const relatedExamples = candidates.flatMap((guide) => (guide.workedExamples || []).map((example) => ({
-      example, score: sectionScore(item, {heading:example.title, body:(example.steps || []).join(" ")})
-    }))).filter((x) => x.score > 0).sort((a,b) => b.score-a.score).slice(0,2).map((x) => x.example);
     const genericSections = genericDeepSections(item);
-    item.sections = genericSections.slice(0,2).concat(linkedSections, genericSections.slice(2));
+    item.sections = genericSections;
     item.formulaCheatSheet = cards;
     item.depth = "detailed";
-    item.workedExamples = (relatedExamples.length ? relatedExamples : []).concat([
+    item.workedExamples = [
       {title:"Chapter example — full working and reasoning",steps:[
         "Read the worked example: " + String(item.example || "the example shown above"),
         "Identify the relevant definition, formula, process or evidence from the preceding sections.",
@@ -1092,11 +1078,11 @@
         "Check that all stated conditions and assumptions are satisfied.",
         "Use a second method, a limiting case, a diagram or the source data to verify the answer where appropriate."
       ]}
-    ]).slice(0,4);
+    ].slice(0,4);
     item.commonMistakes = (item.commonMistakes || []).concat([
-      "Memorising a final statement/formula without its conditions or reason.",
-      "Skipping a definition, intermediate step, unit, label or link in the reasoning.",
-      "Answering a related topic instead of the exact command word and scope of the question."
+      "Do not memorise a final statement or formula without understanding its conditions and reasoning.",
+      "Do not skip a definition, intermediate step, unit, label or link in the reasoning.",
+      "Answer the exact command word and scope of the question instead of writing about a related topic."
     ]);
     item.examFocus = (item.examFocus || []).concat([
       "Start with the precise definition/model and state any needed assumption.",
@@ -1115,7 +1101,6 @@
   const schoolGuides = Array.isArray(window.KP_SCHOOL_CHAPTER_GUIDES) ? window.KP_SCHOOL_CHAPTER_GUIDES : [];
   const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
   const humanitiesGuides = Array.isArray(window.KP_HUMANITIES_GUIDES) ? window.KP_HUMANITIES_GUIDES : [];
-  notes.forEach(enrichIndividualChapter);
   if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
   // Detailed chapter packs replace compact starter summaries sharing the same key.
   // The older add-only de-duplication silently discarded richer content.
@@ -1172,6 +1157,9 @@
       glossary: combineUnique("glossary", (x) => String(x))
     });
   });
+  // Enrich only chapters that still need it after the detailed chapter sources have been merged.
+  // This prevents synthetic fallback sections and loosely matched examples from contaminating a detailed chapter.
+  notes.forEach(enrichIndividualChapter);
   notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...humanitiesGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
@@ -1404,14 +1392,55 @@
     const formulas = Array.isArray(item.formulaCheatSheet) ? item.formulaCheatSheet : [];
     const worked = Array.isArray(item.workedExamples) ? item.workedExamples : [];
     const methods = Array.isArray(item.fastMethods) ? item.fastMethods : [];
+    const genericHeading = /^(chapter framework and connections|key ideas unpacked|how to solve questions step by step|formula, process and result checks|how to write a complete exam answer)$/i;
+    const firstSentence = (value) => {
+      const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+      if (!text) return "";
+      const match = text.match(/^.*?[.!?](?=\s|$)/);
+      return match ? match[0].trim() : text;
+    };
+    const endSentence = (value) => {
+      const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+      if (!text) return "";
+      return /[.!?]$/.test(text) ? text : text + ".";
+    };
+    const avoidSentence = (value) => {
+      const text = endSentence(value).replace(/[.!?]+$/, "").trim();
+      if (!text) return "";
+      if (/^(avoid|do not|don't|never)\b/i.test(text)) return text + ".";
+      return "Avoid " + text.charAt(0).toLowerCase() + text.slice(1) + ".";
+    };
+    const realSections = sections.filter((section) => {
+      const heading = String(section.heading || "").trim();
+      return heading && !genericHeading.test(heading) && !/^related topic\s*[·:]/i.test(heading);
+    });
+    const conceptItems = realSections.length
+      ? realSections.map((section) => firstSentence(section.body) || endSentence(section.heading)).slice(0, 6)
+      : (item.points || []).map(endSentence).slice(0, 6);
+    const ruleItems = uniqueNoteText((item.formulas || []).concat(formulas.map((card) => card.formula || ""))).slice(0, 6);
+    const workedItems = uniqueNoteText(
+      worked.map((example) => firstSentence((example.steps || [])[0] || example.title) || endSentence(example.title || "Work through the example."))
+        .concat(item.example ? [firstSentence(item.example) || endSentence(item.example)] : [])
+    ).slice(0, 6);
+    const methodItems = uniqueNoteText(
+      methods.map((method) => firstSentence(method.when || (method.steps || [])[0] || method.title) || endSentence(method.title || "Follow the method carefully."))
+        .concat(!methods.length ? (item.examFocus || []).map(endSentence) : [])
+    ).slice(0, 6);
+    const trapItems = uniqueNoteText(
+      (item.commonMistakes || []).map(avoidSentence).concat(formulas.map((card) => card.trap ? endSentence(card.trap) : ""))
+    ).slice(0, 6);
+    const vocabularyItems = uniqueNoteText(item.glossary || []).slice(0, 6);
+    const practiceItems = uniqueNoteText(
+      (item.practiceProblems || []).map((problem) => problem.question || "").concat(item.recall || []).map(endSentence)
+    ).slice(0, 6);
     return [
-      { title: "Concepts & chapter structure", items: uniqueNoteText(sections.map((section) => section.heading).concat(item.points || [])) },
-      { title: "Formulas, rules & conditions", items: uniqueNoteText((item.formulas || []).concat(formulas.map((card) => String(card.formula || "Rule") + (card.when ? " · " + card.when : "")))) },
-      { title: "Worked reasoning", items: uniqueNoteText((worked.map((example) => example.title || "Worked method")).concat(item.example ? ["Primary worked example"] : [])) },
-      { title: "Methods & exam approach", items: uniqueNoteText(methods.map((method) => method.title || "Problem-solving method").concat(item.examFocus || [])) },
-      { title: "Common traps", items: uniqueNoteText((item.commonMistakes || []).concat(formulas.map((card) => card.trap ? "Avoid: " + card.trap : ""))) },
-      { title: "Vocabulary", items: uniqueNoteText(item.glossary || []) },
-      { title: "Practice & retrieval", items: uniqueNoteText((item.practiceProblems || []).map((problem) => problem.question || "").concat(item.recall || [])) }
+      { title: "Concepts & chapter structure", items: conceptItems },
+      { title: "Formulas, rules & conditions", items: ruleItems },
+      { title: "Worked reasoning", items: workedItems },
+      { title: "Methods & exam approach", items: methodItems },
+      { title: "Common traps", items: trapItems },
+      { title: "Vocabulary", items: vocabularyItems },
+      { title: "Practice & retrieval", items: practiceItems }
     ].filter((group) => group.items.length);
   }
   function noteListHtml(values, ordered) {
@@ -1438,13 +1467,10 @@
     ][index % 7];
   }
   function mapKeyword(value) {
-    const full = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
-    // Keep a useful keyword phrase on the map; the following pages retain the complete explanation.
-    const firstClause = full.split(/;\s+|:\s+| — | – /)[0].trim();
-    const chosen = firstClause.length >= 12 && full.length > 58 ? firstClause : full;
-    return chosen.length > 72 ? chosen.slice(0, 69).trimEnd() + "…" : chosen;
+    // Keep the full wording. The SVG layout wraps long text instead of clipping it with an ellipsis.
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
   }
-  function mapTextLines(value, maxChars, maxLines) {
+  function mapTextLines(value, maxChars) {
     const words = String(value || "").split(/\s+/).filter(Boolean);
     const lines = [];
     let line = "";
@@ -1456,12 +1482,6 @@
       } else line = next;
     }
     if (line) lines.push(line);
-    if (lines.length > maxLines) {
-      const kept = lines.slice(0, maxLines);
-      const last = kept[maxLines - 1];
-      kept[maxLines - 1] = last.length > maxChars - 2 ? last.slice(0, maxChars - 2).trimEnd() + "…" : last + "…";
-      return kept;
-    }
     return lines;
   }
   function mapSvgLabel(value, x, y, width, height, fontSize, maxChars, maxLines) {
@@ -1519,16 +1539,16 @@
         const sourceX = isLeft ? catX : catX + categoryWidth;
         const chipX = chipPanelX[side.name];
         const items = uniqueNoteText((group.items || []).map(mapKeyword));
-        const columns = items.length > 20 ? 4 : items.length > 8 ? 3 : 2;
+        const columns = 2;
         const gapX = 7;
         const gapY = 4;
         const chipW = (chipPanelWidth - gapX * (columns - 1)) / columns;
         const rows = Math.max(1, Math.ceil(items.length / columns));
         const panelH = 164;
-        const chipH = Math.max(18, Math.min(32, (panelH - gapY * (rows - 1)) / rows));
+        const chipH = Math.max(24, Math.min(52, (panelH - gapY * (rows - 1)) / rows));
         const top = y - ((rows * chipH + (rows - 1) * gapY) / 2);
-        const fontSize = columns === 4 ? 8.1 : columns === 3 ? 9.0 : 10.0;
-        const maxChars = Math.max(9, Math.floor((chipW - 12) / (fontSize * 0.56)));
+        const fontSize = 8.6;
+        const maxChars = Math.max(16, Math.floor((chipW - 14) / (fontSize * 0.56)));
         const maxLines = chipH >= 27 ? 2 : 1;
 
         items.forEach((label, itemIndex) => {
@@ -1554,7 +1574,7 @@
           leafNodes.push(
             '<g class="mindmap-topic" data-branch="' + index + '"><title>' + esc((group.title || "") + " — " + label) + '</title>' +
             '<rect x="' + x + '" y="' + chipY + '" width="' + chipW + '" height="' + chipH +
-            '" rx="' + Math.min(10, chipH / 2) + '" fill="#FFFFFF" stroke="' + palette.color +
+            '" rx="' + Math.min(10, chipH / 2) + '" fill="' + palette.pale + '" stroke="' + palette.color +
             '" stroke-opacity=".42" stroke-width="1.25"/>' +
             '<circle cx="' + (isLeft ? x + chipW - 5 : x + 5) + '" cy="' + anchorY +
             '" r="2.7" fill="' + palette.color + '"/>' +
@@ -1578,7 +1598,7 @@
     });
 
     const chapterFont = String(item.chapter || "").length > 28 ? 19 : String(item.chapter || "").length > 20 ? 22 : 26;
-    const chapterLines = mapTextLines(item.chapter || "Chapter", 17, 3);
+    const chapterLines = mapTextLines(item.chapter || "Chapter", 17);
     const chapterText = '<text x="' + cx + '" y="' + (cy - (chapterLines.length - 1) * 14) +
       '" text-anchor="middle" font-size="' + chapterFont + '" font-weight="800" fill="#192641">' +
       chapterLines.map((line, index) => '<tspan x="' + cx + '" dy="' + (index === 0 ? 0 : 28) + '">' + esc(line) + '</tspan>').join("") +
@@ -1606,15 +1626,15 @@
       '<rect x="36" y="31" width="9" height="53" rx="4.5" fill="url(#mapTop)"/>' +
       '<text x="64" y="55" font-size="28" font-weight="850" fill="#17233E">' + esc(item.chapter) + '</text>' +
       '<text x="65" y="82" font-size="14" font-weight="550" fill="#6B7690">' +
-      esc(item.level + " · " + item.subject + " · Core concepts and connected revision topics") + '</text>' +
+      esc(item.level + " · " + item.subject + " · This map connects the chapter’s main concepts, rules, examples, methods and practice.") + '</text>' +
       decorativeDots +
       mainPaths.join("") + subPaths.join("") +
       categories.join("") + leafNodes.join("") +
       '<g filter="url(#mapShadow)">' + root + '</g>' +
       '<rect x="36" y="900" width="1528" height="34" rx="12" fill="#F0F3FA"/>' +
       '<circle cx="56" cy="917" r="4" fill="#8B5CF6"/>' +
-      '<text x="70" y="921" font-size="11" font-weight="600" fill="#58647B">Each colour is a chapter strand; curved sub-branches connect it to its topics.</text>' +
-      '<text x="1545" y="921" text-anchor="end" font-size="10" fill="#6B7690">Generated from this lesson pack · verify syllabus scope with the prescribed text</text>' +
+      '<text x="70" y="921" font-size="11" font-weight="600" fill="#58647B">Each colour marks a chapter strand, and curved sub-branches connect the main idea to its supporting topics.</text>' +
+      '<text x="1545" y="921" text-anchor="end" font-size="10" fill="#6B7690">Generated from this lesson pack. Check the scope against the prescribed textbook and current syllabus.</text>' +
       '</svg>';
     return '<article class="note-page mindmap-page"><div class="map-caption"><span class="map-caption-kicker">KAUSHALPATH · VISUAL REVISION</span><span class="map-caption-label">PAGE 1 · CONNECTED CONCEPT MAP</span></div>' +
       svg + '</article>';
