@@ -1844,12 +1844,15 @@
   }
 
   function chapterPdfText(value) {
-    return String(value == null ? "" : value)
-      .replace(/[\\u200B-\\u200D\\uFEFF]/g, "")
-      .replace(/\\s+/g, " ")
-      .trim();
+    let text = String(value == null ? "" : value);
+    [8203, 8204, 8205, 65279].forEach((code) => {
+      text = text.split(String.fromCharCode(code)).join("");
+    });
+    [9, 10, 13].forEach((code) => {
+      text = text.split(String.fromCharCode(code)).join(" ");
+    });
+    return text.split(" ").map((part) => part.trim()).filter(Boolean).join(" ").trim();
   }
-
   function collectChapterPdfBlocks(article) {
     const blocks = [];
     const headingTags = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
