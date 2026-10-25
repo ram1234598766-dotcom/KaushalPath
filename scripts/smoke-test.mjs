@@ -50,6 +50,8 @@ assert.match(html, /value="JEE Main"/, "the notes library should filter detailed
 assert.match(html, /value="NEET UG"/, "the notes library should filter detailed NEET UG notes");
 assert.ok(html.indexOf('src="/exam-prep-notes.js"') < html.indexOf('src="/study-library.js"'), "exam note data must load before the library renderer");
 assert.match(html, /Expanded chapter notes &amp; formula sheets/, "the catalogue should advertise expanded notes rather than an outdated fixed pack count");
+assert.ok(vercel.builds.some(b => b.src === "ncert-physics-chapter-notes.js" && b.use === "@vercel/static"), "Vercel must publish the existing detailed Physics chapters");
+assert.ok(vercel.builds.some(b => b.src === "ncert-chemistry-chapter-notes.js" && b.use === "@vercel/static"), "Vercel must publish the existing detailed Chemistry chapters");
 for (const asset of ["school-chapter-guides.js","school-humanities-commerce-guides.js","formula-cheat-sheets.js","ncert-mathematics-chapter-notes.js","ncert-biology-chapter-notes.js","ncert-other-chapter-notes.js","ncert-physics-chapter-notes.js","ncert-chemistry-chapter-notes.js","exam-prep-notes.js"]) {
   assert.ok(html.indexOf(`src="/${asset}"`) >= 0 && html.indexOf(`src="/${asset}"`) < html.indexOf('src="/study-library.js"'), asset + " must load before the study-library renderer");
 }
