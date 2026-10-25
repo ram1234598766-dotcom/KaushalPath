@@ -1081,9 +1081,26 @@ renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSaved
 
 
 let pendingPwaInstall = null;
+function showPwaUpdateNotice() {
+ const banner=$("pwaUpdateBanner");
+ if(banner)banner.classList.remove("hidden");
+}
 function initPWA() {
  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(function(){});
+  let hasControllerAtStart=Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener("controllerchange",function(){
+   // First install should not interrupt a learner; later controller changes indicate a refreshed app shell.
+   if(hasControllerAtStart)showPwaUpdateNotice();
+   else hasControllerAtStart=true;
+  });
+  navigator.serviceWorker.register("/service-worker.js", { scope: "/", updateViaCache: "none" }).then(function(registration){
+   if(registration.waiting&&navigator.serviceWorker.controller)showPwaUpdateNotice();
+   // Check for a new app shell on each visit instead of relying only on the browser's periodic check.
+   if(typeof registration.update==="function")registration.update().catch(function(){});
+  }).catch(function(){});
+  const reloadUpdate=$("pwaUpdateReload"),dismissUpdate=$("pwaUpdateDismiss");
+  if(reloadUpdate)reloadUpdate.addEventListener("click",function(){location.reload();});
+  if(dismissUpdate)dismissUpdate.addEventListener("click",function(){$("pwaUpdateBanner").classList.add("hidden");});
  }
  window.addEventListener("offline",function(){toast("You're offline. Saved notes, practice and your study plan remain on this device; AI tools need a connection.");});
  window.addEventListener("online",function(){toast("Connection restored.");});
