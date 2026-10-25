@@ -59,7 +59,6 @@ assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/,
 assert.match(examPrepNotes, /workedExamples/, "exam notes should include stepwise examples and problem methods");
 assert.equal((formulaSheets.match(/const .* = sheet\(/g) || []).length, 14, "formula cheat sheets should cover CBSE classes and JEE/NEET");
 assert.equal((schoolGuides.match(/const g[0-9]+[A-Za-z0-9]* = guide\(/g) || []).length, 17, "core CBSE chapters should have expanded master guides");
-const humanitiesGuides = readFileSync(new URL("../school-humanities-commerce-guides.js", import.meta.url), "utf8");
 assert.equal((humanitiesGuides.match(/=guide\("/g) || []).length, 14, "CBSE humanities, language, commerce and CS should have expanded guides");
 assert.match(studyLibrary, /Common trap:/, "formula cards should render common mistakes");
 assert.match(studyLibrary, /Units \/ notation:/, "formula cards should explain units and notation");
