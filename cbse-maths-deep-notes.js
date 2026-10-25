@@ -293,6 +293,7 @@
        problem("Evaluate sin(π/6) exactly.","1/2.","Use the unit circle or the 30° special triangle.")],
       ["Using degree angles in calculus-limit formulas.","Forgetting periodic repetitions.","Using a double-angle identity with an incorrect sign.","Applying an identity outside its domain after division."],
       ["Memorise exact special-angle values and solve equations in the required interval, then express the general family if asked."],
+      ["Why must arc length s=rθ use radians?","How does tangent's period differ from sine's period?","How do you express all solutions of sin x=sin α?"],
       ["Radian: angle defined by arc-length/radius.","Period: interval after which a function repeats.","Principal value: selected output in an inverse function's range."]),
     chapter("Class 11","Mathematics","Complex Numbers and Quadratic Equations","Represent complex numbers algebraically and geometrically, solve quadratic equations and use root-coefficient relationships.",
       [
