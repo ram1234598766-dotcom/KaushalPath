@@ -41,9 +41,9 @@ assert.match(html, /id="localAiPrefer"/, "local model preference must be explici
 assert.match(html, /value="JEE Main"/, "the notes library should filter detailed JEE Main notes");
 assert.match(html, /value="NEET UG"/, "the notes library should filter detailed NEET UG notes");
 assert.ok(html.indexOf('src="/exam-prep-notes.js"') < html.indexOf('src="/study-library.js"'), "exam note data must load before the library renderer");
-assert.match(html, /160 note packs/, "the notes catalogue should reflect 119 core packs plus 41 detailed exam packs");
+assert.match(html, /180 note packs/, "the notes catalogue should reflect 119 core packs plus 61 detailed exam entries");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated school catalogue should retain its 119 authored note packs");
-assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 28, "the exam notes should include at least 28 authored deep-dive packs");
+assert.ok((examPrepNotes.match(/ = pack\("/g) || []).length >= 42, "the exam notes should include at least 42 authored deep-dive chapter definitions");
 assert.match(examPrepNotes, /window\.KP_DEEP_NOTES = base\.concat\(examDupes\)/, "deep-dive notes should include dedicated JEE and NEET views");
 assert.match(examPrepNotes, /workedExamples/, "exam notes should include stepwise examples and problem methods");
 assert.match(examPrepNotes, /commonMistakes/, "exam notes should cover common mistakes");
