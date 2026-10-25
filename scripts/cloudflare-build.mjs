@@ -28,6 +28,7 @@ const staticFiles = [
   "ncert-mathematics-chapter-notes.js",
   "ncert-biology-chapter-notes.js",
   "study-library.js",
+  "local-ai.js",
   "question-bank.js",
   "_headers",
   "_routes.json"
