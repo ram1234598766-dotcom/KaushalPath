@@ -79,6 +79,9 @@ assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLi
 assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
 assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should have a dedicated export action");
 assert.ok(studyLibrary.includes('downloadButton.addEventListener("click", startDownload)'), "chapter export should create a direct downloadable PDF file");
+assert.ok(studyLibrary.includes('printButton.addEventListener("click", startPrint)') && studyLibrary.includes('printButton.textContent = "Print / Save PDF"'), "the print workflow should remain available as a separate action");
+assert.ok(!studyLibrary.includes('downloadButton.addEventListener("click", startPrint)'), "Download PDF must never be wired to the print action");
+assert.ok(studyLibrary.includes('pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal")'), "PDF export should embed a Unicode-capable font for science notation");
 assert.ok(studyLibrary.includes("createAndDownloadChapterPdf(") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF export must create a downloadable vector map and portrait notes");
 assert.doesNotMatch(studyLibrary, /html2pdf\(\)\.set\(|html2canvas:/, "chapter export should not rasterize or crop the mind map in a PDF canvas");
 assert.ok(studyLibrary.includes("const pageTitle = fileStem;") && studyLibrary.includes('fileStem + ".pdf"'), "the generated PDF should use a chapter-specific filename");
@@ -121,7 +124,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v30"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v31"), "PWA cache must be bumped for new chapter assets");
 assert.ok(questionBank.includes("window.KP_FULL_LENGTH_QUESTION_BANK = fullLengthBank"), "the question bank must expose full-length JEE and NEET question pools");
 assert.ok(questionBank.includes("questionsPerTest: 90") && questionBank.includes("questionsPerTest: 180"), "the configured mock lengths must be 90 for JEE and 180 for NEET");
 assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("selectRotated(subjects.Mathematics,30") && app.includes("selectRotated(subjects.Biology,90"), "the app must assemble the requested subject-balanced mock tests");
@@ -244,14 +247,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v30/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v31/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v30/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v31/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -268,7 +271,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v30/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v31/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
@@ -511,10 +514,10 @@ assert.ok(vercel.builds.some(b => b.src === "smart-system-client.js" && b.use ==
 
 assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF export should fall back to a simpler per-chapter layout if rich rendering fails");
 assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
-assert.ok(studyLibrary.includes("await engine.svg2pdf(svg, pdf, options)") && studyLibrary.includes('pdf.output("blob")'), "the Download PDF action must create a real PDF blob with a vector map");
+assert.ok(studyLibrary.includes("await engine.svg2pdf(vectorSvg, pdf, options)") && studyLibrary.includes('pdf.output("blob")'), "the Download PDF action must create a real PDF blob with a cloned vector map");
 assert.ok(!studyLibrary.includes("printTarget.print()"), "Download PDF must not open the browser print dialog");
 assert.ok(studyLibrary.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;"), "the landscape map should not inherit a portrait width constraint");
-assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Click Download PDF to save the .pdf file directly — no print dialog needed. The map and notes remain crisp and selectable."'), "the chapter preview should explain that Download PDF saves a real file directly");
+assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Download PDF saves a real file directly; Print / Save PDF is a separate browser-print option. The map and notes remain crisp and selectable."'), "the chapter preview should distinguish the real PDF download from the print option");
 
 assert.match(html, /@keyframes kp-view-enter/, "workspace views should use a short polished entrance animation");
 assert.match(html, /@media\(prefers-reduced-motion:reduce\)[^]*?\.kp-view-enter[^]*?animation:none!important/, "workspace animations must respect reduced-motion preferences");
@@ -541,7 +544,7 @@ assert.ok(app.includes('String(event.key).toLowerCase()==="k"') && app.includes(
 assert.match(app, /dashboardAccuracyBar/, "dashboard accuracy should be calculated from local practice results");
 assert.match(app, /mobile-dock \[data-view\]/, "mobile quick navigation should track the active workspace");
 assert.match(studyLibrary, /window\.KP_STUDY_NOTE_INDEX = notes\.map/, "chapter metadata should be indexed for global search without exposing learner history");
-assert.match(serviceWorker, /kaushalpath-shell-v30/, "the offline shell cache should be refreshed for the workspace overhaul");
+assert.match(serviceWorker, /kaushalpath-shell-v31/, "the offline shell cache should be refreshed for the workspace overhaul");
 
 // CBSE self-paced sample-test behaviour and written-response safety.
 
@@ -568,4 +571,4 @@ assert.match(app, /cbseClass10AnnualSubjects/, "the annual subject picker should
 assert.match(app, /cbseSeniorAnnualSubjects/, "the annual subject picker should cover senior-secondary core and elective subjects");
 assert.match(html, /sqp_classx_2026-27\.html/, "the Class X annual paper builder should link to current official SQPs");
 assert.match(html, /SQP_CLASSXII_2026-27\.html/, "the Class XII annual paper builder should link to current official SQPs");
-assert.match(serviceWorker, /kaushalpath-shell-v30/, "the offline shell cache must refresh after the annual-exam workspace update");
+assert.match(serviceWorker, /kaushalpath-shell-v31/, "the offline shell cache must refresh after the annual-exam workspace update");
