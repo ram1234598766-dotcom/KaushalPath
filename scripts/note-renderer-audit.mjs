@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import { runInNewContext } from "node:vm";
 
 const source = readFileSync(new URL("../study-library.js", import.meta.url), "utf8");
+const pdfExportStart = source.indexOf("function printNotes(items)");
+const pdfExportEnd = source.indexOf("function toast(", pdfExportStart);
+assert.ok(pdfExportStart >= 0 && pdfExportEnd > pdfExportStart, "the chapter PDF export path must be present");
+const pdfExport = source.slice(pdfExportStart, pdfExportEnd);
+assert.ok(pdfExport.includes('image: { type: "png" }'), "downloaded PDFs must use lossless PNG rendering instead of JPEG artifacts");
+assert.ok(pdfExport.includes("Math.min(2, Math.max(1, Math.sqrt(32000000 / ("), "PDF export must render at higher resolution while bounding large-document canvas memory");
+assert.ok(pdfExport.includes("sharpest selectable text and vector graphics"), "the preview must explain that native Print / Save PDF is the sharpest text-preserving option");
 const helperStart = source.indexOf("  function uniqueNoteText(");
 const helperEnd = source.indexOf("function printNotes(items)", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "the pure chapter map and packet helpers must be present");
