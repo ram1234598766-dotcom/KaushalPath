@@ -6,13 +6,10 @@ const SHELL_FILES = [
   "/school-chapter-guides.js",
   "/ncert-mathematics-chapter-notes.js",
   "/ncert-biology-chapter-notes.js",
-  "/ncert-biology-chapter-notes.js",
-  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-other-chapter-notes.js",
+  "/ncert-physics-chapter-notes.js",
+  "/ncert-chemistry-chapter-notes.js",
   "/school-humanities-commerce-guides.js",
-  "/ncert-chemistry-chapter-notes.js",
-  "/ncert-chemistry-chapter-notes.js",
-  "/ncert-physics-chapter-notes.js",
-  "/ncert-physics-chapter-notes.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
   "/study-library.js",
@@ -25,14 +22,19 @@ const SHELL_FILES = [
 const STATIC_FILES = new Set([
   "/app.js",
   "/school-chapter-guides.js",
+  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-biology-chapter-notes.js",
+  "/ncert-other-chapter-notes.js",
+  "/ncert-physics-chapter-notes.js",
+  "/ncert-chemistry-chapter-notes.js",
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
   "/study-library.js",
   "/question-bank.js",
+  "/local-ai.js",
   "/manifest.webmanifest",
   "/app-icon.svg"
-  "/ncert-other-chapter-notes.js",
 ]);
 
 self.addEventListener("install", (event) => {
