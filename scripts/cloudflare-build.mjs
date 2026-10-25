@@ -66,6 +66,6 @@ if (missing.length) {
   console.error("Cloudflare static build is missing required files: " + missing.join(", "));
   process.exitCode = 1;
 } else {
-  console.log("Cloudflare Workers static-asset build ready: " + staticFiles.length + " assets copied to dist/.");
-  console.log("Worker serves public app files from the repository origin and routes /api/study-guide to the existing Vercel-backed API.");
+  console.log("Cloudflare preflight passed: " + staticFiles.length + " required public files staged in dist/.");
+  console.log("The existing Worker serves its allowlisted public files from GitHub main; Wrangler asset uploads stay disabled.");
 }
