@@ -138,12 +138,6 @@ function withRequestMetadata(response, requestId, startedAt) {
     headers: outHeaders
   });
 }
-function jsonWithId(req, env, requestId, data, status = 200, extra = {}) {
-  const response = json(req, env, data, status, extra);
-  const headers = new Headers(response.headers);
-  headers.set("X-Request-Id", requestId);
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-}
 
 export default {
   async fetch(req, env, ctx) {
