@@ -78,7 +78,7 @@ assert.ok(studyLibrary.includes("PRACTICE QUESTIONS WITH WORKED ANSWERS"), "save
 assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLibrary.includes("problem.question ||") && studyLibrary.includes("problem.answer ||") && studyLibrary.includes("problem.solution ||"), "PDF export must retain solved practice with answers and reasoning");
 assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
 assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should have a dedicated export action");
-assert.match(studyLibrary, /downloadButton\\.addEventListener\\("click", startDownload\\)/, "chapter export should create a direct downloadable PDF file");
+assert.ok(studyLibrary.includes('downloadButton.addEventListener("click", startDownload)'), "chapter export should create a direct downloadable PDF file");
 assert.ok(studyLibrary.includes("createAndDownloadChapterPdf(") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF export must create a downloadable vector map and portrait notes");
 assert.doesNotMatch(studyLibrary, /html2pdf\(\)\.set\(|html2canvas:/, "chapter export should not rasterize or crop the mind map in a PDF canvas");
 assert.ok(studyLibrary.includes("const pageTitle = fileStem;") && studyLibrary.includes('fileStem + ".pdf"'), "the generated PDF should use a chapter-specific filename");
