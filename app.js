@@ -1587,8 +1587,8 @@ function initPlanner(){
  renderPlanner();
 }
 
-function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
-function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
+function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);tick=null;active={test:t,answers:{},index:0,endAt:t.timed===false?0:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();if(t.timed!==false)tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
+function updateTimer(){if(!active)return;const el=$("timer");if(active.test&&active.test.timed===false){if(el){el.textContent="Self-paced";el.setAttribute("aria-label","Untimed sample test");}return;}const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
 function renderQuestion(){
  if(!active)return;
  const t=active.test,q=t.qs[active.index],selected=active.answers[active.index],root=$("examWorkspace");
