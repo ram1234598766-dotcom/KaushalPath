@@ -1,9 +1,30 @@
-import { cp, mkdir, rm, access } from "node:fs/promises";
+import { cp, mkdir, rm, access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const output = resolve(root, "dist");
+const configPath = resolve(root, "wrangler.toml");
+const config = await readFile(configPath, "utf8");
+const configLines = config.split(/\r?\n/).map((line) => line.trim());
+if (!configLines.includes('name = "kaushalpath"')) {
+  throw new Error('Cloudflare build must target the existing "kaushalpath" Worker.');
+}
+if (!configLines.includes('main = "cloudflare-worker.mjs"')) {
+  throw new Error('wrangler.toml must declare cloudflare-worker.mjs as the Worker entry point.');
+}
+if (configLines.includes("[assets]")) {
+  throw new Error('Do not enable Wrangler static-asset uploads for this Worker: KaushalPath serves its allowlisted public files through the existing Worker, avoiding the previous unauthorized /workers/assets/upload failure.');
+}
+const deploymentFiles = [
+  "cloudflare-worker.mjs",
+  "functions/api/study-guide.js",
+  "smart-system/worker.js"
+];
+for (const file of deploymentFiles) {
+  try { await access(resolve(root, file)); }
+  catch { throw new Error("Cloudflare deployment is missing required Worker module: " + file); }
+}
 const staticFiles = [
   "index.html",
   "app.js",
@@ -45,6 +66,6 @@ if (missing.length) {
   console.error("Cloudflare static build is missing required files: " + missing.join(", "));
   process.exitCode = 1;
 } else {
-  console.log("Cloudflare Workers static-asset build ready: " + staticFiles.length + " assets copied to dist/.");
-  console.log("Worker serves public app files from the repository origin and routes /api/study-guide to the existing Vercel-backed API.");
+  console.log("Cloudflare preflight passed: " + staticFiles.length + " required public files staged in dist/.");
+  console.log("The existing Worker serves its allowlisted public files from GitHub main; Wrangler asset uploads stay disabled.");
 }
