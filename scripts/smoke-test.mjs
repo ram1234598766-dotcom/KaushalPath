@@ -78,6 +78,11 @@ assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLi
 assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
 assert.ok(studyLibrary.includes("function mapPalette(index)") && studyLibrary.includes("stroke-width=\"7\"") && studyLibrary.includes("stroke-width=\"2.1\""), "mind maps should use distinct colorful curved main and sub-branches");
 assert.ok(studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("mindmap-svg"), "the chapter mind map should print as a landscape SVG cover page");
+assert.ok(!studyLibrary.includes("return chosen.length > 72") && !studyLibrary.includes('last.slice(0, maxChars - 2).trimEnd() + "…"'), "mind-map labels must wrap completely instead of adding ellipses");
+assert.ok(studyLibrary.includes("const firstSentence = (value) =>") && studyLibrary.includes("const avoidSentence = (value) =>"), "mind maps should show complete explanations and grammatical trap sentences");
+assert.ok(studyLibrary.indexOf("notes.forEach(enrichIndividualChapter);") > studyLibrary.indexOf("individualChapterSets.flat().forEach((item) => {") && !studyLibrary.includes('linkedSections.push({heading:"Related topic · "'), "detailed chapter sources must merge before fallback enrichment and stay on-topic");
+assert.ok(studyLibrary.includes("print-color-adjust:exact") && html.includes(".notes-card:nth-child(7n+1)") && html.includes(".notes-detail .practice-answer"), "chapter PDFs, note cards and practice explanations should use distinct colours");
+
 assert.ok(mathsDeepNotes.includes("KP_MATHS_INDIVIDUAL_DEEP_NOTES = notes"), "maths collection must be exported");
 assert.ok(physicsChemistryDeepNotes.includes("KP_SCIENCE_INDIVIDUAL_DEEP_NOTES = notes"), "Physics/Chemistry collection must be exported");
 assert.ok(biologyDeepNotes.includes("KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES = notes"), "Biology collection must be exported");
@@ -92,7 +97,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v12"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v13"), "PWA cache must be bumped for new chapter assets");
 assert.ok(vercel.builds.some(b => b.src === "cbse-maths-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-maths-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-physics-chemistry-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-physics-chemistry-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-biology-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-biology-deep-notes.js");
@@ -160,14 +165,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v12/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v13/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v12/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v13/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -184,7 +189,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v12/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v13/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 
