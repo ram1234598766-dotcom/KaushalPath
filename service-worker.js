@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaushalpath-shell-v8";
+const CACHE_NAME = "kaushalpath-shell-v9";
 const SHELL_FILES = [
   "/",
   "/index.html",
@@ -7,6 +7,7 @@ const SHELL_FILES = [
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
+  "/jee-neet-chapter-notes.js",
   "/cbse-maths-deep-notes.js",
   "/cbse-physics-chemistry-deep-notes.js",
   "/cbse-biology-deep-notes.js",
