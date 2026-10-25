@@ -80,7 +80,7 @@ assert.match(ncertMathematicsChapterNotes, /practiceQuestions/, "Maths chapter n
 assert.match(ncertMathematicsChapterNotes, /Sets and Functions/, "Maths chapter notes should include Class 11 individually");
 assert.match(ncertMathematicsChapterNotes, /Vector Algebra and Three-Dimensional Geometry/, "Maths chapter notes should include Class 12 individually");
 assert.equal((ncertBiologyChapterNotes.match(/\bb\("Class /g) || []).length, 38, "Biology should have individual detailed Class 10–12 chapter guides");
-assert.equal((ncertOtherChapterNotes.match(/guide\("Class /g) || []).length, 28, "The remaining curriculum topics should have detailed individual chapter guides");
+assert.equal((ncertOtherChapterNotes.match(/guide\("Class /g) || []).length, 43, "The remaining curriculum topics should have detailed individual chapter guides");
 assert.match(ncertOtherChapterNotes, /Nationalism in India/, "History should include individual chapter explanations");
 assert.match(ncertOtherChapterNotes, /SQL and Relational Databases/, "Computer Science should include detailed database chapters");
 assert.match(ncertOtherChapterNotes, /Journal, Ledger and Trial Balance/, "Accountancy should include detailed individual chapters");
