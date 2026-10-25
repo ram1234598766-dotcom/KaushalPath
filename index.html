@@ -560,6 +560,34 @@ html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion
 @media(max-width:680px){.notes-grid{grid-template-columns:1fr}.notes-official-resources{grid-template-columns:1fr}.notes-official-links{grid-template-columns:1fr}.tour-card{padding:24px 20px}.tour-actions{align-items:flex-start}.tour-actions>div{display:flex;gap:6px}.tour-actions .btn{padding:9px 10px}.notes-promise{padding:14px}.notes-section-head{align-items:flex-start}.notes-count{margin-top:8px}}
 @media print{.notes-toolbar,.notes-promise,.notes-official-resources,.tour-overlay,.sidebar,.topbar,.site-footer{display:none!important}}
 
+
+/* Local AI device setup */
+.local-ai-panel{margin:0 0 18px;padding:22px;border:1px solid #dfd1f5;background:linear-gradient(125deg,#fff 0%,#fbf8ff 70%,#f1ebff 100%);box-shadow:0 10px 28px #34155308}
+.local-ai-header{display:flex;align-items:flex-start;gap:13px}
+.local-ai-mark{display:grid;place-items:center;flex:0 0 43px;width:43px;height:43px;border-radius:14px;color:#fff;font-weight:900;font-size:1.5rem;background:linear-gradient(145deg,#8d64e5,#4f2a9b);box-shadow:0 7px 16px #7445d824}
+.local-ai-heading{flex:1;min-width:0}
+.local-ai-heading h3{margin:5px 0 5px;font-size:1.2rem;letter-spacing:-.035em;color:#34204f}
+.local-ai-heading p{margin:0;color:#79688e;font-size:.84rem;line-height:1.7;max-width:760px}
+.local-ai-badge{flex:0 0 auto;padding:6px 9px;border-radius:999px;background:#eee8f6;color:#756487;font-size:.68rem;font-weight:900}
+.local-ai-badge.is-ready{background:#dff7ed;color:#17684c}
+.local-ai-badge.is-loading{background:#fff1d9;color:#8d5a12}
+.local-ai-device{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(0,1.2fr);gap:14px;padding:14px;margin-top:17px;border:1px solid #eae1f5;border-radius:13px;background:#ffffffb8}
+.local-ai-device>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.local-ai-device-label{font-size:.68rem;color:#8e7ea4;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+.local-ai-device strong{font-size:.86rem;color:#432a68}
+.local-ai-device small,.local-ai-device-note{font-size:.75rem;color:#81728f;line-height:1.55}
+.local-ai-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:15px}
+.local-ai-actions .btn{font-size:.78rem;padding:10px 12px}
+.local-ai-toggle{display:inline-flex;align-items:center;gap:7px;color:#685879;font-size:.78rem;font-weight:750}
+.local-ai-toggle input{accent-color:#7445d8;width:16px;height:16px}
+.local-ai-progress-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+.local-ai-progress-row progress{width:min(300px,55%);height:9px;accent-color:#7445d8}
+.local-ai-progress-row span{font-size:.72rem;color:#77668b}
+.local-ai-status{font-size:.79rem;line-height:1.65;color:#665779;margin:9px 0 0}
+.local-ai-limitations{margin-top:10px;padding:11px 12px;border-left:3px solid #ae91ec;background:#f5f0ff;color:#77628e;font-size:.74rem;line-height:1.65;border-radius:0 9px 9px 0}
+.local-ai-limitations strong{color:#513185}
+@media(max-width:650px){.local-ai-panel{padding:16px}.local-ai-header{flex-wrap:wrap}.local-ai-badge{margin-left:56px}.local-ai-device{grid-template-columns:1fr}.local-ai-actions{align-items:flex-start}.local-ai-toggle{width:100%;order:3}.local-ai-progress-row{align-items:flex-start;flex-direction:column}.local-ai-progress-row progress{width:100%}}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
@@ -647,6 +675,32 @@ html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion
 
 <section class="section wrap view-hidden" id="ai-guide">
   <div class="section-head"><div><div class="kicker">AI LEARNING STUDIO</div><h2>AI Study Guide</h2><p>A focused space for clear explanations, worked examples, revision notes and practice. Ask follow-up questions without losing the thread.</p></div></div>
+  <section class="local-ai-panel panel" aria-labelledby="localAiTitle">
+    <div class="local-ai-header">
+      <div class="local-ai-mark" aria-hidden="true">⌁</div>
+      <div class="local-ai-heading">
+        <div class="kicker">PRIVATE ON-DEVICE MODE</div>
+        <h3 id="localAiTitle">Run the Study Guide locally</h3>
+        <p>Download a quantised language model to this browser. Text-only chat can then run on your device without sending the prompt to the AI server.</p>
+      </div>
+      <span class="local-ai-badge" id="localAiBadge">Not installed</span>
+    </div>
+    <div class="local-ai-device">
+      <div><span class="local-ai-device-label">Recommended for this device</span><strong id="localAiModel">Checking browser capabilities…</strong><small id="localAiMemory"></small></div>
+      <div class="local-ai-device-note" id="localAiDeviceReason">Local inference requires a secure browser context and WebGPU.</div>
+    </div>
+    <div class="local-ai-actions">
+      <button type="button" class="btn btn-purple" id="localAiInstall">Download &amp; enable local AI</button>
+      <label class="local-ai-toggle"><input type="checkbox" id="localAiPrefer"> Prefer local AI for text-only questions</label>
+      <button type="button" class="btn btn-light" id="localAiUseCloud">Use cloud AI</button>
+    </div>
+    <div class="local-ai-progress-row">
+      <progress id="localAiProgress" max="1" value="0"></progress>
+      <span id="localAiProgressLabel">No model downloaded</span>
+    </div>
+    <p id="localAiStatus" class="local-ai-status" role="status" aria-live="polite">First-time setup downloads model files from the public model host. The files are cached by your browser; a large download and available storage are required. Wi-Fi is recommended.</p>
+    <div class="local-ai-limitations"><strong>Important:</strong> A browser cannot report exact free RAM or GPU memory on every device. Local mode is text-only; images, file extraction and web research use the cloud route. If local mode is selected, a failed local request is not silently sent to the cloud.</div>
+  </section>
   <div class="chat-context panel" role="group" aria-label="Study preferences">
     <div class="chat-select-field"><label for="chatClass">Class</label><select id="chatClass"><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
     <div class="chat-select-field"><label for="chatSubject">Subject</label><select id="chatSubject"><option>Mathematics</option><option>Science</option><option>English</option><option>Social Science</option><option>Computer Applications</option></select></div>
@@ -714,6 +768,7 @@ html.kp-reduced-motion *,html.kp-reduced-motion *::before,html.kp-reduced-motion
 
 <script src="/study-library.js" defer></script>
 <script src="/question-bank.js" defer></script>
+<script src="/local-ai.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>
