@@ -38,6 +38,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "school-humanities-commerce-guides.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "school-chapter-guides.js",
       "use": "@vercel/static"
     },
