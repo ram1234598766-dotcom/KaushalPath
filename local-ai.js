@@ -3,7 +3,7 @@
   "use strict";
   const PREF_KEY = "kp-local-ai-preferred";
   const CONSENT_KEY = "kp-local-ai-consent-v1";
-  const RUNTIME_URL = "https://esm.sh/@mlc-ai/web-llm@0.2.85?bundle";
+  const RUNTIME_URL = "https://esm.run/@mlc-ai/web-llm@0.2.86";
   const MODEL_LITE = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
   const MODEL_PLUS = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
   let runtimePromise = null, engine = null, loadingPromise = null, activeModel = "";
