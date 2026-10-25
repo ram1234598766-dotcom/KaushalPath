@@ -58,6 +58,26 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ncert-maths-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-senior-maths-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-chemistry-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-physics-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-biology-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "app.js",
       "use": "@vercel/static"
     },

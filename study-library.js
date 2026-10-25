@@ -610,6 +610,16 @@
   notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...humanitiesGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
 
+  const ncertChapterNotes = Array.isArray(window.KP_NCERT_CHAPTER_NOTES) ? window.KP_NCERT_CHAPTER_NOTES : [];
+  // Prefer the chapter-specific deep dives over any shorter legacy card with the same class, subject and chapter title.
+  ncertChapterNotes.forEach((item) => {
+    for (let i = notes.length - 1; i >= 0; i--) {
+      const existing = notes[i];
+      if (existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter) notes.splice(i, 1);
+    }
+  });
+  notes.push(...ncertChapterNotes);
+
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
