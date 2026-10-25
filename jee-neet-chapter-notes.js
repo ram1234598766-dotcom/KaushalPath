@@ -126,7 +126,7 @@
     [
       formula("sin²x+cos²x=1","Pythagorean identity; links sine and cosine.","Use to eliminate one ratio or convert an equation to a single variable.","Angles in radians or degrees consistently.","Dividing by a trig function can discard zero cases."),
       formula("sin x=sin α ⇒ x=nπ+(−1)ⁿα","Complete sine-solution family.","Use for all real solutions, then restrict to the requested interval.","Angles in radians; n∈ℤ.","A single principal angle is not a general solution."),
-      formula("tan x has period π; sin x and cos x have period 2π","Periodicity of the basic functions.","Use to generate all equivalent solutions.","Angle unit must match the period.","Do not use a 2π period for tangent."]
+      formula("tan x has period π; sin x and cos x have period 2π","Periodicity of the basic functions.","Use to generate all equivalent solutions.","Angle unit must match the period.","Do not use a 2π period for tangent.")
     ],
     [
       worked("Solve sin x=1/2 on [0,2π)",["Reference angle is π/6 because sin(π/6)=1/2.","Sine is positive in quadrants I and II, so x=π/6 or 5π/6.","The interval excludes 2π; no further angles belong."]),
