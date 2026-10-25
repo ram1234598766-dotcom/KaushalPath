@@ -36,4 +36,4 @@ const smart = createSmartSystem({
 const matrix = await smart.getWeaknessMatrix();
 const task = await smart.createSmartPlannerTask();
 ```
-Do not call analytics submission without an explicit opt-in, and submit only newly completed attempts to avoid double counting. CORS is not authentication. The analytics route is also bound to a simple 30-requests-per-minute edge limiter; monitor abuse before broad public launch.
+Do not call analytics submission without an explicit opt-in, and submit only newly completed attempts to avoid double counting. CORS is not authentication. Keep an edge rate limit enabled and verify the binding in Cloudflare before broad public launch.
