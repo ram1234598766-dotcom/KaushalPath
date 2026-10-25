@@ -5,9 +5,9 @@
 KaushalPath is a responsive student workspace with a purple learning dashboard, original timed practice sets, answer explanations, downloadable results, official education links, and an AI Study Guide.
 
 ## Features
-- A non-AI CBSE chapter-notes catalogue with 119 curated note packs across core subjects, formula summaries, worked examples, recall checks and print-to-PDF exports. Official NCERT/CBSE links point to the complete current syllabus and textbook catalogue.
-- AI-generated notes, explanations, revision sheets, practice questions and step-by-step solutions.
-- Kilo Auto Free inference through the OpenAI-compatible Kilo AI Gateway endpoint.
+- A non-AI CBSE chapter-notes catalogue with 119 curated school chapter-note packs across core subjects plus 41 detailed JEE/NEET deep-dive packs, formula summaries, worked examples, recall checks and print-to-PDF exports. Official NCERT/CBSE links point to the complete current syllabus and textbook catalogue.
+- AI-generated notes, explanations, revision sheets, practice questions and step-by-step solutions. A consent-based in-browser WebGPU mode downloads and caches quantised local weights, recommends a smaller model on phones/low-RAM devices, checks browser storage, and retries a smaller model if a larger desktop model cannot load.
+- Kilo Auto Free inference through the OpenAI-compatible Kilo AI Gateway endpoint, with a separate local-only text chat option. Web research and attachments still use the cloud route.
 - 120 additional original exam-style MCQs across JEE mathematics/physics/chemistry and NEET physics/chemistry/biology, with +4/-1 scoring and exam-proportional mini-set timers. These are not represented as copied previous-year questions; official past-paper sources remain linked.
 - Timed tests with autosave and resume after refresh, one-click retakes of missed or unanswered questions, answer explanations, result history, CSV exports and downloadable PDF/JSON reports.
 - A focus timer with persistent countdowns, completed-session tracking, accuracy summaries and active-day streaks.
