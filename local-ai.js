@@ -127,7 +127,7 @@
           candidate = await webllm.CreateMLCEngine(modelId, {
             initProgressCallback: (report) => {
               if (opts.onProgress) opts.onProgress({
-                progress: Number.isFinite(Number(report && report.progress)) ? Math.max(0, Math.min(1, Number(report.progress)) : null,
+                progress: Number.isFinite(Number(report && report.progress)) ? Math.max(0, Math.min(1, Number(report.progress))) : null,
                 text: modelLabel(modelId) + " · " + String(report && report.text || "Downloading or preparing model…")
               });
             }
