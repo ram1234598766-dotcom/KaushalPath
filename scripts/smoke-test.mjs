@@ -79,7 +79,7 @@ assert.ok(studyLibrary.includes("function practiceContentHtml(item)") && studyLi
 assert.ok(studyLibrary.includes("function fullChapterPacket(item)") && studyLibrary.includes('renderMindMapPage(item) + pages.join("")'), "single-chapter PDF must start with a mind map and include the 12-page packet");
 assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should have a dedicated export action");
 assert.match(studyLibrary, /downloadButton\.addEventListener\("click", startPrint\)/, "chapter export should use the browser print renderer");
-assert.ok(studyLibrary.includes("printTarget.print()") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF printing must use native vector output with a full landscape map followed by portrait notes");
+assert.ok(studyLibrary.includes("createAndDownloadChapterPdf(") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF export must create a downloadable vector map and portrait notes");
 assert.doesNotMatch(studyLibrary, /html2pdf\(\)\.set\(|html2canvas:/, "chapter export should not rasterize or crop the mind map in a PDF canvas");
 assert.ok(studyLibrary.includes("const pageTitle = fileStem;"), "the PDF save dialog should use a chapter-specific suggested filename");
 assert.ok(studyLibrary.includes("<title>' + esc(pageTitle) + '</title><style>'"), "the chapter PDF HTML should use its defined title");
@@ -509,9 +509,10 @@ assert.ok(vercel.builds.some(b => b.src === "smart-system-client.js" && b.use ==
 
 assert.ok(studyLibrary.includes("const fallbackChapterPage ="), "chapter PDF export should fall back to a simpler per-chapter layout if rich rendering fails");
 assert.ok(studyLibrary.includes("const renderChapterSafely ="), "one malformed chapter must not abort the whole notes export");
-assert.ok(studyLibrary.includes("printTarget.print()"), "native browser printing should preserve vector text and mind-map graphics");
+assert.ok(studyLibrary.includes("await engine.svg2pdf(svg, pdf, options)") && studyLibrary.includes('pdf.output("blob")'), "the Download PDF action must create a real PDF blob with a vector map");
+assert.doesNotMatch(studyLibrary, /printTarget\\.print\\(\\)/, "Download PDF must not open the browser print dialog");
 assert.ok(studyLibrary.includes(".mindmap-page{page:chapter-map;width:100%!important;max-width:none!important;"), "the landscape map should not inherit a portrait width constraint");
-assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Click Download PDF, then choose “Save as PDF” in the print dialog and click Save. Your map and notes remain crisp and selectable."'), "the chapter preview should clearly explain how to save the PDF");
+assert.ok(studyLibrary.includes('status.textContent = "Preview ready. Click Download PDF to save the .pdf file directly — no print dialog needed. The map and notes remain crisp and selectable."'), "the chapter preview should explain that Download PDF saves a real file directly");
 assert.doesNotMatch(studyLibrary, /html2pdf|html2canvas|runDownload/, "the chapter export must not retain its old raster download implementation");
 assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter filename construction must tolerate incomplete chapter metadata");
 assert.match(html, /id="commandPalette"/, "the app should provide an accessible global quick-launch dialog");
