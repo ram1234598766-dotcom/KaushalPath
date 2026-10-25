@@ -98,7 +98,7 @@ assert.ok(studyLibrary.includes("print-color-adjust:exact") && html.includes(".n
 
 
 
-assert.match(studyLibrary, /We couldn’t prepare these notes/, "PDF export errors must show a helpful message instead of leaving a blank window");
+assert.match(studyLibrary, /I couldn’t prepare these notes/, "PDF export errors must show a helpful message instead of leaving a blank window");
 assert.match(studyLibrary, /Your chapter notes are ready/, "the PDF preview should explain the next step in natural language");
 assert.match(studyLibrary, /Start by checking exactly what the question wants you to find or explain/, "general revision guidance should sound natural and clear");
 assert.ok(!studyLibrary.includes("<\\\\/script></body></html>"), "print document must not contain an escaped script closing tag that makes the generated page blank");
