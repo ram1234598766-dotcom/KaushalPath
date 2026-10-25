@@ -733,11 +733,292 @@
     ["What is the role of primase?","What defines the target segment in PCR?","Can a mutation be phenotypically neutral."],
     ["Transcription: RNA synthesis from a nucleic-acid template.","Translation: synthesis of a polypeptide according to an mRNA sequence.","Ligase: enzyme that joins compatible nucleic-acid ends."]);
 
+
+  const mathematicsComplex = pack("JEE Main", "Mathematics", "Complex Numbers and Quadratic Equations",
+    "Treat complex numbers as points/vectors in the plane and use algebra, modulus, arguments and root relations consistently.",
+    ["A complex number z=a+ib has real part a and imaginary part b; i^2=-1.","Conjugation changes the sign of the imaginary part, while modulus measures distance from the origin.","Multiplication by a complex number changes scale and rotation in the Argand plane; arguments are defined modulo 2pi.","Quadratic roots are linked to coefficients, and real-coefficient polynomials have conjugate pairs of non-real roots."],
+    ["z=a+ib; conjugate z-bar=a-ib","|z|=sqrt(a^2+b^2); z z-bar=|z|^2","For ax^2+bx+c=0: sum of roots=-b/a; product=c/a"],
+    "For z=3-4i, |z|=5, z-bar=3+4i and z z-bar=25.",
+    [
+      {heading:"Arithmetic and conjugates",body:"Add and subtract real and imaginary components separately. Multiply by expanding and using i^2=-1; higher powers of i repeat every four powers. Dividing by a+bi is usually simplest after multiplying numerator and denominator by a-bi, making the denominator a^2+b^2. The conjugate operation respects sums and products: the conjugate of zw is z-bar times w-bar."},
+      {heading:"Modulus and geometry",body:"The Argand plane represents z=a+ib as point (a,b). Its modulus is distance from the origin, and |z1-z2| is distance between two complex points. The equation |z-z0|=r describes a circle centred at z0 with radius r. Triangle inequalities and geometric loci can turn apparently complicated algebra into simple distance reasoning."},
+      {heading:"Argument and polar form",body:"Argument is the angle made with the positive real axis; quadrant signs determine the correct angle. A principal argument is restricted to a chosen interval, but all arguments differ by integer multiples of 2pi. In polar form z=r(cos theta+i sin theta), multiplication adds arguments and multiplies moduli. De Moivre's theorem is useful for powers and roots."},
+      {heading:"Quadratic equations",body:"Use the discriminant to classify real roots, then use coefficient-root relations when root information is more useful than solving explicitly. If roots are alpha and beta, symmetric expressions can often be computed from alpha+beta and alpha beta without finding either root individually. Check whether the question assumes real roots or allows complex roots."}
+    ],
+    [
+      {title:"Compute a complex quotient",steps:["Write the numerator and denominator as a+bi form.","Multiply by the conjugate of the denominator.","Use i^2=-1 and collect real/imaginary parts.","Check that the final denominator is real and nonzero."]},
+      {title:"Find a root expression",steps:["Read sum and product of roots from coefficients.","Rewrite the target expression symmetrically if possible.","Substitute the coefficient relations.","If the expression is not symmetric, solve for the individual roots."]}
+    ],
+    ["Forgetting that i^2=-1.","Using modulus as a signed quantity.","Ignoring the quadrant when computing argument.","Assuming every quadratic has two distinct real roots."],
+    ["JEE often combines complex loci, modulus inequalities, arguments, roots of unity and symmetric root expressions."],
+    ["What geometry does |z-z0|=r represent?","Why is z z-bar always a non-negative real number?","How do the arguments of a product relate to the factors?"],
+    ["Argand plane: plane representation of complex numbers.","Modulus: distance from zero.","Principal argument: argument chosen in a prescribed interval."]);
+
+  const mathematicsTrigonometry = pack("JEE Main", "Mathematics", "Trigonometric Identities, Equations and Inverse Functions",
+    "Use identities, periodicity, domain/range and principal values without losing solutions.",
+    ["Trigonometric equations often have infinitely many solutions because sine, cosine and tangent are periodic.","Identity transformations can simplify equations, but every division requires checking when the denominator is zero.","Inverse trigonometric functions return principal values, not every angle that shares a ratio.","Quadrant signs, reference angles and unit-circle reasoning support exact-value calculations."],
+    ["sin^2 x + cos^2 x = 1","1+tan^2 x=sec^2 x; 1+cot^2 x=cosec^2 x","sin x = sin alpha gives x = n pi + (-1)^n alpha for integer n, subject to equivalent angle convention."],
+    "For sin x = 1/2, the solutions in [0,2pi) are pi/6 and 5pi/6; periodicity adds 2npi.",
+    [
+      {heading:"Build identities from a base relation",body:"Start from sin^2 x+cos^2 x=1 and divide only when the denominator is nonzero to obtain related identities. Compound-angle formulae express sin(A±B), cos(A±B) and tan(A±B); double-angle and half-angle formulae follow from them. When simplifying, prefer forms that preserve the original domain and do not remove solutions."},
+      {heading:"Solve equations systematically",body:"For a trigonometric equation, determine the requested interval first. Find all relevant reference angles, account for signs in each quadrant, then add periodic repetitions. If the equation becomes quadratic in sin x or cos x, solve the algebraic equation and retain only values in [-1,1]. Check roots against any divisions or squaring used during the derivation."},
+      {heading:"Inverse trigonometric functions",body:"Inverse sine, cosine and tangent return values in fixed principal ranges. For example, arcsin(sin x) is not always x because the output must lie in the arcsin principal interval. Use a unit circle or graph to reduce an angle into that interval. Composition identities require domain and range checks; a symbolic cancellation can be invalid outside the permitted range."},
+      {heading:"Signs, periodicity and symmetry",body:"Sine is odd and cosine is even; tangent has period pi while sine and cosine have period 2pi. These symmetries help reduce angles and evaluate negative inputs. For identities that involve tan or sec, also check points where cosine is zero. Exact values should be simplified and angle units made explicit."}
+    ],
+    [
+      {title:"Solve on a finite interval",steps:["Rewrite the equation using a convenient ratio or identity.","Solve the algebraic equation for sine/cosine/tangent values.","Find all principal/reference angles in the requested interval.","Check excluded values and substitute final candidates."]},
+      {title:"Simplify inverse-trig expressions",steps:["Check each inverse function's principal range.","Reduce the original angle or expression to that range.","Apply the identity within its valid domain.","Check boundary cases such as ±1 or zero denominators."]}
+    ],
+    ["Dividing by sin x or cos x without checking zero cases.","Returning only one solution for a periodic equation.","Treating arcsin(sin x)=x for every real x.","Mixing degrees and radians."],
+    ["JEE tests equation solution sets, principal values, compound-angle identities and domain restrictions. Always write the interval or integer period explicitly."],
+    ["Why can a trigonometric equation have infinitely many solutions?","What is the principal range of arcsin?","Which angles must be checked when dividing by cosine?"],
+    ["Period: smallest positive interval after which a function repeats.","Principal value: selected output in an inverse function's defined range.","Reference angle: acute angle used with quadrant signs to evaluate a trig ratio."]);
+
+  const mathematicsCoordinate = pack("JEE Main", "Mathematics", "Straight Lines, Circles and Coordinate Geometry",
+    "Use slope/intercepts, distance, angle conditions and circle equations to solve two-dimensional geometry algebraically.",
+    ["A straight line can be described by a point and direction/slope or by a general linear equation.","The distance from a point to a line uses the line coefficients and a normal direction.","A circle is the locus of points at a fixed distance from a centre; completing squares identifies its centre and radius.","Tangency, intersection and chord questions often reduce to simultaneous equations or distance constraints."],
+    ["Line y-y1=m(x-x1)","Distance of (x0,y0) from Ax+By+C=0: |Ax0+By0+C|/sqrt(A^2+B^2)","Circle: (x-h)^2+(y-k)^2=r^2"],
+    "For x^2+y^2-6x+4y-12=0, completing squares gives (x-3)^2+(y+2)^2=25, so centre is (3,-2) and radius is 5.",
+    [
+      {heading:"Lines and slope",body:"The slope is rise over run for non-vertical lines. Parallel non-vertical lines share slope; perpendicular lines have slopes whose product is -1 where both are defined. The intercept form can be convenient when axis intercepts are known, while the general form Ax+By+C=0 exposes a normal vector (A,B). A vertical line x=a has undefined slope."},
+      {heading:"Distance and angle",body:"Distance from a point to a line is measured along a perpendicular, not an arbitrary connecting segment. The formula with coefficients A and B is the absolute line value at the point divided by the normal magnitude. For the angle between two lines, use their direction vectors or slopes; acute/obtuse orientation depends on whether the question requests the smaller angle or directed angle."},
+      {heading:"Circle equations",body:"The standard circle equation directly gives centre and radius; the general equation x^2+y^2+Dx+Ey+F=0 becomes standard after completing squares. If the x^2 and y^2 coefficients differ or an xy term appears, it is not an ordinary circle in the same simple Cartesian orientation. Tangency can be checked by comparing the distance from the centre to a line with the radius."},
+      {heading:"Intersection and chord problems",body:"To find intersections, substitute the line equation into the circle and solve the resulting quadratic. Two distinct real roots imply two intersection points; a repeated root corresponds to tangency; no real roots means no real intersection. Chord geometry can also use perpendicular bisectors because the perpendicular from a circle's centre to a chord bisects that chord."}
+    ],
+    [
+      {title:"Find a tangent condition",steps:["Identify centre and radius.","Calculate centre-to-line perpendicular distance.","Set the distance equal to radius for tangency.","Solve for the unknown coefficient and verify the line is real."]},
+      {title:"Line-circle intersection",steps:["Substitute y=mx+c or the given line equation into the circle.","Simplify to a quadratic in one variable.","Use the discriminant to count intersections.","Find coordinates only after checking the discriminant."]}
+    ],
+    ["Using the distance between the centre and a random point on the line rather than perpendicular distance.","Forgetting vertical-line special cases.","Misreading a repeated root as no intersection.","Failing to complete squares correctly."],
+    ["JEE often uses tangent condition, chord of contact, distance from a point, angle between lines and circle intersections."],
+    ["What does a repeated root mean geometrically?","How do you find a circle's centre from the general equation?","Why does the perpendicular from centre to chord bisect it?"],
+    ["Normal vector: vector perpendicular to a line.","Tangency: one repeated intersection point in the standard line-circle case.","Discriminant: quantity indicating root type of a quadratic."]);
+
+  const mathematicsSeries = pack("JEE Main", "Mathematics", "Sequences, Series and Binomial Theorem",
+    "Recognise arithmetic/geometric patterns and expand powers using binomial coefficients.",
+    ["Arithmetic progressions add a constant difference; geometric progressions multiply by a constant ratio.","The nth term and the sum are different quantities; identify whether the task asks for one term or accumulated total.","Binomial coefficients count choices and form symmetric coefficient patterns.","For a finite geometric series the ratio r=1 is a separate case from the formula with denominator r-1."],
+    ["AP nth term: a_n=a+(n-1)d; sum S_n=n/2[2a+(n-1)d]","GP nth term: a_n=ar^(n-1)","Finite GP sum (r!=1): S_n=a(r^n-1)/(r-1)","(a+b)^n=sum from k=0 to n of nCk a^(n-k)b^k"],
+    "For 2+6+18+54, a=2, r=3 and n=4; S4=2(3^4-1)/(3-1)=80.",
+    [
+      {heading:"Arithmetic and geometric sequences",body:"A sequence is a list indexed by position; a series is a sum of sequence terms. In an AP, subtract adjacent terms to confirm constant difference. In a GP, divide adjacent nonzero terms to check a constant ratio. A zero ratio or sign-changing ratio can still be valid if the sequence satisfies the defining relation. Read the indexing carefully because a1 is the first term and a_n is the nth."},
+      {heading:"Sum formulas and estimates",body:"Use AP formulas only after identifying first term, difference and number of terms. For a GP, if r=1 every term equals a and S_n=na; otherwise use the geometric sum formula. For an infinite GP, convergence requires |r|<1; this condition should not be applied to a finite sum. A quick magnitude estimate can reveal exponent errors."},
+      {heading:"Binomial coefficients",body:"The binomial theorem expands a non-negative integer power. The coefficient of a selected power comes from matching the exponent pattern of a and b. Coefficients are symmetric nCk=nC(n-k), and their sum is 2^n. For a general term, keep exponents adding to n and count the correct zero-based index."},
+      {heading:"Common exam patterns",body:"Questions may give the sum S_n and ask for a_n; use a_n=S_n-S_(n-1) for n>=2. They may ask a coefficient or middle term in a binomial expansion, or constrain the ratio of two consecutive terms. Express the general term first, then use coefficient matching to avoid expanding every term."}
+    ],
+    [
+      {title:"Recover an nth term from S_n",steps:["Write S_n and S_(n-1) carefully.","Compute a_n=S_n-S_(n-1).","Simplify the difference.","Check the result against the first term given."]},
+      {title:"Find a binomial coefficient",steps:["Write the general term with index k.","Set the exponent to the requested power.","Solve for k and confirm 0<=k<=n.","Evaluate the binomial coefficient and any numerical factor."]}
+    ],
+    ["Confusing a_n and S_n.","Using the infinite-series formula without |r|<1.","Applying a GP sum formula when r=1.","Dropping the index shift in the binomial general term."],
+    ["JEE asks sums from sequence definitions, special sums, coefficients, middle terms and relationships between successive terms."],
+    ["When does an infinite GP converge?","How do you recover a term from two partial sums?","Why are binomial coefficients symmetric."],
+    ["Common difference: fixed adjacent-term difference in an AP.","Common ratio: fixed adjacent-term ratio in a GP.","Binomial coefficient: nCk, the number of ways to select k items from n."]);
+
+  const physicsRotation = pack("JEE Main", "Physics", "Rotational Motion, Torque, Angular Momentum and Rolling",
+    "Translate linear mechanics into rotational variables and apply energy, torque and angular-momentum conservation.",
+    ["Angular displacement, angular velocity and angular acceleration describe rotational kinematics.","Torque depends on force, lever arm and angle; it changes angular momentum.","Moment of inertia depends on mass distribution relative to an axis, not just total mass.","Rolling without slipping links centre-of-mass translation to rotation about the centre."],
+    ["v=omega R for rolling without slipping","tau=I alpha for a rigid body about a fixed principal axis","L=I omega for rotation about a fixed axis","K_rot=1/2 I omega^2"],
+    "A solid disc rolling without slipping at centre speed v has omega=v/R and total kinetic energy 1/2 Mv^2 + 1/2(1/2 MR^2)(v^2/R^2)=3/4 Mv^2.",
+    [
+      {heading:"Torque and moment of inertia",body:"Torque is the cross product of lever-arm vector and force. Only the perpendicular force component contributes to torque magnitude. Moment of inertia sums each mass element times the square of its distance from the axis, so moving mass farther out increases rotational inertia strongly. Use the parallel-axis theorem when shifting from the centre-of-mass axis to a parallel axis."},
+      {heading:"Angular momentum and conservation",body:"Angular momentum depends on position, momentum and reference point in general; for simple fixed-axis rotation it is I omega. If net external torque about a point/axis is zero, angular momentum about that point/axis is conserved. A skater pulling arms inward reduces moment of inertia and increases angular speed if angular momentum remains conserved."},
+      {heading:"Rotational energy and rolling",body:"Rotational kinetic energy is 1/2 I omega^2. For pure rolling, each point's motion combines translation of the centre and rotation about it. Static friction may provide the torque needed for rolling without dissipating energy at an ideal no-slip contact, but friction's role depends on the forces and constraints. Rolling objects with the same centre speed can have different total energy because moments of inertia differ."},
+      {heading:"Compound dynamics",body:"For a spool, pulley or rolling body, write translation for the centre of mass and torque around the appropriate axis. Use a no-slip constraint such as a=alpha R only when the contact does not slip. For strings, check whether the string is massless, inextensible and does not slip on the pulley; these assumptions determine whether different segments share acceleration."}
+    ],
+    [
+      {title:"Rolling down an incline",steps:["Draw forces and torque about the centre.","Use translation along the slope and rotation about the centre.","Apply a=alpha R for no-slip rolling.","Use energy as a cross-check if the height drop and moment of inertia are known."]},
+      {title:"Conservation of angular momentum",steps:["Choose the axis/reference point and state external torque is zero or negligible.","Write initial angular momentum.","Write final angular momentum with the changed inertia or velocities.","Equate initial and final values and check direction signs."]}
+    ],
+    ["Using I for the wrong axis.","Adding friction energy loss to ideal static no-slip contact without justification.","Applying angular momentum conservation when external torque is nonzero.","Forgetting rotational energy when a body rolls."],
+    ["JEE often combines pulleys, rolling constraints, energy conservation and angular momentum. Draw a separate diagram for each body's translation and rotation."],
+    ["What determines moment of inertia?","When is angular momentum conserved?","Why does rolling kinetic energy contain translational and rotational terms."],
+    ["Torque: rotational effect of a force about a chosen point/axis.","Moment of inertia: rotational inertia for an axis.","Pure rolling: rolling without relative slipping at the contact point."]);
+
+  const physicsFluids = pack("JEE Main", "Physics", "Gravitation, Fluids and Properties of Matter",
+    "Use field/potential reasoning and fluid pressure, buoyancy, continuity and Bernoulli relationships with assumptions.",
+    ["Gravitational force follows an inverse-square law for point masses or spherical bodies outside them.","Gravitational field is force per unit mass; gravitational potential is potential energy per unit mass.","Fluid pressure at rest increases with depth and acts normal to a surface.","Ideal-fluid continuity follows volume conservation, and Bernoulli's equation represents energy conservation along a streamline under restricted conditions."],
+    ["F=Gm1m2/r^2; g=GM/r^2","Near Earth: delta U approx mg delta h","Hydrostatic pressure difference: delta P=rho g delta h","Continuity: A1 v1=A2 v2 for steady incompressible flow","Bernoulli: P+1/2 rho v^2+rho gh=constant along a streamline for ideal steady flow"],
+    "In a horizontal pipe that narrows from area 4A to area A, incompressible-flow speed rises by a factor of 4 under continuity.",
+    [
+      {heading:"Gravity and potential",body:"Outside a spherically symmetric mass, gravitational field behaves as if the mass were concentrated at its centre. Field points toward the mass and potential is conventionally negative when zero is chosen at infinity. Force, field and potential are related but have different units and vector/scalar properties. At height small relative to Earth's radius, mg is a useful approximation for potential-energy change."},
+      {heading:"Pressure and buoyancy",body:"Pressure is force per unit area and in a fluid at rest acts equally in all directions at a point. Hydrostatic pressure difference is proportional to density, gravity and vertical depth difference. Buoyant force equals the weight of displaced fluid in the standard Archimedes principle. Whether a body floats depends on its average density and the fluid, including how much volume is submerged."},
+      {heading:"Continuity and flow",body:"Continuity states that mass flow is conserved in steady flow; for an incompressible fluid this reduces to A v constant along the tube. A narrower cross-section therefore has higher speed under the ideal assumptions. Distinguish the cross-sectional area from radius: area scales with radius squared."},
+      {heading:"Bernoulli and viscosity limits",body:"Bernoulli's equation applies for steady, incompressible, non-viscous flow along a streamline, with no unaccounted pump/turbine work or dissipative loss. Higher speed can coincide with lower static pressure along the same streamline under its assumptions, but that is not a universal statement for every real flow. Viscosity, turbulence, flow separation and varying elevation can change the result."}
+    ],
+    [
+      {title:"Floating body",steps:["Identify body weight and displaced-fluid buoyant force.","At equilibrium, buoyant force equals weight.","Use displaced volume times fluid density to get displaced mass.","Compare object and fluid densities to determine the submerged fraction under uniform-density assumptions."]},
+      {title:"Narrow pipe",steps:["Use continuity to relate area and speed.","Use the actual area ratio, noting A is proportional to radius squared.","If pressure is requested, apply Bernoulli only after checking its assumptions.","Convert pressure, density and velocity units consistently."]}
+    ],
+    ["Confusing gravitational field and potential.","Using full atmospheric pressure when a gauge pressure difference is requested.","Assuming fluid speed doubles when radius halves; area changes quadratically.","Applying Bernoulli to strongly viscous/turbulent flow without qualification."],
+    ["JEE combines gravity field/potential, satellites, buoyancy, pressure columns, continuity and Bernoulli. State assumptions before using ideal equations."],
+    ["Why does pressure increase with depth?","What does buoyant force equal?","Which assumptions support Bernoulli's equation."],
+    ["Gravitational potential: potential energy per unit mass.","Gauge pressure: pressure relative to a chosen ambient reference.","Viscosity: resistance to relative fluid motion."]);
+
+  const chemistrySolutions = pack("JEE Main", "Chemistry", "Solutions, Colligative Properties and Concentration",
+    "Convert concentration units accurately and connect dissolved particle number to vapour pressure, boiling/freezing changes and osmotic pressure.",
+    ["Molarity uses total solution volume; molality uses solvent mass and is less temperature-sensitive.","Ideal dilute-solution colligative properties depend on the number of dissolved particles, not their chemical identity alone.","Electrolyte dissociation/association changes effective particle count and may require the van't Hoff factor.","Use Kelvin for thermodynamic equations and keep molar mass/concentration units consistent."],
+    ["Molarity M=nsolute/Vsolution(L)","Molality m=nsolute/kg solvent","Delta Tb=i Kb m; Delta Tf=i Kf m","Osmotic pressure pi=i C R T in the ideal dilute model"],
+    "For a 0.20 molal non-electrolyte solution with Kf=1.86 K kg mol^-1, freezing-point depression is 1.86(0.20)=0.372 K.",
+    [
+      {heading:"Concentration units",body:"Molarity depends on the final solution volume and can change with temperature expansion. Molality uses solvent mass and remains stable under ordinary temperature changes when no mass is lost. Mole fraction is a component's amount divided by total moles. Mass percentage uses solute mass over solution mass; never replace solvent mass with total solution mass in molality."},
+      {heading:"Raoult's law and vapour pressure",body:"For an ideal solution of volatile components, each component's partial vapour pressure is its mole fraction times its pure-component vapour pressure. A non-volatile solute lowers the solvent's vapour pressure and can lead to boiling-point elevation and freezing-point depression. Deviations from ideality occur when interactions between unlike molecules differ from those in the pure components."},
+      {heading:"Colligative properties",body:"Boiling elevation and freezing depression are proportional to molality for dilute ideal solutions. Osmotic pressure is the pressure needed to stop solvent flow through a semipermeable membrane and depends on concentration and absolute temperature. Electrolytes may dissociate into multiple ions, so the ideal particle count changes; use a van't Hoff factor only as the question's model permits."},
+      {heading:"Find molar mass from a measured effect",body:"Choose the relevant colligative relation, solve for molality or concentration, and relate moles to the known solute mass. If association or dissociation is present, incorporate the effective factor. Check that units cancel to give the expected temperature, pressure or molar-mass unit. Very dilute formulas may be inaccurate at high concentration."}
+    ],
+    [
+      {title:"Convert mass to molality",steps:["Convert solute mass to moles using molar mass.","Convert solvent mass to kilograms.","Divide moles by kg solvent.","Use the result in a colligative formula with consistent units."]},
+      {title:"Find boiling elevation",steps:["Identify the solvent's Kb and solution molality.","Determine whether a van't Hoff factor is supplied or required.","Compute Delta Tb=i Kb m.","Add the elevation to the solvent's normal boiling temperature using matching temperature units."]}
+    ],
+    ["Using grams instead of kilograms for molality.","Using Celsius instead of Kelvin in osmotic pressure.","Forgetting particle dissociation when the model specifies i.","Applying ideal-solution relationships without stating they are approximations."],
+    ["JEE asks concentration conversions, vapour pressure, molar mass from colligative properties and electrolyte particle factors."],
+    ["Why does molality not change with ordinary volume expansion?","What does osmotic pressure measure?","When is the van't Hoff factor greater than one."],
+    ["Mole fraction: fraction of total moles from one component.","Colligative property: property depending primarily on particle count.","Osmosis: net solvent flow through a semipermeable membrane driven by chemical-potential difference."]);
+
+  const chemistryKinetics = pack("JEE Main", "Chemistry", "Chemical Kinetics: Rate Laws, Order and Activation Energy",
+    "Derive rates from concentration-time data and distinguish reaction order, molecularity, half-life and temperature effects.",
+    ["Rate is change in concentration per time and depends on which species and stoichiometric coefficient are used.","Rate law powers are experimental and do not automatically equal the balanced reaction coefficients.","Integrated rate equations describe how concentration changes over time for a specified rate law.","Arrhenius behaviour relates temperature and rate constant through activation energy; a catalyst lowers the pathway barrier."],
+    ["Rate=k[A]^m[B]^n; overall order=m+n","First order: ln([A]0/[A]t)=kt; t1/2=0.693/k","Arrhenius: k=A exp(-Ea/RT)"],
+    "For first-order k=0.231 min^-1, half-life=0.693/0.231=3.0 min, independent of initial concentration.",
+    [
+      {heading:"Rate and rate law",body:"Average rate measures concentration change over an interval; instantaneous rate is the local rate. When using a species that has a coefficient in the balanced equation, normalised reaction rate divides its concentration-change rate by the stoichiometric coefficient with the appropriate sign. The empirical rate law is determined experimentally and its exponents define reaction order."},
+      {heading:"Integrated forms and half-life",body:"For a zero-order process, concentration decreases linearly with time in the relevant interval; for a first-order process, the logarithm of concentration changes linearly with time; for a second-order single-reactant model, reciprocal concentration is linear in time. Half-life depends on initial concentration for some orders but not for the ideal first-order case. Choose a plot based on the candidate order."},
+      {heading:"Temperature and catalyst",body:"The Arrhenius equation predicts an exponential increase of rate constant as temperature rises for positive activation energy, within the useful range of the model. A catalyst provides an alternate pathway with lower activation barrier and accelerates forward/reverse processes. It changes the time needed to approach equilibrium, not the equilibrium constant at fixed temperature."},
+      {heading:"Mechanism and molecularity",body:"A reaction mechanism proposes elementary steps. Molecularity describes the number of reacting entities in one elementary step and is a positive integer; overall reaction order can be zero or fractional and is an experimental property. Rate-determining-step approximations require assumptions about the preceding/following steps, so do not infer a complex rate law from the overall balanced equation alone."}
+    ],
+    [
+      {title:"Determine order from data",steps:["Compare experiments where only one reactant concentration changes.","Calculate the rate ratio and concentration ratio.","Solve the exponent that relates them.","Repeat for each reactant and sum exponents for overall order."]},
+      {title:"Use a half-life",steps:["Identify the reaction order or state the model supplied.","Choose the matching integrated relation.","Keep rate-constant units consistent with the equation.","Check whether initial concentration should affect the result."]}
+    ],
+    ["Reading order straight from a complex overall equation.","Using the wrong integrated equation or k units.","Assuming catalysts change K.","Forgetting natural log versus base-10 log conversion."],
+    ["JEE asks order from experimental tables, rate-constant units, half-life, Arrhenius and elementary-step reasoning."],
+    ["Can reaction order be fractional?","Which order has half-life independent of initial concentration?","What does a catalyst change."],
+    ["Activation energy: barrier quantity in the Arrhenius model.","Molecularity: count of reactant entities in an elementary step.","Rate-determining step: kinetically slow step in an assumed mechanism."]);
+
+  const chemistryCoordination = pack("JEE Main", "Chemistry", "Coordination Compounds: Nomenclature, Isomerism and Bonding",
+    "Identify the coordination sphere, ligand denticity, oxidation state, geometry, isomerism and basic crystal-field consequences.",
+    ["The coordination entity contains a central atom/ion bonded to ligands; coordination number counts donor atoms bound directly to the centre.","Ligands may be neutral or charged and monodentate or polydentate; chelating ligands bind through multiple donor atoms.","Complex naming records ligand names, ligand counts, metal name and oxidation state following the taught convention.","Geometries such as octahedral, tetrahedral and square planar depend on coordination number and metal/ligand circumstances."],
+    ["Oxidation state of centre + sum ligand charges = complex charge","Octahedral d-orbitals split into lower t2g and higher eg sets in the elementary crystal-field model."],
+    "In [Cu(NH3)4]2+, ammonia is neutral, so copper has oxidation state +2; there are four donor nitrogen atoms and coordination number 4.",
+    [
+      {heading:"Identify a complex",body:"Separate the formula's coordination sphere from counterions. Count donor atoms attached directly to the central ion, not simply the number of ligand molecules: a bidentate ligand contributes two to coordination number. Find central oxidation state by balancing ligand charges against the overall complex charge. Do not confuse coordination number with oxidation state."},
+      {heading:"Naming and ligand order",body:"Write ligand names first in the prescribed alphabetical ordering and use prefixes to describe quantity; common polydentate ligand names may need special multiplicative prefixes. Then write the central metal name and oxidation state in Roman numerals. Anionic complexes use the appropriate modified metal name under standard nomenclature rules. Follow the course's exact naming conventions for ambidentate ligands and polyatomic ligand names."},
+      {heading:"Isomerism",body:"Structural isomerism includes ionisation, linkage and coordination isomerism in their applicable settings. Stereoisomerism includes geometrical arrangements such as cis/trans or fac/mer, and optical isomerism when non-superimposable mirror-image configurations occur. Draw or visualise ligand positions rather than memorising only a formula; the same formula can represent multiple arrangements."},
+      {heading:"Crystal-field picture",body:"Ligand fields split d-orbital energies; the splitting magnitude depends on geometry, ligand and metal. Comparing splitting energy with pairing energy helps reason about high-spin/low-spin cases where the model applies. d-d transitions often contribute to colour, and unpaired electrons determine paramagnetism. Crystal-field theory is a useful model, not a full description of every bonding property."}
+    ],
+    [
+      {title:"Find oxidation state and coordination number",steps:["Write the overall complex charge.","Assign known ligand charges and solve charge balance for the central metal.","Count donor atoms bound to the centre.","Check multidentate ligands contribute more than one donor atom."]},
+      {title:"Classify an isomer",steps:["Compare which atoms/groups are directly bonded first.","If connectivity differs, check structural isomerism type.","If connectivity matches but spatial positions differ, check stereoisomerism.","Use a labelled arrangement to justify cis/trans or optical relationships."]}
+    ],
+    ["Counting ligand molecules instead of donor atoms for coordination number.","Ignoring the charge of an anionic ligand.","Confusing oxidation state and coordination number.","Claiming all four-coordinate complexes are tetrahedral."],
+    ["JEE asks formula/name conversion, oxidation state, geometry, isomers, d-electron count, magnetic behaviour and ligand-field comparisons."],
+    ["What is coordination number?","How does a bidentate ligand affect that number?","What is the difference between linkage and geometrical isomerism."],
+    ["Ligand: species donating a pair of electrons to the central ion.","Chelation: binding by a multidentate ligand through multiple donor atoms.","Crystal-field splitting: separation of d-orbital energies in a ligand environment."]);
+
+  const chemistryTransition = pack("JEE Main", "Chemistry", "d- and f-Block Elements and Transition-Metal Trends",
+    "Explain variable oxidation state, colour, magnetism, catalytic behaviour, alloy formation and lanthanoid contraction.",
+    ["Partially filled d subshells support several oxidation states in many transition elements, though stability varies by configuration and conditions.","Unpaired d electrons often create paramagnetism; paired electrons lead to diamagnetism under the simple spin-only comparison.","Many coloured complexes absorb visible light through electronic transitions; d0 and d10 configurations often lack ordinary d-d transitions.","Lanthanoid contraction reflects gradual size decrease across the lanthanoid series and affects later-element size similarity and separation chemistry."],
+    ["Spin-only magnetic moment estimate: mu=sqrt(n(n+2)) BM for n unpaired electrons under the elementary model.","Oxidation-state balance remains the first check for ions and compounds."],
+    "A species with three unpaired electrons has spin-only moment sqrt(3(5)) = sqrt(15) BM in the basic model.",
+    [
+      {heading:"Electronic configurations and oxidation states",body:"Transition-metal valence electrons can involve both ns and (n-1)d subshells. Oxidation can remove ns electrons before d electrons in many ions, but stability depends on the species and environment. Half-filled and filled subshells may contribute to observed exceptions. Always use the stated element/ion rather than assuming a single oxidation state from the periodic group."},
+      {heading:"Colour and magnetism",body:"A magnetic field interacts with unpaired electron spins; more unpaired electrons typically means stronger paramagnetic response in the simple comparison. Colour often results when electronic transitions absorb certain visible wavelengths, leaving the complementary light transmitted/reflected. Not all coloured compounds owe their colour to the same mechanism; charge-transfer transitions can also be important."},
+      {heading:"Catalysis, alloys and interstitial compounds",body:"Transition metals and their compounds can catalyse reactions because they provide variable oxidation states, adsorb reactants or offer accessible reaction pathways. Alloys contain mixtures of metals or metal with other elements and often improve practical properties. Small atoms fitting into metal-lattice spaces can form interstitial compounds with changed hardness and other properties."},
+      {heading:"f-block and lanthanoid contraction",body:"Across the lanthanoids, increasing nuclear charge is imperfectly shielded by f electrons, producing a gradual decrease in ionic size. This affects coordination, separation and the similar radii of some 4d/5d transition-metal pairs. Actinoid chemistry has additional complexity from radioactivity and several accessible oxidation states."}
+    ],
+    [
+      {title:"Count unpaired electrons",steps:["Write the appropriate ion electron configuration.","Identify the d-electron count after ion formation.","Apply the geometry/ligand-spin information if a complex is given.","Count unpaired electrons before using the spin-only estimate."]},
+      {title:"Explain a trend",steps:["State the observed trend across the relevant series.","Connect it to nuclear charge, shielding or subshell filling.","Mention important exceptions if the prompt asks for them.","Tie the explanation to the specific property rather than memorising an unsupported arrow."]}
+    ],
+    ["Using the neutral atom's electron configuration for its cation without removing electrons correctly.","Assuming every coloured transition-metal compound is coloured by d-d transitions.","Ignoring the ligand field when counting unpaired electrons in a complex.","Treating lanthanoid contraction as a sudden size jump."],
+    ["JEE often tests oxidation states, magnetic moments, electronic configurations, colour and periodic trends of transition metals."],
+    ["Why can transition elements have variable oxidation states?","What information is needed before counting unpaired electrons in a complex?","What is lanthanoid contraction."],
+    ["Paramagnetism: attraction due to unpaired electron moments.","Charge-transfer transition: electronic transfer between ligand/metal-related states.","Lanthanoid contraction: gradual decrease in size across the lanthanoid series."]);
+
+  const biologyPlantRepro = pack("NEET UG", "Biology", "Sexual Reproduction in Flowering Plants",
+    "Trace flower structure, microsporogenesis, megasporogenesis, pollination, fertilisation, seed development and fruit formation.",
+    ["A flower contains reproductive structures; anther and ovule house developing male and female gametophytes respectively.","Microsporogenesis produces haploid microspores that develop into pollen grains; megasporogenesis produces megaspores in the ovule.","Pollination transfers pollen to a receptive stigma; fertilisation follows after compatible pollen-tube growth and gamete fusion.","Double fertilisation in angiosperms produces a zygote and endosperm-forming product, supporting embryo and seed development."],
+    ["Meiosis reduces chromosome number in spore-producing cells; fertilisation restores diploidy.","Angiosperm double fertilisation involves syngamy and triple fusion in the typical description."],
+    "A pollen grain reaching a compatible stigma is not yet fertilisation; pollen germination, tube growth and delivery of male gametes still occur.",
+    [
+      {heading:"Flower and gametophytes",body:"A typical flower's androecium contains stamens; an anther has pollen sacs in which microspore mother cells undergo meiosis. Each microspore can develop into a pollen grain representing the male gametophyte at the stage taught by the syllabus. The gynoecium contains carpels; the ovule includes the megasporangium/nucellus and integuments. The functional megaspore develops into the embryo sac, the female gametophyte."},
+      {heading:"Pollination mechanisms",body:"Self-pollination transfers pollen within the same flower or plant under the stated classification; cross-pollination transfers between plants of the same species. Wind, water and animals are common agents, and floral traits can reflect the pollination strategy. Outbreeding devices such as different maturation times, spatial separation or self-incompatibility reduce selfing and can support genetic variation."},
+      {heading:"Double fertilisation",body:"After compatible pollen germinates, the pollen tube carries male gametes into the ovule. One male gamete fuses with the egg to form the diploid zygote (syngamy). The other fuses with the central cell nuclei in the typical angiosperm embryo sac to form the primary endosperm nucleus, usually triploid in the standard case (triple fusion). These are two distinct events."},
+      {heading:"Seed and fruit development",body:"The zygote develops into the embryo, while endosperm nourishes the developing embryo. Integuments form the seed coat; ovules develop into seeds and the ovary commonly develops into fruit. Some structures may persist or develop from accessory floral parts, so the common simplified relationship has exceptions. Dormancy and dispersal improve survival and spread under appropriate conditions."}
+    ],
+    [
+      {title:"Order the reproductive sequence",steps:["Identify microspore/megaspore formation.","Trace pollen transfer to the stigma.","Follow pollen-tube growth and entry to the ovule.","Separate syngamy from triple fusion.","Connect the products to embryo, endosperm, seed and fruit."]},
+      {title:"Compare pollination types",steps:["Identify where pollen starts and ends.","Determine whether the source and recipient are the same plant or different plants of the same species.","Name likely agents if the question provides floral clues.","State the consequence for genetic variation or reproductive assurance."]}
+    ],
+    ["Confusing pollination with fertilisation.","Saying two male gametes both form the embryo.","Confusing ovule with ovary in seed/fruit development.","Treating every angiosperm endosperm detail as identical outside the standard model."],
+    ["NEET emphasises pollen and embryo-sac structure, pollination adaptations, double-fertilisation terms and seed/fruit product mapping."],
+    ["What is the difference between syngamy and triple fusion?","Which structure develops from the ovule?","Why can outbreeding devices be beneficial."],
+    ["Microsporogenesis: formation of microspores through meiosis.","Pollination: pollen transfer to a receptive stigma.","Endosperm: tissue that supports embryo development."]);
+
+  const biologyMicrobes = pack("NEET UG", "Biology", "Microbes in Human Welfare",
+    "Connect microorganisms to food production, industrial products, sewage treatment, biogas, biocontrol and biofertilisers.",
+    ["Microbes are used in food fermentation and industrial production because their metabolism can generate useful products.","Wastewater treatment uses microbial communities to reduce organic load and support cleaner effluent.","Biogas production involves anaerobic microbial communities that convert organic matter into methane-rich gas.","Biocontrol and biofertilisers can reduce reliance on certain chemical inputs when applied appropriately."],
+    ["BOD: biochemical oxygen demand, a measure related to oxygen required to biologically degrade organic matter in water.","Anaerobic digestion produces biogas; methane is a major combustible component."],
+    "A high BOD indicates substantial biodegradable organic material in water and can signal that decomposition may deplete dissolved oxygen.",
+    [
+      {heading:"Food and industry",body:"Lactic-acid bacteria support curd formation by fermenting lactose to lactic acid under suitable conditions. Yeasts are used in fermentation and bread making; microorganisms can produce organic acids, enzymes, antibiotics and other industrial products. Production depends on strain, nutrient supply, oxygen, pH, temperature and process control."},
+      {heading:"Sewage treatment",body:"Primary treatment physically removes settleable material; secondary treatment relies heavily on microbial activity. Aerobic microbial flocs oxidise organic matter, lowering the organic load. In the standard sewage description, BOD is lower after effective treatment because less biodegradable organic material remains. The microbial sludge may undergo anaerobic digestion to produce gas."},
+      {heading:"Biogas and waste conversion",body:"Biogas plants use anaerobic microbes, including methanogens, to convert organic waste into a methane-rich mixture. Feedstock and operating conditions affect yield. A proper system manages methane flammability, leaks and digestate handling. The process links waste management with energy recovery rather than treating waste simply as a disposal problem."},
+      {heading:"Biocontrol and biofertilisers",body:"Biocontrol uses organisms or their products to suppress pests/pathogens; it can be species-specific and requires suitable ecological conditions. Biofertilisers include microbes that fix nitrogen or improve nutrient availability, such as appropriate rhizobial associations and some cyanobacteria. They do not automatically replace every nutrient input and should match crop, soil and local practice."}
+    ],
+    [
+      {title:"Sewage process question",steps:["Identify primary physical treatment versus secondary biological treatment.","Explain the role of microbial flocs in reducing organic load.","Connect reduced organic load with lower BOD.","State where sludge digestion or biogas production fits in the process."]},
+      {title:"Choose a microbial application",steps:["Determine whether the goal is fermentation, waste treatment, methane generation, pest control or nutrient supply.","Match the organism group/process to the outcome taught in the chapter.","Explain the relevant metabolism or ecological interaction.","Avoid claiming all microorganisms are beneficial or interchangeable."]}
+    ],
+    ["Confusing BOD with dissolved oxygen itself.","Assuming biogas generation is aerobic.","Treating biocontrol as a universal substitute for all pesticides.","Forgetting that microbial products depend on conditions and strain."],
+    ["NEET often asks process order, BOD interpretation, microbe/product matching and the biological basis of biocontrol or biofertilisers."],
+    ["What does BOD indicate?","Why are methanogens associated with anaerobic conditions?","Give one role of a biofertiliser."],
+    ["Fermentation: microbial conversion of compounds, commonly without oxygen in the classic yeast process.","Methanogen: microorganism that produces methane under anaerobic conditions.","Biofertiliser: preparation using beneficial microbes to improve nutrient availability."]);
+
+  const biologyMorphology = pack("NEET UG", "Biology", "Morphology and Anatomy of Flowering Plants",
+    "Use root, stem, leaf, inflorescence, flower, fruit and seed structures to identify plant adaptations and internal tissues.",
+    ["Root systems include primary/tap and fibrous forms; modifications support storage, anchorage, respiration or other functions.","Stems and leaves can be modified for storage, protection, climbing, photosynthesis and reproduction.","Plant anatomy compares epidermal, ground and vascular tissues and the arrangement of xylem/phloem.","Monocot/dicot contrasts are useful patterns, but diagnostic characters should be considered together."],
+    ["Xylem conducts water/mineral ions; phloem transports sugars and other organic solutes.","Dicot stem commonly has vascular bundles arranged in a ring; typical monocot stem bundles are scattered."],
+    "Aerial prop roots can provide support to a large plant; root modifications should be identified by structure plus function.",
+    [
+      {heading:"Root, stem and leaf modifications",body:"Roots may be modified for food storage, mechanical support, aerial absorption, respiration or parasitic attachment. Stems may form rhizomes, tubers, corms, tendrils, thorns or photosynthetic structures. Leaves can be modified into spines, tendrils, storage organs or reproductive structures. Identify homology from origin and structure rather than appearance alone."},
+      {heading:"Flowers, inflorescences, fruits and seeds",body:"A flower's arrangement of sepals, petals, stamens and carpels supports identification. Inflorescence describes the arrangement of flowers on the axis; it is distinct from the individual flower. Fruit type depends on which floral parts develop and how the ovary changes. Seed structure commonly includes seed coat, embryo and stored food; cotyledon number alone should not replace all other diagnostic information."},
+      {heading:"Tissue systems",body:"The epidermal system protects and regulates exchange; ground tissue performs photosynthesis, storage and support; vascular tissue conducts materials. Xylem includes conducting/supporting elements and phloem includes sieve elements and associated cells. Tissue properties and arrangement explain why stems support and transport, roots absorb, and leaves intercept light and exchange gases."},
+      {heading:"Anatomical comparisons",body:"Typical dicot and monocot roots/stems differ in vascular arrangement and secondary growth patterns. The common dicot stem description has vascular bundles in a ring and a vascular cambium; common monocot stems have scattered bundles and usually lack the same secondary-growth pattern. These are teaching-level generalisations: check the precise organ and species described."}
+    ],
+    [
+      {title:"Identify a plant modification",steps:["Describe the structure and its origin (root, stem or leaf).","Identify the visible diagnostic feature.","Link that feature to the function or adaptation.","Distinguish similar-looking organs based on their origin."]},
+      {title:"Compare cross sections",steps:["Identify the organ first: root, stem or leaf.","Locate epidermis, ground tissue and vascular tissue.","Compare xylem/phloem arrangement and cambium where relevant.","Use at least two features rather than a single clue."]}
+    ],
+    ["Identifying a structure from function alone without checking its origin.","Confusing inflorescence with flower structure.","Assuming every monocot/dicot example follows every textbook generalisation.","Switching xylem and phloem transport roles."],
+    ["NEET emphasizes textbook diagrams, modification-to-function matching, floral parts, and monocot/dicot root/stem anatomy."],
+    ["How do xylem and phloem differ?","Why should origin be checked when classifying a plant modification?","Name two common monocot/dicot anatomical contrasts."],
+    ["Inflorescence: arrangement of flowers on a plant axis.","Cambium: meristematic tissue that can produce secondary vascular tissues.","Cotyledon: embryonic seed leaf."]);
+
+  const biologyPopulation = pack("NEET UG", "Biology", "Organisms, Populations and Ecological Interactions",
+    "Explain environmental responses, population attributes, growth curves and species interactions using ecological reasoning.",
+    ["Organisms respond to temperature, water, salinity and other environmental factors through tolerance, regulation, migration or dormancy.","Population attributes include density, age structure, natality, mortality and dispersion; they are not individual attributes.","Exponential growth assumes abundant resources; logistic growth includes limits and approaches carrying capacity.","Species interactions differ in their effects on partners and may change with context."],
+    ["Population change = births + immigration - deaths - emigration over a defined interval.","Exponential model: dN/dt=rN; logistic model: dN/dt=rN(1-N/K) in standard notation."],
+    "In a logistic model, growth is fastest around an intermediate fraction of carrying capacity and slows as N approaches K.",
+    [
+      {heading:"Organisms and environmental factors",body:"Temperature influences enzyme activity and water balance; organisms vary in tolerance ranges. Conformers experience internal conditions that change with their environment, while regulators maintain aspects of internal constancy at an energetic cost. Some organisms migrate, enter dormancy or form resistant stages when conditions become unfavourable. Adaptation and acclimatisation are different: inherited population-level change is not the same as an individual's physiological adjustment."},
+      {heading:"Population attributes",body:"Population density is a count or estimate relative to area/volume; absolute counts are not always practical, so indirect methods may be needed. Age pyramids describe the proportions of pre-reproductive, reproductive and post-reproductive members and help infer likely future trend. Natality and mortality rates require a defined time base and population denominator. Dispersion can be clumped, uniform or random depending on resources, social behaviour and interactions."},
+      {heading:"Exponential and logistic growth",body:"Exponential growth is a useful model when resources are effectively unlimited; it produces a J-shaped curve. Logistic growth incorporates carrying capacity K and produces an S-shaped curve as growth slows with competition or other limits. Carrying capacity is not permanent if habitat, climate, resource use or management changes. Real populations can fluctuate around predictions because of time lags and environmental variation."},
+      {heading:"Interactions and coexistence",body:"Competition can occur within or between species; outcomes depend on resource overlap and environment. Predation can regulate prey and move energy across trophic levels; parasites exploit hosts and can affect host fitness. Mutualisms may be obligate or facultative; commensalism involves one partner benefiting with little apparent effect on the other. Use +, -, and 0 outcome notation only after identifying whose fitness effect is described."}
+    ],
+    [
+      {title:"Interpret a population graph",steps:["Identify axes and whether the curve is J-shaped or S-shaped.","Locate any plateau and relate it to carrying capacity.","Describe the changing growth rate as population size changes.","State model assumptions before generalising to real ecosystems."]},
+      {title:"Classify a species interaction",steps:["Identify both species and the direct relationship.","Determine whether each partner benefits, is harmed or is largely unaffected.","Match the effect pair to the interaction category.","Explain the ecological mechanism rather than only naming the category."]}
+    ],
+    ["Calling an individual's acclimatisation evolution.","Treating carrying capacity as fixed under all conditions.","Confusing a population attribute with an individual characteristic.","Classifying an interaction from a single organism's benefit without considering the second partner."],
+    ["NEET often tests graphs, ecological terms, age pyramids, population growth assumptions and +/−/0 interaction types."],
+    ["How do exponential and logistic curves differ?","What is carrying capacity?","How do commensalism and mutualism differ."],
+    ["Carrying capacity: population size the environment can support under stated conditions.","Conformer: organism whose internal state varies with external conditions.","Logistic growth: limited-resource model approaching carrying capacity."]);
+
   const base = [
-    physicsMechanics, physicsForces, physicsThermal, physicsElectro, physicsCurrent, physicsMagnet, physicsOptics, physicsModern,
-    chemistryMole, chemistryBond, chemistryThermo, chemistryElectro, chemistryOrganic,
-    mathematicsCalculus, mathematicsIntegrals, mathematicsMatrices, mathematicsVectors, mathematicsProbability,
-    biologyCells, biologyGenetics, biologyPhysiology, biologyPlant, biologyEcology, biologyReproduction, biologyEvolution, biologyHealth, biologyDiversity, biologyMolecular
+    physicsMechanics, physicsForces, physicsThermal, physicsElectro, physicsCurrent, physicsMagnet, physicsOptics, physicsModern, physicsRotation, physicsFluids,
+    chemistryMole, chemistryBond, chemistryThermo, chemistryElectro, chemistryOrganic, chemistrySolutions, chemistryKinetics, chemistryCoordination, chemistryTransition,
+    mathematicsCalculus, mathematicsIntegrals, mathematicsMatrices, mathematicsVectors, mathematicsProbability, mathematicsComplex, mathematicsTrigonometry, mathematicsCoordinate, mathematicsSeries,
+    biologyCells, biologyGenetics, biologyPhysiology, biologyPlant, biologyEcology, biologyReproduction, biologyEvolution, biologyHealth, biologyDiversity, biologyMolecular, biologyPlantRepro, biologyMicrobes, biologyMorphology, biologyPopulation
   ];
   const examDupes = [];
   base.forEach((item) => {
