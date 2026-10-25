@@ -13,6 +13,7 @@ const mathsDeepNotes = readFileSync(new URL("../cbse-maths-deep-notes.js", impor
 const physicsChemistryDeepNotes = readFileSync(new URL("../cbse-physics-chemistry-deep-notes.js", import.meta.url), "utf8");
 const biologyDeepNotes = readFileSync(new URL("../cbse-biology-deep-notes.js", import.meta.url), "utf8");
 const remainingDeepNotes = readFileSync(new URL("../cbse-remaining-chapter-notes.js", import.meta.url), "utf8");
+const humanitiesComputerDeepNotes = readFileSync(new URL("../cbse-humanities-computer-deep-notes.js", import.meta.url), "utf8");
 const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -48,6 +49,7 @@ assert.ok(html.includes('src="/cbse-biology-deep-notes.js" defer'), "individual 
 assert.ok(html.includes('src="/cbse-remaining-chapter-notes.js" defer'), "additional individual chapter notes should load");
 assert.ok(studyLibrary.includes("Detailed chapter packs replace compact starter summaries"), "detailed sources must override short starter entries");
 assert.ok(studyLibrary.includes("individualChapterSets"), "the library must merge individual chapter packs");
+assert.ok(studyLibrary.includes("KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES"), "detailed humanities/commerce/computer chapters must be considered by the merge logic");
 assert.ok(studyLibrary.includes("practiceProblems"), "chapter practice answers must be part of the notes model");
 assert.ok(studyLibrary.includes("Practice questions with worked answers"), "reader must render solved practice");
 assert.ok(studyLibrary.includes("PRACTICE QUESTIONS WITH WORKED ANSWERS"), "saved note export must retain solved practice");
@@ -56,6 +58,8 @@ assert.ok(mathsDeepNotes.includes("KP_MATHS_INDIVIDUAL_DEEP_NOTES = notes"), "ma
 assert.ok(physicsChemistryDeepNotes.includes("KP_SCIENCE_INDIVIDUAL_DEEP_NOTES = notes"), "Physics/Chemistry collection must be exported");
 assert.ok(biologyDeepNotes.includes("KP_BIOLOGY_INDIVIDUAL_DEEP_NOTES = notes"), "Biology collection must be exported");
 assert.ok(remainingDeepNotes.includes("KP_REMAINING_CHAPTER_DEEP_NOTES = notes"), "additional collection must be exported");
+assert.ok(humanitiesComputerDeepNotes.includes("KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES = notes"), "humanities/commerce/computer/biology deep chapters must be exported");
+assert.ok(humanitiesComputerDeepNotes.split('chapter("Class ').length - 1 >= 30, "individual humanities, commerce and computer chapters should be detailed");
 assert.ok(physicsChemistryDeepNotes.includes('chapter("Class 11","Physics","Gravitation"'), "Gravitation must have a dedicated detailed chapter");
 assert.ok(mathsDeepNotes.split('chapter("Class 10","Mathematics"').length - 1 >= 12, "Class 10 maths should cover individual chapters");
 assert.ok(mathsDeepNotes.split('chapter("Class 11","Mathematics"').length - 1 >= 7, "Class 11 maths should cover individual chapters");
@@ -64,7 +68,7 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v6"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v7"), "PWA cache must be bumped for new chapter assets");
 assert.ok(vercel.builds.some(b => b.src === "cbse-maths-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-maths-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-physics-chemistry-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-physics-chemistry-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-biology-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-biology-deep-notes.js");
@@ -344,3 +348,4 @@ assert.match(html, /id="clearProgress"/, "students should be able to clear saved
 console.log("KaushalPath static assets, private AI routing, web research, and image handling checks passed.");
 
 
+\nassert.ok(vercel.builds.some(b => b.src === "cbse-humanities-computer-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish humanities/computer detailed notes");\nassert.ok(serviceWorker.includes('"/cbse-humanities-computer-deep-notes.js"'), "PWA shell must cache humanities/computer detailed notes");
