@@ -1819,7 +1819,10 @@
     status.setAttribute("role", "status");
     status.textContent = "Preparing your PDF…";
     status.style.cssText = "display:block;margin-top:4px;font-size:13px;color:#675a78";
-    guidance.append(heading, status);
+    const qualityHint = document.createElement("span");
+    qualityHint.textContent = "Download PDF uses high-resolution, lossless rendering. For the sharpest selectable text and vector graphics, choose Print / Save PDF and select “Save as PDF” in the browser dialog.";
+    qualityHint.style.cssText = "display:block;max-width:640px;margin-top:5px;font-size:12px;line-height:1.45;color:#675a78";
+    guidance.append(heading, status, qualityHint);
 
     const controls = document.createElement("div");
     Object.assign(controls.style, { display: "flex", flexWrap: "wrap", gap: "8px" });
@@ -2014,22 +2017,27 @@
       const runDownload = async () => {
         downloadButton.disabled = true;
         downloadButton.textContent = "Preparing PDF…";
-        status.textContent = "Putting the chapter notes into a downloadable PDF. This can take a moment.";
+        status.textContent = "Rendering your notes in high-resolution, lossless format. This can take a moment.";
         try {
           const html2pdf = await loadPdfEngine();
           await html2pdf().set({
             margin: [9, 10, 9, 10],
             filename: fileName,
-            image: { type: "jpeg", quality: 0.96 },
+            image: { type: "png" },
             html2canvas: {
-              scale: 1, useCORS: true, allowTaint: false,
+              // Keep small-print chapter text crisp while bounding peak memory for large multi-chapter exports.
+              scale: Math.min(2, Math.max(1, Math.sqrt(32000000 / (
+                Math.max(1, chapterContent.scrollWidth || chapterContent.offsetWidth || 800) *
+                Math.max(1, chapterContent.scrollHeight || chapterContent.offsetHeight || 12000)
+              )))),
+              useCORS: true, allowTaint: false,
               backgroundColor: "#ffffff", logging: false, scrollY: 0
             },
             jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
             pagebreak: { mode: ["css", "legacy"] },
             enableLinks: true
           }).from(chapterContent).save();
-          status.textContent = "Your PDF is ready. Check your Downloads folder.";
+          status.textContent = "Your high-resolution PDF is ready. Check your Downloads folder.";
           toast("Your chapter PDF has been downloaded. Check your Downloads folder.");
         } catch (error) {
           console.error("Direct chapter PDF download failed:", error);
