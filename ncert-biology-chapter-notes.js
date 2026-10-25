@@ -594,7 +594,8 @@
       ["CBSE focus: stakeholder roles, practical conservation methods and balanced evaluation of development options."],
       ["Why can a renewable resource still be depleted?","What is the purpose of watershed management?","Why should social impacts be included in conservation decisions?"],
       ["Watershed: land area draining to a common outlet.","Rainwater harvesting: capturing/recharging precipitation.","Sustainability: meeting needs while protecting future capacity."]
-  );
+    ),
+  ];
 
-    window.KP_NCERT_CHAPTER_NOTES = (Array.isArray(window.KP_NCERT_CHAPTER_NOTES) ? window.KP_NCERT_CHAPTER_NOTES : []).concat(notes);
+  window.KP_NCERT_CHAPTER_NOTES = (Array.isArray(window.KP_NCERT_CHAPTER_NOTES) ? window.KP_NCERT_CHAPTER_NOTES : []).concat(notes);
 })();
