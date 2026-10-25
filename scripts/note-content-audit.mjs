@@ -69,9 +69,35 @@ const subjectCoverage = [
   ["Class 12", "Biology", 6]
 ];
 for (const [level, subject, minimum] of subjectCoverage) {
-  const count = cbseNotes.filter(note => note.level === level && note.subject === subject).length;
+  const count = coverageNotes.filter(note => note.level === level && note.subject === subject).length;
   assert.ok(count >= minimum, level + " " + subject + " expected at least " + minimum + " individual chapters; found " + count);
 }
+
+const ncertSandbox = { window: {} };
+for (const filename of ["ncert-physics-chapter-notes.js","ncert-chemistry-chapter-notes.js","ncert-mathematics-chapter-notes.js","ncert-biology-chapter-notes.js"]) {
+  const source = readFileSync(new URL("../" + filename, import.meta.url), "utf8");
+  vm.runInNewContext(source, ncertSandbox, { filename, timeout: 10000 });
+}
+const supplementalNotes = ncertSandbox.window.KP_NCERT_CHAPTER_NOTES;
+assert.ok(Array.isArray(supplementalNotes) && supplementalNotes.length >= 138, "the supplemental NCERT collection should contain at least 138 individual notes");
+for (const note of supplementalNotes) {
+  assert.ok(note.level && note.subject && note.chapter, "supplemental note lacks class/subject/chapter metadata");
+  assert.ok(Array.isArray(note.sections) && note.sections.length >= 4, note.chapter + " needs at least four sections");
+  const explanatoryWords = note.sections.reduce((sum, section) => sum + String(section.body || "").trim().split(/\s+/).filter(Boolean).length, 0);
+  assert.ok(explanatoryWords >= 140, note.chapter + " is too short (" + explanatoryWords + " explanatory words)");
+  assert.ok(Array.isArray(note.workedExamples) && note.workedExamples.length >= 2, note.chapter + " needs at least two worked methods");
+  assert.ok(Array.isArray(note.commonMistakes) && note.commonMistakes.length >= 3, note.chapter + " needs common mistakes");
+  assert.ok(Array.isArray(note.examFocus) && note.examFocus.length >= 1, note.chapter + " needs exam focus");
+  assert.ok(Array.isArray(note.recall) && note.recall.length >= 3, note.chapter + " needs recall questions");
+  assert.ok(Array.isArray(note.glossary) && note.glossary.length >= 2, note.chapter + " needs glossary terms");
+  if (["Mathematics","Physics","Chemistry","Science"].includes(note.subject)) {
+    assert.ok(Array.isArray(note.formulaCheatSheet) && note.formulaCheatSheet.length >= 1, note.chapter + " needs at least one formula/rule card");
+    assert.ok(note.formulaCheatSheet.every(card => card.formula && card.meaning && card.when && card.units && card.trap), note.chapter + " has an incomplete formula card");
+  }
+}
+const coverageNotes = cbseNotes.concat(supplementalNotes);
+const gravitationSupplement = supplementalNotes.find(note => note.level === "Class 11" && note.subject === "Physics" && note.chapter === "Gravitation");
+assert.ok(gravitationSupplement && gravitationSupplement.formulaCheatSheet.length >= 3, "supplemental Gravitation note must contain explained formula cards");
 
 const examNotes = loadExport("exam-prep-notes.js", "KP_DEEP_NOTES");
 assert.ok(examNotes.length >= 42, "JEE/NEET preparation needs at least 42 detailed exam-prep entries");
