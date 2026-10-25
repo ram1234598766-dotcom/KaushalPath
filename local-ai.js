@@ -51,7 +51,29 @@
       return true;
     } catch (error) { return false; }
   }
-  function isReady() { return Boolean(engine && activeModel && activeModel === capabilities().model); }
+  function isReady() { return Boolean(engine && activeModel); }
+  function modelLabel(id) {
+    if (id === MODEL_PLUS) return "Llama 3.2 · 3B (quantised)";
+    if (id === MODEL_LITE) return "Llama 3.2 · 1B (quantised)";
+    return id || "No local model loaded";
+  }
+  function candidatesFor(caps) {
+    // Model IDs are checked against WebLLM's current prebuilt model registry.
+    return caps.model === MODEL_PLUS ? [MODEL_PLUS, MODEL_LITE] : [MODEL_LITE];
+  }
+  async function requestStorageEstimate() {
+    if (!navigator.storage || typeof navigator.storage.estimate !== "function") return null;
+    try {
+      const estimate = await navigator.storage.estimate();
+      const quota = Number(estimate && estimate.quota), usage = Number(estimate && estimate.usage);
+      if (!Number.isFinite(quota) || !Number.isFinite(usage)) return null;
+      return { quota, usage, available: Math.max(0, quota - usage) };
+    } catch (error) { return null; }
+  }
+  function requiredStorageBytes(model) {
+    // Rough browser-cache allowances, not guarantees: weights, runtime and temporary download buffers.
+    return model === MODEL_PLUS ? 2700 * 1024 * 1024 : 1200 * 1024 * 1024;
+  }
 
   async function getRuntime() {
     if (!runtimePromise) {
@@ -67,28 +89,66 @@
     const opts = options || {};
     const caps = capabilities();
     if (!caps.canRun) throw new Error(caps.reason || "This browser is not ready for local AI.");
-    if (engine && activeModel === caps.model) return { model: caps.model, label: caps.modelLabel, cachedSession: true };
+    if (engine && activeModel) return { model: activeModel, label: modelLabel(activeModel), cachedSession: true };
     if (loadingPromise) return loadingPromise;
     setPreferred(true);
     lastLoadError = "";
     loadingPromise = (async () => {
-      if (opts.onProgress) opts.onProgress({ progress: 0.01, text: "Loading local AI runtime…" });
+      if (opts.onProgress) opts.onProgress({ progress: 0.01, text: "Checking GPU and browser storage…" });
+      if (!navigator.gpu || typeof navigator.gpu.requestAdapter !== "function") {
+        throw new Error("WebGPU is not available. Use a recent supported browser/device or choose cloud AI.");
+      }
+      const adapter = await navigator.gpu.requestAdapter({ powerPreference: caps.mobile ? "low-power" : "high-performance" });
+      if (!adapter) throw new Error("The browser could not obtain a WebGPU adapter. Close GPU-heavy tabs, update the browser, or choose cloud AI.");
+      const modelCandidates = candidatesFor(caps);
+      const storage = await requestStorageEstimate();
+      if (storage) {
+        const required = requiredStorageBytes(modelCandidates[0]);
+        // Do not block when quota is unknown/inaccurate, but stop an obvious low-storage failure before a gigabyte download.
+        if (storage.available < required * 0.7) {
+          const freeGB = (storage.available / (1024 * 1024 * 1024)).toFixed(2);
+          const needGB = (required / (1024 * 1024 * 1024)).toFixed(1);
+          throw new Error("This browser reports about " + freeGB + " GB of storage available, while the selected model may need around " + needGB + " GB plus temporary download space. Free device/browser storage, then retry, or use cloud AI.");
+        }
+        if (navigator.storage && typeof navigator.storage.persist === "function") {
+          try { await navigator.storage.persist(); } catch (error) {}
+        }
+      }
+      if (opts.onProgress) opts.onProgress({ progress: 0.025, text: "Loading local AI runtime…" });
       const webllm = await getRuntime();
       if (typeof webllm.CreateMLCEngine !== "function") throw new Error("The local AI runtime loaded without its model engine.");
-      const candidate = await webllm.CreateMLCEngine(caps.model, {
-        initProgressCallback: (report) => {
-          if (opts.onProgress) opts.onProgress({
-            progress: Number.isFinite(Number(report && report.progress)) ? Math.max(0, Math.min(1, Number(report.progress))) : null,
-            text: String(report && report.text || "Preparing on-device model…")
+      let candidate = null, chosen = "", failures = [];
+      for (let index = 0; index < modelCandidates.length; index++) {
+        const modelId = modelCandidates[index];
+        if (opts.onProgress) opts.onProgress({
+          progress: index === 0 ? 0.04 : 0.03,
+          text: index === 0 ? "Preparing " + modelLabel(modelId) + "…" : "The larger model did not fit; retrying with " + modelLabel(modelId) + "…"
+        });
+        try {
+          candidate = await webllm.CreateMLCEngine(modelId, {
+            initProgressCallback: (report) => {
+              if (opts.onProgress) opts.onProgress({
+                progress: Number.isFinite(Number(report && report.progress)) ? Math.max(0, Math.min(1, Number(report.progress)) : null,
+                text: modelLabel(modelId) + " · " + String(report && report.text || "Downloading or preparing model…")
+              });
+            }
           });
+          chosen = modelId;
+          break;
+        } catch (error) {
+          failures.push(modelLabel(modelId) + ": " + String(error && error.message || error).slice(0, 220));
+          candidate = null;
         }
-      });
+      }
+      if (!candidate || !chosen) {
+        throw new Error("No selected local model could be loaded on this device. Tried " + modelCandidates.map(modelLabel).join(" then ") + ". " + failures.join(" | ") + ". The model was not marked installed; choose cloud AI or try again after closing other apps/tabs.");
+      }
       engine = candidate;
-      activeModel = caps.model;
-      if (opts.onProgress) opts.onProgress({ progress: 1, text: "Local model is ready on this device." });
-      return { model: caps.model, label: caps.modelLabel, cachedSession: false };
+      activeModel = chosen;
+      if (opts.onProgress) opts.onProgress({ progress: 1, text: modelLabel(chosen) + " is ready on this device." });
+      return { model: chosen, label: modelLabel(chosen), cachedSession: false, fallback: chosen !== caps.model, storage: storage };
     })().catch((error) => {
-      lastLoadError = String(error && error.message || error).slice(0, 500);
+      lastLoadError = String(error && error.message || error).slice(0, 1000);
       engine = null; activeModel = "";
       throw error;
     }).finally(() => { loadingPromise = null; });
@@ -143,6 +203,8 @@
     load,
     respond,
     getModel: () => activeModel,
+    getModelLabel: () => modelLabel(activeModel),
+    getRecommendedModel: () => capabilities().model,
     getLastError: () => lastLoadError
   };
 
