@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
@@ -102,7 +103,57 @@ assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v14"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v15"), "PWA cache must be bumped for new chapter assets");
+assert.ok(questionBank.includes("window.KP_FULL_LENGTH_QUESTION_BANK = fullLengthBank"), "the question bank must expose full-length JEE and NEET question pools");
+assert.ok(questionBank.includes("questionsPerTest: 90") && questionBank.includes("questionsPerTest: 180"), "the configured mock lengths must be 90 for JEE and 180 for NEET");
+assert.ok(app.includes("configureFullLengthEntranceTests") && app.includes("selectRotated(subjects.Mathematics,30") && app.includes("selectRotated(subjects.Biology,90"), "the app must assemble the requested subject-balanced mock tests");
+assert.ok(app.includes("Keep labelled previous-year questions in every mock") && app.includes("Previous-year question"), "full mocks must prioritize source-labelled PYQs and display a source label in each question");
+assert.ok(html.includes("scrollbar-width:none!important") && html.includes("*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}"), "scrollbars must be visually hidden without disabling scrolling");
+assert.ok(html.includes("Each NEET full mock contains 180 questions") && html.includes("official JEE Main 2026 Paper 1 format has 75 questions"), "the test catalogue must clearly distinguish NEET's official pattern from the requested extended JEE mock");
+
+const bankRuntime = { window: {} };
+runInNewContext(questionBank, bankRuntime);
+const makeMock = (id, exam) => ({
+  id, exam, qs: Array.from({length:5}, (_,i) => ({
+    q: id + " simulated challenge question " + i,
+    o: ["A","B","C","D"], a: 0, e: "Test fixture explanation."
+  }))
+});
+const mockedTests = [
+  makeMock("jee1","JEE Main"), makeMock("jee2","JEE Main"), makeMock("jee3","JEE Main"),
+  makeMock("neet1","NEET UG"), makeMock("neet2","NEET UG"), makeMock("neet3","NEET UG"),
+  ...bankRuntime.window.KP_EXTRA_QUESTIONS
+];
+const configureStart = app.indexOf("(function configureFullLengthEntranceTests() {");
+const configureEnd = app.indexOf("\n})();", configureStart);
+assert.ok(configureStart >= 0 && configureEnd > configureStart, "the full-length mock configuration function must exist");
+const configSandbox = {
+  window: { KP_FULL_LENGTH_QUESTION_BANK: bankRuntime.window.KP_FULL_LENGTH_QUESTION_BANK },
+  questions: mockedTests
+};
+runInNewContext(app.slice(configureStart, configureEnd + 6), configSandbox);
+for (const exam of ["JEE Main","NEET UG"]) {
+  const sets = mockedTests.filter((set) => set.exam === exam);
+  assert.equal(sets.length, 6, exam + " must provide six full-length tests");
+  for (const set of sets) {
+    const expectedCount = exam === "JEE Main" ? 90 : 180;
+    assert.equal(set.qs.length, expectedCount, set.title + " must contain the required number of questions");
+    assert.equal(set.duration, 180, set.title + " must have a 180-minute timer");
+    assert.equal(set.mark, 4, set.title + " must award four marks for a correct answer");
+    assert.equal(set.negativeMark, 1, set.title + " must apply the one-mark penalty");
+    assert.equal(new Set(set.qs.map((q) => q.q.trim().toLowerCase())).size, expectedCount, set.title + " must not repeat questions within a single attempt");
+    assert.ok(set.qs.some((q) => q.sourceType === "PYQ"), set.title + " must include at least one labelled previous-year question");
+    const counts = {};
+    set.qs.forEach((q) => { counts[q.subject] = (counts[q.subject] || 0) + 1; });
+    assert.deepEqual(counts, exam === "JEE Main"
+      ? { Mathematics: 30, Physics: 30, Chemistry: 30 }
+      : { Physics: 45, Chemistry: 45, Biology: 90 },
+      set.title + " must match the specified subject split");
+    const max = set.qs.reduce((sum,q) => sum + (Number.isFinite(q.mark) ? q.mark : set.mark),0);
+    assert.equal(max, exam === "JEE Main" ? 360 : 720, set.title + " must have the correct maximum marks");
+  }
+}
+
 assert.ok(vercel.builds.some(b => b.src === "cbse-maths-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-maths-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-physics-chemistry-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-physics-chemistry-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-biology-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-biology-deep-notes.js");
@@ -170,14 +221,14 @@ assert.ok(vercel.builds.some(b => b.src === "exam-prep-notes.js" && b.use === "@
 assert.ok(vercel.builds.some(b => b.src === "school-chapter-guides.js" && b.use === "@vercel/static"), "Vercel should publish the expanded CBSE master guides");
 assert.ok(vercel.builds.some(b => b.src === "school-humanities-commerce-guides.js" && b.use === "@vercel/static"), "Vercel should publish humanities, commerce and CS guides");
 assert.ok(vercel.builds.some(b => b.src === "formula-cheat-sheets.js" && b.use === "@vercel/static"), "Vercel should publish formula cheat sheets");
-assert.match(serviceWorker, /kaushalpath-shell-v14/, "service worker cache should be bumped to include local model controls");
+assert.match(serviceWorker, /kaushalpath-shell-v15/, "service worker cache should be bumped to include local model controls");
 assert.match(serviceWorker, /"\/local-ai\.js"/, "PWA shell should cache local AI controls");
 assert.match(serviceWorker, /"\/exam-prep-notes\.js"/, "PWA shell should cache the expanded exam notes");
 assert.match(html, /id="pwaUpdateBanner"/, "students should see when a refreshed chapter library is available");
 assert.match(app, /updateViaCache: "none"/, "PWA update checks should bypass stale HTTP cache entries");
 assert.match(app, /registration\.update\(\)/, "PWA registration should actively check for updates on visits");
 assert.match(app, /pwaUpdateReload/, "students should have a clear reload action for the latest note content");
-assert.match(serviceWorker, /kaushalpath-shell-v14/, "new deep-note deployment should force a new service-worker cache");
+assert.match(serviceWorker, /kaushalpath-shell-v15/, "new deep-note deployment should force a new service-worker cache");
 
 assert.match(serviceWorker, /"\/school-humanities-commerce-guides\.js"/, "PWA shell should cache humanities, language and commerce guides");
 assert.equal((studyLibrary.match(/note\("Class /g) || []).length, 119, "the curated chapter notes catalogue should contain 119 authored note packs");
@@ -186,7 +237,7 @@ assert.match(studyLibrary, /navigator\.deviceMemory/, "the UI should use availab
 assert.match(studyLibrary, /prefers-reduced-motion/, "the animated guide should respect reduced-motion preferences");
 assert.match(studyLibrary, /overlay\.id\s*=\s*"kpTourOverlay"/, "the guided tour should create an accessible modal overlay");
 assert.match(app, /questions\.push\(\.\.\.window\.KP_EXTRA_QUESTIONS\)/, "the main test runner should include the additional MCQ bank");
-assert.equal((questionBank.match(/\n    q\(/g) || []).length, 120, "the added question bank must contain 120 individually authored practice MCQs");
+assert.ok((questionBank.match(/\n    q\(/g) || []).length >= 300, "the expanded question bank must retain the starter bank and contain enough authored questions for full-length JEE/NEET mocks");
 assert.match(questionBank, /JEE Main · Mathematics Practice 01/, "the bank should include a JEE mathematics set");
 assert.match(questionBank, /NEET UG · Biology Practice 01/, "the bank should include a NEET biology set");
 assert.match(api, /async function requestGateway\(/, "the AI request should use a resilient gateway helper");
@@ -194,7 +245,7 @@ assert.match(api, /ai-gateway\.kilo\.ai\/api\/v1\/chat\/completions/, "the AI ba
 assert.match(api, /allowsAnonymousFallback/, "a stale optional key should not block anonymous requests to free models");
 assert.ok(vercel.builds.some(b => b.src === "question-bank.js" && b.use === "@vercel/static"), "Vercel should publish the extra question bank");
 assert.ok(vercel.builds.some(b => b.src === "study-library.js" && b.use === "@vercel/static"), "Vercel should publish the notes and tour logic");
-assert.match(serviceWorker, /kaushalpath-shell-v14/, "offline shell cache should be version-bumped for the new assets");
+assert.match(serviceWorker, /kaushalpath-shell-v15/, "offline shell cache should be version-bumped for the new assets");
 assert.match(serviceWorker, /"\/question-bank\.js"/, "the PWA shell cache should include the new question bank");
 assert.match(serviceWorker, /"\/study-library\.js"/, "the PWA shell cache should include the notes library");
 

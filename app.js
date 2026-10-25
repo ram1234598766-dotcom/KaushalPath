@@ -50,6 +50,93 @@ const questions=[
 ]}
  ];
 if (Array.isArray(window.KP_EXTRA_QUESTIONS)) questions.push(...window.KP_EXTRA_QUESTIONS);
+
+// Convert the compact entrance cards into complete, syllabus-mapped mock exams.
+(function configureFullLengthEntranceTests() {
+ const bank = window.KP_FULL_LENGTH_QUESTION_BANK;
+ if (!bank) return;
+ const challengeSubjects = {
+  jee1:["Mathematics","Physics","Chemistry","Physics","Mathematics"],
+  jee2:["Mathematics","Physics","Chemistry","Mathematics","Physics"],
+  jee3:["Mathematics","Physics","Chemistry","Mathematics","Physics"],
+  neet1:["Biology","Biology","Chemistry","Physics","Biology"],
+  neet2:["Biology","Biology","Chemistry","Biology","Biology"],
+  neet3:["Biology","Biology","Physics","Chemistry","Biology"]
+ };
+ questions.forEach(function(test) {
+  const subjects = challengeSubjects[test.id];
+  if (!subjects) return;
+  test.qs.forEach(function(question,index) {
+   question.subject = subjects[index] || question.subject || "";
+   question.sourceType = question.sourceType || "Competency";
+   question.sourceLabel = question.sourceLabel || "Syllabus-mapped competency practice";
+   question.topic = question.topic || "Mixed syllabus revision";
+   const examBank = bank[test.exam];
+   const pool = examBank && examBank.subjects && examBank.subjects[question.subject];
+   if (pool && !pool.some(function(item) { return item.q === question.q; })) pool.push(Object.assign({},question));
+  });
+ });
+ function selectRotated(pool,count,seed) {
+  const source = Array.isArray(pool) ? pool : [];
+  if (source.length < count) throw new Error("Full mock pool is too small: need "+count+", found "+source.length+".");
+  const seen = new Set();
+  const picked = [];
+  // Keep labelled previous-year questions in every mock, then fill the remaining slots with the rotated pool.
+  source.filter(function(item) { return item.sourceType === "PYQ"; }).forEach(function(item) {
+   const key = String(item.q || "").trim().toLowerCase();
+   if (key && !seen.has(key) && picked.length<count) {
+    seen.add(key);
+    picked.push(Object.assign({},item));
+   }
+  });
+  const offset = ((seed % source.length) + source.length) % source.length;
+  for (let step=0; picked.length<count && step<source.length*2; step++) {
+   const item = source[(offset+step)%source.length];
+   const key = String(item.q || "").trim().toLowerCase();
+   if (!key || seen.has(key)) continue;
+   seen.add(key);
+   picked.push(Object.assign({},item));
+  }
+  if (picked.length !== count) throw new Error("Could not assemble "+count+" unique questions for a full mock.");
+  return picked;
+ }
+ const sequence = {"JEE Main":0,"NEET UG":0};
+ questions.forEach(function(test) {
+  if (test.exam !== "JEE Main" && test.exam !== "NEET UG") return;
+  const index = sequence[test.exam]++;
+  const seed = index * 7;
+  const subjects = bank[test.exam].subjects;
+  if (test.exam === "JEE Main") {
+   const math = selectRotated(subjects.Mathematics,30,seed);
+   const physics = selectRotated(subjects.Physics,30,seed+5);
+   const chemistry = selectRotated(subjects.Chemistry,30,seed+11);
+   test.qs = [];
+   for (let i=0;i<30;i++) test.qs.push(math[i],physics[i],chemistry[i]);
+   test.title = "JEE Main · Extended Full Mock "+String(index+1).padStart(2,"0");
+   test.level = "Extended mock";
+   test.duration = 180;
+   test.mark = 4;
+   test.negativeMark = 1;
+   test.subjectCounts = {Mathematics:30,Physics:30,Chemistry:30};
+   test.fullLength = true;
+   test.desc = "90 questions: 30 Mathematics, 30 Physics and 30 Chemistry. 360 marks with +4/−1 scoring. This extended practice mock is longer than the official JEE Main 2026 Paper 1 format of 75 questions.";
+  } else {
+   const physics = selectRotated(subjects.Physics,45,seed);
+   const chemistry = selectRotated(subjects.Chemistry,45,seed+9);
+   const biology = selectRotated(subjects.Biology,90,seed+17);
+   test.qs = [];
+   for (let i=0;i<45;i++) test.qs.push(physics[i],chemistry[i],biology[2*i],biology[2*i+1]);
+   test.title = "NEET UG · Full Mock Test "+String(index+1).padStart(2,"0");
+   test.level = "Full-length mock";
+   test.duration = 180;
+   test.mark = 4;
+   test.negativeMark = 1;
+   test.subjectCounts = {Physics:45,Chemistry:45,Biology:90};
+   test.fullLength = true;
+   test.desc = "180 compulsory questions: 45 Physics, 45 Chemistry and 90 Biology. 720 marks with +4/−1 scoring, following the NEET UG 2026 question count and subject split.";
+  }
+ });
+})();
 let active=null,tick=null,lastAnswerText="",studyAttachment=null,chatAttachment=null,lastChatAttachment=null;
 function safe(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function resizeImageFile(file){
@@ -141,7 +228,24 @@ function needsRemoteTools(payload){
 function toast(msg){const el=$("toast");el.textContent=msg;el.classList.remove("hidden");setTimeout(function(){el.classList.add("hidden");},3200);}
 function subjectName(){return $("subject").value==="other"?$("otherSubject").value.trim():$("subject").value;}
 $("subject").addEventListener("change",function(){$("otherSubjectWrap").hidden=$("subject").value!=="other";});
-function renderTests(){const grid=$("testGrid");grid.innerHTML="";questions.forEach(function(t){const card=document.createElement("article");card.className="test-card";card.dataset.exam=t.exam;const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";const kind=t.official?"Official sample-paper question":"Original practice set";const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";const sourceLinks=t.official?'<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>':"";card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+t.id+'">Start test ↗</button>';grid.appendChild(card);});}
+function renderTests(){
+ const grid=$("testGrid");grid.innerHTML="";
+ questions.forEach(function(t){
+  const card=document.createElement("article");
+  card.className="test-card"+(t.fullLength?" full-length-test-card":"");
+  card.dataset.exam=t.exam;
+  const cls=t.exam==="NEET UG"?"teal":t.exam==="CBSE"?"orange":"";
+  const kind=t.official?"Official sample-paper question":t.fullLength?"PYQs + syllabus-mapped competency practice":"Original practice set";
+  const maxMarks=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);
+  const marking=t.official?"+1 / 0 / 0":"+"+t.mark+" / "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" / 0";
+  let sourceLinks="";
+  if(t.official) sourceLinks='<div class="test-source-links"><a href="'+safe(t.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Official question paper ↗</a> <a href="'+safe(t.schemeUrl)+'" target="_blank" rel="noopener noreferrer">Marking scheme ↗</a></div>';
+  else if(t.fullLength && t.exam==="JEE Main") sourceLinks='<div class="test-source-links"><a href="https://jeemain.nta.nic.in/2026/" target="_blank" rel="noopener noreferrer">Official JEE Main papers and syllabus ↗</a></div>';
+  else if(t.fullLength && t.exam==="NEET UG") sourceLinks='<div class="test-source-links"><a href="https://neet.nta.nic.in/documents/page/4/" target="_blank" rel="noopener noreferrer">Official NEET UG syllabus and documents ↗</a></div>';
+  card.innerHTML='<span class="tag '+cls+'">'+safe(t.exam)+" · "+safe(t.level)+'</span><h3>'+safe(t.title)+'</h3><p>'+safe(t.desc)+'</p><div class="test-meta"><span>◷ '+t.duration+' min</span><span>▦ '+t.qs.length+' questions</span><span>◎ '+maxMarks+' marks</span><span>Scoring: '+marking+' (correct / wrong / blank)</span><span>'+kind+'</span></div>'+sourceLinks+'<button class="btn btn-blue" type="button" data-start="'+safe(t.id)+'">Start test ↗</button>';
+  grid.appendChild(card);
+ });
+}
 function renderStudyText(answer){const out=$("studyOutput");out.innerHTML=markdownToHtml(answer);lastAnswerText=answer;$("copyAnswer").disabled=!answer;if($("saveStudyPdf"))$("saveStudyPdf").disabled=!answer;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=!answer;}
 $("copyAnswer").addEventListener("click",async function(){if(!lastAnswerText)return;try{await navigator.clipboard.writeText(lastAnswerText);toast("Study text copied.");}catch(e){toast("Copy was blocked by this browser.");}});
 const subjectSets={
@@ -1063,7 +1167,7 @@ function initPlanner(){
 
 function startTest(id){const t=questions.find(function(q){return q.id===id;});if(!t)return;const pending=getSavedTest();if(pending&&!confirm("Starting a new test will discard your unfinished saved attempt. Continue?"))return;clearSavedTest();clearInterval(tick);active={test:t,answers:{},index:0,endAt:Date.now()+t.duration*60*1000};$("resultWorkspace").classList.add("hidden");$("examWorkspace").classList.remove("hidden");$("examWorkspace").scrollIntoView({behavior:"smooth",block:"start"});saveActiveTest();renderQuestion();tick=setInterval(function(){if(!active)return;updateTimer();},1000);}
 function updateTimer(){if(!active)return;const secs=Math.max(0,Math.ceil((active.endAt-Date.now())/1000));const el=$("timer");if(el)el.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");if(secs<=0)finishTest(true);}
-function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div><div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted. This compact set is not a full exam.")+'</p>';updateTimer();}
+function renderQuestion(){if(!active)return;const t=active.test,q=t.qs[active.index],selected=active.answers[active.index];const root=$("examWorkspace");const sourceKind=t.official?"Official sample-paper question":q.sourceType==="PYQ"?"Previous-year question":t.exam==="CBSE"?"Original foundation practice":"Competency-based practice";const sourceLabel=t.official?"CBSE Class XII Computer Science · Official SQP 2026–27":(q.sourceLabel||"Syllabus-mapped competency practice");const sourceMarkup='<div class="question-source"><span class="question-source-badge '+(t.official?"official":q.sourceType==="PYQ"?"pyq":"competency")+'">'+safe(sourceKind+" · "+sourceLabel)+'</span>'+(q.subject?'<span class="question-topic">'+safe(q.subject)+(q.topic?" · "+safe(q.topic):"")+'</span>':"")+(q.sourceUrl?'<a href="'+safe(q.sourceUrl)+'" target="_blank" rel="noopener noreferrer">View source ↗</a>':"")+'</div>';root.innerHTML='<div class="exam-top"><div><div class="question-count">'+safe(t.title)+'</div><h3>Question '+(active.index+1)+' of '+t.qs.length+'</h3></div><div class="timer" id="timer" role="timer" aria-label="Time remaining">--:--</div></div>'+sourceMarkup+'<div class="question" role="heading" aria-level="4" aria-live="polite">'+safe(q.q)+'</div><div class="options" role="group" aria-label="Answer choices">'+q.o.map(function(o,i){return '<button type="button" class="option '+(selected===i?"selected":"")+'" data-answer="'+i+'" aria-pressed="'+(selected===i?"true":"false")+'"><span class="optkey">'+String.fromCharCode(65+i)+'</span><span>'+safe(o)+'</span></button>';}).join("")+'</div><div class="question-nav">'+t.qs.map(function(qq,i){return '<button type="button" class="qnav '+(active.answers[i]!==undefined?"done ":"")+(i===active.index?"current":"")+'" data-jump="'+i+'" aria-label="Question '+(i+1)+'">'+(i+1)+'</button>';}).join("")+'</div><div class="exam-actions"><button class="btn btn-light" type="button" id="prevQ" '+(active.index===0?"disabled":"")+'>← Previous</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-light" type="button" id="nextQ">'+(active.index===t.qs.length-1?"Review answers":"Next question →")+'</button><button class="btn btn-blue" type="button" id="finishQ">Finish test</button></div></div><p class="tiny">'+(t.official?"Official CBSE sampler scoring: +1 correct, 0 incorrect or unattempted. This is not the full 70-mark paper.":t.level==="Targeted review"?"Targeted retake: missed or unanswered questions only. Original per-question marks and penalties are retained.":t.fullLength?(t.exam==="NEET UG"?"Full NEET-length mock: 180 questions in 180 minutes, with 45 Physics, 45 Chemistry and 90 Biology questions.":"Extended JEE practice mock: 90 questions in 180 minutes; official JEE Main Paper 1 currently uses 75 questions."):"Practice scoring: +"+t.mark+" correct, "+(t.negativeMark>0?"−"+t.negativeMark:"0")+" incorrect, 0 unattempted.")+'</p>';updateTimer();}
 $("testGrid").addEventListener("click",function(e){const b=e.target.closest("[data-start]");if(b)startTest(b.dataset.start);});
 $("examWorkspace").addEventListener("click",function(e){if(!active)return;const ans=e.target.closest("[data-answer]"),jump=e.target.closest("[data-jump]");if(ans){active.answers[active.index]=Number(ans.dataset.answer);saveActiveTest();renderQuestion();return;}if(jump){active.index=Number(jump.dataset.jump);saveActiveTest();renderQuestion();return;}if(e.target.closest("#prevQ")){active.index=Math.max(0,active.index-1);saveActiveTest();renderQuestion();return;}if(e.target.closest("#nextQ")){if(active.index===active.test.qs.length-1){toast("Review your answers, then finish the test.");}else{active.index++;saveActiveTest();renderQuestion();}return;}if(e.target.closest("#finishQ")){const unanswered=active.test.qs.length-Object.keys(active.answers).length;if(unanswered&&!confirm("You still have "+unanswered+" unanswered question(s). Finish this test anyway?"))return;finishTest(false);}});
 function finishTest(auto){if(!active)return;clearInterval(tick);tick=null;const t=active.test;let correct=0,wrong=0,blank=0;const answers=active.answers;const review=t.qs.map(function(q,i){const chosen=answers[i];if(chosen===undefined)blank++;else if(chosen===q.a)correct++;else wrong++;return {question:q.q,options:q.o,chosen:chosen,correct:q.a,explanation:q.e,mark:Number.isFinite(q.mark)?q.mark:t.mark,negativeMark:Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1))};});const score=t.qs.reduce(function(total,q,i){const chosen=answers[i],marks=Number.isFinite(q.mark)?q.mark:t.mark,penalty=Number.isFinite(q.negativeMark)?q.negativeMark:(Number.isFinite(t.negativeMark)?t.negativeMark:(t.exam==="CBSE"?0:1));return total+(chosen===undefined?0:chosen===q.a?marks:-penalty);},0);const max=t.qs.reduce(function(total,q){return total+(Number.isFinite(q.mark)?q.mark:t.mark);},0);const result={id:t.id,title:t.title,exam:t.exam,level:t.level,date:new Date().toLocaleString(),correct:correct,wrong:wrong,blank:blank,score:score,max:max,percentage:Math.round(Math.max(0,score)/max*100),review:review};saveHistory(result);clearSavedTest();active=null;renderResult(result,auto);}
