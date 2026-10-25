@@ -518,6 +518,101 @@ function initCbseAnnualBuilder(){
  loadSubjectOptions();
 }
 
+
+function downloadCbseAnnualPaperPdf(paper,withKey){
+ if(!paper||!Array.isArray(paper.qs)||!paper.qs.length)throw new Error("The selected annual paper has no questions.");
+ if(typeof window.KP_LOAD_PDF_ENGINE!=="function")throw new Error("The direct PDF engine is unavailable.");
+ return window.KP_LOAD_PDF_ENGINE().then(function(engine){
+  const pdf=new engine.jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true,putOnlyUsedFonts:true});
+  const isKey=Boolean(withKey),title=paper.title+(isKey?" · Marking Scheme":" · Question Paper");
+  const subject=paper.subject||"",className=paper.level||"",margin=17;
+  const palette={ink:[38,27,57],muted:[112,98,131],purple:[105,61,183],blue:[48,112,210],teal:[19,139,130],line:[226,218,239],pale:[248,245,253],white:[255,255,255]};
+  let y=20,section="";
+  const size=function(){return {w:pdf.internal.pageSize.getWidth(),h:pdf.internal.pageSize.getHeight()};};
+  const color=function(method,values){method.apply(pdf,values);};
+  function pageStart(continued){
+   const d=size();
+   pdf.setFillColor(255,255,255);pdf.rect(0,0,d.w,d.h,"F");
+   pdf.setFont("helvetica","bold");pdf.setFontSize(7.2);color(pdf.setTextColor,palette.purple);
+   pdf.text("KAUSHALPATH  /  CBSE-STYLE ANNUAL PRACTICE",margin,9);
+   pdf.setFont("helvetica","normal");pdf.setFontSize(7);color(pdf.setTextColor,palette.muted);
+   pdf.text(className+" · "+subject+" · "+(isKey?"MARKING SCHEME":"QUESTION PAPER"),d.w-margin,9,{align:"right",maxWidth:d.w-margin*2-60});
+   color(pdf.setDrawColor,palette.line);pdf.setLineWidth(.25);pdf.line(margin,12,d.w-margin,12);
+   if(continued){pdf.setFont("helvetica","italic");pdf.setFontSize(8);color(pdf.setTextColor,palette.muted);pdf.text("Continued",margin,17);}
+   y=continued?23:19;section="";
+  }
+  function newPage(){pdf.addPage("a4","portrait");pageStart(true);}
+  function fitRoom(height){if(y+height>size().h-17)newPage();}
+  function addText(raw,opts){
+   opts=opts||{};const textValue=String(raw==null?"":raw).replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/[–—−]/g,"-").replace(/×/g,"x").replace(/÷/g,"/").replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≈/g,"~=").replace(/→/g,"->").replace(/π/g,"pi").replace(/θ/g,"theta").replace(/Ω/g,"ohm").replace(/\u00a0/g," ").trim();
+   if(!textValue)return;
+   const d=size(),fontSize=opts.fontSize||9,style=opts.style||"normal",maxW=d.w-margin*2-(opts.indent||0);
+   pdf.setFont("helvetica",style);pdf.setFontSize(fontSize);color(pdf.setTextColor,opts.color||palette.ink);
+   const lines=pdf.splitTextToSize(textValue,maxW),lineHeight=fontSize*.44;
+   const blockHeight=lines.length*lineHeight+(opts.after==null?2:opts.after)+(opts.before||0);
+   fitRoom(blockHeight);
+   if(opts.before)y+=opts.before;
+   if(opts.fill){
+    pdf.setFillColor.apply(pdf,opts.fill);
+    pdf.roundedRect(margin-1,y-3,maxW+2,Math.max(5,lines.length*lineHeight+4),1.2,1.2,"F");
+   }
+   pdf.text(lines,margin+(opts.indent||0),y,{lineHeightFactor:1.15,maxWidth:maxW});
+   y+=lines.length*lineHeight+(opts.after==null?2:opts.after);
+  }
+  function addSection(name){
+   if(!name||name===section)return;
+   section=name;
+   addText(name,{fontSize:11,style:"bold",color:palette.purple,before:3,after:4,fill:palette.pale});
+  }
+  function answerLabel(q){
+   if(q.responseType==="written")return "Suggested answer:\n"+String(q.modelAnswer||q.e||"Use the case evidence, show your reasoning and justify the conclusion.")+"\n\nIndicative marking rubric:\n"+(Array.isArray(q.rubric)?q.rubric.join("\n"):"Award marks for accurate concepts, evidence, reasoning and a clear conclusion.");
+   const choice=Array.isArray(q.o)&&Number.isInteger(q.a)&&q.a>=0?q.o[q.a]:"";
+   return "Correct answer: "+(choice||"Not available")+"\nExplanation: "+String(q.e||"Review the relevant chapter concept.");
+  }
+  pageStart(false);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(16);color(pdf.setTextColor,palette.ink);
+  const titleLines=pdf.splitTextToSize(title,size().w-margin*2);pdf.text(titleLines,margin,y);y+=titleLines.length*7+3;
+  addText("Maximum marks: "+paper.maxMarks+"    Time allowed: "+(paper.duration/60)+" hour"+(paper.duration===60?"":"s"),{fontSize:9,style:"bold",color:palette.blue,after:3});
+  addText(isKey
+   ?"Marking scheme and suggested answers. Accept equivalent correct reasoning and syllabus-appropriate wording; this is an original practice model, not an official CBSE key."
+   :"Instructions: Attempt every question. Read any source or case before answering. Show calculations/reasoning where relevant. This is an original KaushalPath practice model, not an official CBSE paper.",{fontSize:8.5,color:palette.muted,after:5});
+  paper.qs.forEach(function(q,index){
+   addSection(q.sectionTitle||"Section A · Objective questions");
+   const marks=Number(q.mark)||1;
+   addText("Q"+(index+1)+". ["+marks+" mark"+(marks===1?"":"s")+"] "+q.q,{fontSize:9.1,style:"bold",color:palette.ink,before:2,after:2});
+   if(Array.isArray(q.o)&&q.o.length){
+    q.o.forEach(function(option,optionIndex){
+     addText(String.fromCharCode(65+optionIndex)+". "+option,{fontSize:8.5,indent:3,after:1,color:[65,57,80]});
+    });
+   }else if(!isKey){
+    const answerLines=marks>=4?3:marks>=3?2:1;
+    for(let line=0;line<answerLines;line++){fitRoom(5);color(pdf.setDrawColor,palette.line);pdf.line(margin+2,y+1,size().w-margin-2,y+1);y+=5;}
+   }
+   if(isKey){
+    addText(answerLabel(q),{fontSize:8.4,indent:2,color:palette.teal,before:2,after:4,fill:[242,250,247]});
+   }else{
+    addText("Marks: "+marks,{fontSize:7.4,color:palette.muted,after:3});
+   }
+  });
+  const total=pdf.getNumberOfPages();
+  for(let p=1;p<=total;p++){
+   pdf.setPage(p);const d=size();
+   color(pdf.setDrawColor,palette.line);pdf.setLineWidth(.25);pdf.line(margin,d.h-13,d.w-margin,d.h-13);
+   pdf.setFont("helvetica","normal");pdf.setFontSize(7);color(pdf.setTextColor,palette.muted);
+   pdf.text("KaushalPath · Original CBSE-style model paper",margin,d.h-8);
+   pdf.text("Page "+p+" of "+total,d.w-margin,d.h-8,{align:"right"});
+  }
+  const blob=pdf.output("blob");
+  if(!(blob instanceof Blob)||blob.size<1000)throw new Error("The generated PDF is unexpectedly small.");
+  const url=URL.createObjectURL(blob),anchor=document.createElement("a");
+  const slug=cbseAnnualNormalize(subject).replace(/\s+/g,"-");
+  anchor.href=url;anchor.download="CBSE-"+className.replace(/\s+/g,"-")+"-"+slug+"-Annual-"+(isKey?"Marking-Scheme":"Question-Paper")+".pdf";
+  anchor.style.display="none";document.body.appendChild(anchor);anchor.click();anchor.remove();
+  window.setTimeout(function(){URL.revokeObjectURL(url);},30000);
+  return {filename:anchor.download,pages:total,size:blob.size};
+ });
+}
+
 function renderTests(){
  const grid=$("testGrid");grid.innerHTML="";
  questions.forEach(function(t,index){
@@ -1485,7 +1580,7 @@ async function checkAI(){try{const r=await fetch("/api/study-guide",{headers:{"x
 document.querySelectorAll("[data-show-exam]").forEach(function(link){link.addEventListener("click",function(){const chosen=link.dataset.showExam||"all";document.querySelectorAll(".test-card").forEach(function(card){card.classList.toggle("hidden",chosen!=="all"&&card.dataset.exam!==chosen);});document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const label=chosen==="all"?"Test Series":chosen==="JEE Main"?"JEE Main Prep":"NEET UG Prep";const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=label;});});
 document.querySelectorAll('.side-link[href^="#"]').forEach(function(link){link.addEventListener("click",function(){if(!link.dataset.showExam){document.querySelectorAll(".side-link").forEach(function(item){item.classList.toggle("active",item===link);});const labels={"#overview":"Overview","#learn":"CBSE Study Hub","#history":"My Results","#resources":"Official Resources","#library":"Saved Library","#planner":"Study Planner"};const crumb=$("breadcrumbPage");if(crumb)crumb.textContent=labels[link.getAttribute("href")]||"Workspace";}});});
 
-renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();
+renderTests();renderHistory();refreshResumeBanner();initFocusTimer();renderSavedLibrary();checkAI();restoreLatestChatSession();initPlanner();initCbseAnnualBuilder();
 
 
 let pendingPwaInstall = null;
