@@ -16,7 +16,7 @@ Benchmarks describe **recorded attempts**, not unique students. The Worker hides
 - `GET /api/v2/analytics/benchmarks?subject=Physics&chapter=...&topic=...`
 
 ## Deploy
-The D1 database and KV namespace are bound to the existing `kaushalpath` Worker. The config in this folder targets that same Worker. Install Wrangler 4, then run:
+The D1 database and KV namespace are bound to the existing `kaushalpath` Worker. The root `wrangler.toml` is the canonical config and targets that same Worker; the nested config mirrors its bindings for convenience. Install Wrangler 4, then run:
 ```sh
 npm install
 npm run typecheck
@@ -31,9 +31,9 @@ const smart = createSmartSystem({
   db: existingDatabase,
   attemptsStore: "YOUR_ATTEMPT_STORE",
   plannerStore: "YOUR_PLANNER_STORE",
-  workerBaseUrl: "https://kaushalpath-smart-system.kaushalpath.workers.dev"
+  workerBaseUrl: "https://kaushalpath.kaushalpath.workers.dev"
 });
 const matrix = await smart.getWeaknessMatrix();
 const task = await smart.createSmartPlannerTask();
 ```
-Do not call analytics submission without an explicit opt-in, and submit only newly completed attempts to avoid double counting. CORS is not authentication; add rate limiting and abuse monitoring before broad public launch.
+Do not call analytics submission without an explicit opt-in, and submit only newly completed attempts to avoid double counting. CORS is not authentication. The analytics route is also bound to a simple 30-requests-per-minute edge limiter; monitor abuse before broad public launch.
