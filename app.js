@@ -50,6 +50,85 @@ const questions=[
 ]}
  ];
 if (Array.isArray(window.KP_EXTRA_QUESTIONS)) questions.push(...window.KP_EXTRA_QUESTIONS);
+
+// Convert the compact entrance cards into complete, syllabus-mapped mock exams.
+(function configureFullLengthEntranceTests() {
+ const bank = window.KP_FULL_LENGTH_QUESTION_BANK;
+ if (!bank) return;
+ const challengeSubjects = {
+  jee1:["Mathematics","Physics","Chemistry","Physics","Mathematics"],
+  jee2:["Mathematics","Physics","Chemistry","Mathematics","Physics"],
+  jee3:["Mathematics","Physics","Chemistry","Mathematics","Physics"],
+  neet1:["Biology","Biology","Chemistry","Physics","Biology"],
+  neet2:["Biology","Biology","Chemistry","Biology","Biology"],
+  neet3:["Biology","Biology","Physics","Chemistry","Biology"]
+ };
+ questions.forEach(function(test) {
+  const subjects = challengeSubjects[test.id];
+  if (!subjects) return;
+  test.qs.forEach(function(question,index) {
+   question.subject = subjects[index] || question.subject || "";
+   question.sourceType = question.sourceType || "Competency";
+   question.sourceLabel = question.sourceLabel || "Syllabus-mapped competency practice";
+   question.topic = question.topic || "Mixed syllabus revision";
+   const examBank = bank[test.exam];
+   const pool = examBank && examBank.subjects && examBank.subjects[question.subject];
+   if (pool && !pool.some(function(item) { return item.q === question.q; })) pool.push(Object.assign({},question));
+  });
+ });
+ function selectRotated(pool,count,seed) {
+  const source = Array.isArray(pool) ? pool : [];
+  if (source.length < count) throw new Error("Full mock pool is too small: need "+count+", found "+source.length+".");
+  const seen = new Set();
+  const picked = [];
+  const offset = ((seed % source.length) + source.length) % source.length;
+  for (let step=0; picked.length<count && step<source.length*2; step++) {
+   const item = source[(offset+step)%source.length];
+   const key = String(item.q || "").trim().toLowerCase();
+   if (!key || seen.has(key)) continue;
+   seen.add(key);
+   picked.push(Object.assign({},item));
+  }
+  if (picked.length !== count) throw new Error("Could not assemble "+count+" unique questions for a full mock.");
+  return picked;
+ }
+ const sequence = {"JEE Main":0,"NEET UG":0};
+ questions.forEach(function(test) {
+  if (test.exam !== "JEE Main" && test.exam !== "NEET UG") return;
+  const index = sequence[test.exam]++;
+  const seed = index * 7;
+  const subjects = bank[test.exam].subjects;
+  if (test.exam === "JEE Main") {
+   const math = selectRotated(subjects.Mathematics,30,seed);
+   const physics = selectRotated(subjects.Physics,30,seed+5);
+   const chemistry = selectRotated(subjects.Chemistry,30,seed+11);
+   test.qs = [];
+   for (let i=0;i<30;i++) test.qs.push(math[i],physics[i],chemistry[i]);
+   test.title = "JEE Main · Extended Full Mock "+String(index+1).padStart(2,"0");
+   test.level = "Extended mock";
+   test.duration = 180;
+   test.mark = 4;
+   test.negativeMark = 1;
+   test.subjectCounts = {Mathematics:30,Physics:30,Chemistry:30};
+   test.fullLength = true;
+   test.desc = "90 questions: 30 Mathematics, 30 Physics and 30 Chemistry. 360 marks with +4/−1 scoring. This extended practice mock is longer than the official JEE Main 2026 Paper 1 format of 75 questions.";
+  } else {
+   const physics = selectRotated(subjects.Physics,45,seed);
+   const chemistry = selectRotated(subjects.Chemistry,45,seed+9);
+   const biology = selectRotated(subjects.Biology,90,seed+17);
+   test.qs = [];
+   for (let i=0;i<45;i++) test.qs.push(physics[i],chemistry[i],biology[2*i],biology[2*i+1]);
+   test.title = "NEET UG · Full Mock Test "+String(index+1).padStart(2,"0");
+   test.level = "Full-length mock";
+   test.duration = 180;
+   test.mark = 4;
+   test.negativeMark = 1;
+   test.subjectCounts = {Physics:45,Chemistry:45,Biology:90};
+   test.fullLength = true;
+   test.desc = "180 compulsory questions: 45 Physics, 45 Chemistry and 90 Biology. 720 marks with +4/−1 scoring, following the NEET UG 2026 question count and subject split.";
+  }
+ });
+})();
 let active=null,tick=null,lastAnswerText="",studyAttachment=null,chatAttachment=null,lastChatAttachment=null;
 function safe(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function resizeImageFile(file){
