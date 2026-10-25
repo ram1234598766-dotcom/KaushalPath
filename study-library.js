@@ -602,6 +602,7 @@
       "A mood analysis should identify an image or word choice and explain how it shapes the reader's response.",
       ["What makes textual evidence relevant to a claim?","How does analysis differ from summary?"])
   ];
+  if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
@@ -625,16 +626,29 @@
   if (profile.reduceMotion) document.documentElement.classList.add("kp-reduced-motion");
 
   function noteText(item) {
+    const deepSections = (item.sections || []).map((section) =>
+      String(section.heading || "Detailed concept") + "\\n" + String(section.body || "") +
+      (Array.isArray(section.points) && section.points.length ? "\\n" + section.points.map((x) => "- " + x).join("\\n") : "")
+    );
+    const worked = (item.workedExamples || []).map((example, index) =>
+      (index + 1) + ". " + String(example.title || "Worked method") + "\\n" +
+      (example.steps || []).map((x, i) => "   " + (i + 1) + ". " + x).join("\\n")
+    );
     return [
       item.level + " · " + item.subject,
       item.chapter,
       item.intro,
-      "KEY IDEAS\n" + item.points.map((x) => "- " + x).join("\n"),
-      item.formulas.length ? "FORMULAS / RULES\n" + item.formulas.map((x) => "- " + x).join("\n") : "",
-      "WORKED EXAMPLE\n" + item.example,
-      "QUICK SELF-CHECK\n" + item.recall.map((x, i) => (i + 1) + ". " + x).join("\n"),
-      "Source note: " + NOTE_SOURCE
-    ].filter(Boolean).join("\n\n");
+      ...deepSections,
+      "KEY IDEAS\\n" + item.points.map((x) => "- " + x).join("\\n"),
+      item.formulas.length ? "FORMULAS / RULES\\n" + item.formulas.map((x) => "- " + x).join("\\n") : "",
+      "WORKED EXAMPLE\\n" + item.example,
+      worked.length ? "ADDITIONAL WORKED METHODS\\n" + worked.join("\\n\\n") : "",
+      item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\\n" + item.commonMistakes.map((x) => "- " + x).join("\\n") : "",
+      item.examFocus && item.examFocus.length ? "EXAM APPROACH\\n" + item.examFocus.map((x) => "- " + x).join("\\n") : "",
+      item.glossary && item.glossary.length ? "GLOSSARY\\n" + item.glossary.map((x) => "- " + x).join("\\n") : "",
+      "QUICK SELF-CHECK\\n" + item.recall.map((x, i) => (i + 1) + ". " + x).join("\\n"),
+      "Source note: " + String(item.sourceNote || NOTE_SOURCE)
+    ].filter(Boolean).join("\\n\\n");
   }
   let activeNote = null;
   function filteredNotes() {
@@ -643,7 +657,7 @@
     const search = String($("notesSearch") && $("notesSearch").value || "").trim().toLowerCase();
     return notes.filter((item) => (level === "all" || item.level === level) &&
       (subject === "all" || item.subject === subject) &&
-      (!search || [item.chapter, item.subject, item.intro, ...item.points].join(" ").toLowerCase().includes(search)));
+      (!search || [item.chapter, item.subject, item.intro, ...item.points, ...(item.sections || []).flatMap((section) => [section.heading, section.body || ""]), ...(item.examFocus || []), ...(item.commonMistakes || [])].join(" ").toLowerCase().includes(search)));
   }
   function renderNotes() {
     const root = $("notesResults");
@@ -664,7 +678,7 @@
       const meta = document.createElement("div"); meta.className = "notes-meta"; meta.textContent = item.level + " · " + item.subject;
       const h3 = document.createElement("h3"); h3.textContent = item.chapter;
       const summary = document.createElement("p"); summary.className = "notes-summary"; summary.textContent = item.intro;
-      const pill = document.createElement("span"); pill.className = "notes-tag"; pill.textContent = "Curated notes";
+      const pill = document.createElement("span"); pill.className = "notes-tag"; pill.textContent = item.depth === "detailed" ? "Detailed notes" : "Curated notes";
       head.append(meta, pill); card.append(head, h3, summary);
       const actions = document.createElement("div"); actions.className = "notes-card-actions";
       const read = document.createElement("button"); read.type = "button"; read.className = "btn btn-light"; read.textContent = "Read notes"; read.addEventListener("click", () => showNote(item));
@@ -689,14 +703,29 @@
     if (!detail) return;
     detail.replaceChildren();
     const header = document.createElement("div"); header.className = "notes-detail-head";
-    const meta = document.createElement("div"); meta.className = "notes-meta"; meta.textContent = item.level + " · " + item.subject;
+    const meta = document.createElement("div"); meta.className = "notes-meta"; meta.textContent = item.level + " · " + item.subject + (item.depth === "detailed" ? " · Detailed notes" : "");
     const close = document.createElement("button"); close.className = "btn btn-light"; close.type = "button"; close.textContent = "Close notes"; close.addEventListener("click", () => detail.classList.add("hidden"));
     header.append(meta, close);
     const h2 = document.createElement("h2"); h2.textContent = item.chapter;
     const intro = document.createElement("p"); intro.textContent = item.intro;
+    detail.append(header, h2, intro);
+    if (item.sections && item.sections.length) {
+      const deepHead = document.createElement("h3"); deepHead.textContent = "Detailed concept explanations";
+      detail.appendChild(deepHead);
+      item.sections.forEach((section) => {
+        const sh = document.createElement("h4"); sh.className = "notes-subhead"; sh.textContent = section.heading || "Concept";
+        const body = document.createElement("p"); body.className = "notes-deep-body"; body.textContent = section.body || "";
+        detail.append(sh, body);
+        if (Array.isArray(section.points) && section.points.length) {
+          const list = document.createElement("ul");
+          section.points.forEach((text) => { const li = document.createElement("li"); li.textContent = text; list.appendChild(li); });
+          detail.appendChild(list);
+        }
+      });
+    }
     const pointHead = document.createElement("h3"); pointHead.textContent = "Key ideas";
     const pointList = document.createElement("ul"); item.points.forEach((text) => { const li = document.createElement("li"); li.textContent = text; pointList.appendChild(li); });
-    detail.append(header, h2, intro, pointHead, pointList);
+    detail.append(pointHead, pointList);
     if (item.formulas.length) {
       const fh = document.createElement("h3"); fh.textContent = "Formulas and rules";
       const fl = document.createElement("ul"); item.formulas.forEach((text) => { const li = document.createElement("li"); li.textContent = text; fl.appendChild(li); });
@@ -704,26 +733,70 @@
     }
     const eh = document.createElement("h3"); eh.textContent = "Worked example";
     const ep = document.createElement("p"); ep.textContent = item.example;
+    detail.append(eh, ep);
+    if (item.workedExamples && item.workedExamples.length) {
+      const wh = document.createElement("h3"); wh.textContent = "Additional worked methods";
+      detail.appendChild(wh);
+      item.workedExamples.forEach((example) => {
+        const sub = document.createElement("h4"); sub.className = "notes-subhead"; sub.textContent = example.title || "Worked method";
+        const steps = document.createElement("ol");
+        (example.steps || []).forEach((text) => { const li = document.createElement("li"); li.textContent = text; steps.appendChild(li); });
+        detail.append(sub, steps);
+      });
+    }
+    if (item.commonMistakes && item.commonMistakes.length) {
+      const mh = document.createElement("h3"); mh.textContent = "Common mistakes to avoid";
+      const ml = document.createElement("ul");
+      item.commonMistakes.forEach((text) => { const li = document.createElement("li"); li.textContent = text; ml.appendChild(li); });
+      detail.append(mh, ml);
+    }
+    if (item.examFocus && item.examFocus.length) {
+      const fh = document.createElement("h3"); fh.textContent = "Exam approach";
+      const fl = document.createElement("ul");
+      item.examFocus.forEach((text) => { const li = document.createElement("li"); li.textContent = text; fl.appendChild(li); });
+      detail.append(fh, fl);
+    }
+    if (item.glossary && item.glossary.length) {
+      const gh = document.createElement("h3"); gh.textContent = "Glossary";
+      const gl = document.createElement("ul");
+      item.glossary.forEach((text) => { const li = document.createElement("li"); li.textContent = text; gl.appendChild(li); });
+      detail.append(gh, gl);
+    }
     const rh = document.createElement("h3"); rh.textContent = "Quick self-check";
     const rl = document.createElement("ol"); item.recall.forEach((text) => { const li = document.createElement("li"); li.textContent = text; rl.appendChild(li); });
     const actions = document.createElement("div"); actions.className = "notes-card-actions";
-    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Save this chapter as PDF"; pdf.addEventListener("click", () => printNotes([item]));
+    const pdf = document.createElement("button"); pdf.type = "button"; pdf.className = "btn btn-purple"; pdf.textContent = "Save these notes as PDF"; pdf.addEventListener("click", () => printNotes([item]));
     const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-light"; save.textContent = "Save to library"; save.addEventListener("click", () => {
       if (typeof window.KP_SAVE_NOTE_TO_LIBRARY === "function") window.KP_SAVE_NOTE_TO_LIBRARY(item.level + " · " + item.subject + " · " + item.chapter, noteText(item));
     });
-    actions.append(pdf, save); detail.append(eh, ep, rh, rl, actions);
+    actions.append(pdf, save); detail.append(rh, rl, actions);
     detail.classList.remove("hidden");
     detail.scrollIntoView({ behavior: profile.reduceMotion ? "auto" : "smooth", block: "start" });
   }
   function printNotes(items) {
     if (!items.length) return;
-    const title = items.length === 1 ? items[0].chapter : "KaushalPath Curated Revision Notes";
-    const sections = items.map((item) => '<article class="note-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) + '</div><h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p><h2>Key ideas</h2><ul>' + item.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' +
-      (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") +
-      '<h2>Worked example</h2><p>' + esc(item.example) + '</p><h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol><p class="source">' + esc(NOTE_SOURCE) + '</p></article>').join("");
+    const title = items.length === 1 ? items[0].chapter : "KaushalPath Detailed Revision Notes";
+    const sections = items.map((item) => {
+      const deep = (item.sections || []).map((section) =>
+        '<h2>' + esc(section.heading || "Detailed concept") + '</h2><p>' + esc(section.body || "") + '</p>' +
+        (Array.isArray(section.points) && section.points.length ? '<ul>' + section.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "")
+      ).join("");
+      const worked = (item.workedExamples || []).map((example, idx) =>
+        '<h3>' + esc((idx + 1) + ". " + (example.title || "Worked method")) + '</h3><ol>' +
+        (example.steps || []).map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>'
+      ).join("");
+      const mistakes = item.commonMistakes && item.commonMistakes.length ? '<h2>Common mistakes to avoid</h2><ul>' + item.commonMistakes.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
+      const examFocus = item.examFocus && item.examFocus.length ? '<h2>Exam approach</h2><ul>' + item.examFocus.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
+      const glossary = item.glossary && item.glossary.length ? '<h2>Glossary</h2><ul>' + item.glossary.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
+      return '<article class="note-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) + '</div><h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p>' + deep +
+        '<h2>Key ideas</h2><ul>' + item.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' +
+        (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") +
+        '<h2>Worked example</h2><p>' + esc(item.example) + '</p>' + worked + mistakes + examFocus + glossary +
+        '<h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol><p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
+    }).join("");
     const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
-      'body{font:11pt/1.55 Arial,sans-serif;color:#211735;max-width:780px;margin:28px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin:10px 0}h2{font-size:14pt;margin:18px 0 7px;border-bottom:1px solid #e2d8f2;padding-bottom:4px}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:9pt;font-weight:bold}.intro{font-size:12pt;color:#594b6f}.note-page{page-break-after:always;break-after:page}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 7px;page-break-inside:avoid}p{orphans:3;widows:3}.source{border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#6e6678}@page{size:A4;margin:17mm} @media screen{body{padding:26px;box-shadow:0 3px 24px #20123a14;border-radius:12px}}' +
-      '</style></head><body><p class="eyebrow">KaushalPath · Learn with direction</p>' + sections + '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\/script></body></html>';
+      'body{font:11pt/1.62 Arial,sans-serif;color:#211735;max-width:800px;margin:28px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin:10px 0}h2{font-size:14pt;margin:21px 0 8px;border-bottom:1px solid #e2d8f2;padding-bottom:4px;break-after:avoid}h3{font-size:12pt;margin:16px 0 6px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:9pt;font-weight:bold}.intro{font-size:12pt;color:#594b6f}.note-page{page-break-after:always;break-after:page}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 7px;page-break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line}.source{border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#6e6678}@page{size:A4;margin:17mm} @media screen{body{padding:26px;box-shadow:0 3px 24px #20123a14;border-radius:12px}}' +
+      '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections + '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\/script></body></html>';
     const printWindow = window.open("", "_blank");
     if (!printWindow) { toast("Allow pop-ups to create the PDF, then choose Save as PDF in the print dialog."); return; }
     printWindow.document.open(); printWindow.document.write(page); printWindow.document.close();
