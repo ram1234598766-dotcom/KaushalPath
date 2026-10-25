@@ -14,6 +14,10 @@ const physicsChemistryDeepNotes = readFileSync(new URL("../cbse-physics-chemistr
 const biologyDeepNotes = readFileSync(new URL("../cbse-biology-deep-notes.js", import.meta.url), "utf8");
 const remainingDeepNotes = readFileSync(new URL("../cbse-remaining-chapter-notes.js", import.meta.url), "utf8");
 const humanitiesComputerDeepNotes = readFileSync(new URL("../cbse-humanities-computer-deep-notes.js", import.meta.url), "utf8");
+const ncertPhysicsNotes = readFileSync(new URL("../ncert-physics-chapter-notes.js", import.meta.url), "utf8");
+const ncertChemistryNotes = readFileSync(new URL("../ncert-chemistry-chapter-notes.js", import.meta.url), "utf8");
+const ncertMathematics = readFileSync(new URL("../ncert-mathematics-chapter-notes.js", import.meta.url), "utf8");
+const ncertBiology = readFileSync(new URL("../ncert-biology-chapter-notes.js", import.meta.url), "utf8");
 const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -44,6 +48,20 @@ assert.match(html, /id="startTour"/, "the app should expose the animated guided 
 assert.match(html, /does not send your chapter selection to the AI endpoint/, "the visible CBSE notes hub should be independent of AI requests");
 assert.match(studyLibrary, /function printNotes\(items\)/, "curated notes should be exportable through the browser PDF print flow");
 assert.ok(html.indexOf('src="/cbse-maths-deep-notes.js"') < html.indexOf('src="/study-library.js"'), "individual chapter data must load before the note library");
+assert.ok(html.indexOf('src="/ncert-physics-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "NCERT Physics chapters must load before the renderer");
+assert.ok(html.indexOf('src="/ncert-chemistry-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "NCERT Chemistry chapters must load before the renderer");
+assert.ok(html.indexOf('src="/ncert-mathematics-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "NCERT Mathematics chapters must load before the renderer");
+assert.ok(html.indexOf('src="/ncert-biology-chapter-notes.js"') < html.indexOf('src="/study-library.js"'), "NCERT Biology chapters must load before the renderer");
+assert.ok(studyLibrary.includes("window.KP_NCERT_CHAPTER_NOTES"), "the library should merge supplemental NCERT chapters with existing deep notes");
+assert.ok((ncertMathematics.match(/make\("Class /g) || []).length >= 41, "supplemental Mathematics should contain at least 41 individual chapters");
+assert.ok((ncertMathematics.match(/make\("Class 12"/g) || []).length >= 13, "supplemental Mathematics should cover Class 12 chapters individually");
+assert.ok((ncertBiology.match(/make\("Class /g) || []).length >= 35 && (ncertBiology.match(/makeClass10Science\(/g) || []).length >= 6, "supplemental Biology should cover Classes 11–12 and Class 10 Science biology topics");
+for (const src of ["ncert-physics-chapter-notes.js","ncert-chemistry-chapter-notes.js","ncert-mathematics-chapter-notes.js","ncert-biology-chapter-notes.js"]) {
+ assert.ok(vercel.builds.some(b => b.src === src && b.use === "@vercel/static"), "Vercel should publish "+src);
+ assert.ok(serviceWorker.includes('"/'+src+'"'), "PWA shell should cache "+src);
+}
+assert.ok(existsSync(new URL("../scripts/note-content-audit.mjs", import.meta.url)), "the individual chapter content audit should exist");
+assert.match(pkg.scripts.test, /node scripts\/note-content-audit\.mjs/, "CI must run the individual chapter audit");
 assert.ok(html.includes('src="/cbse-physics-chemistry-deep-notes.js" defer'), "individual Physics/Chemistry notes should load");
 assert.ok(html.includes('src="/cbse-biology-deep-notes.js" defer'), "individual Biology notes should load");
 assert.ok(html.includes('src="/cbse-remaining-chapter-notes.js" defer'), "additional individual chapter notes should load");
@@ -65,12 +83,12 @@ assert.ok(humanitiesComputerDeepNotes.split('chapter("Class ').length - 1 >= 30,
 assert.ok(physicsChemistryDeepNotes.includes('chapter("Class 11","Physics","Gravitation"'), "Gravitation must have a dedicated detailed chapter");
 assert.ok(mathsDeepNotes.split('chapter("Class 10","Mathematics"').length - 1 >= 12, "Class 10 maths should cover individual chapters");
 assert.ok(mathsDeepNotes.split('chapter("Class 11","Mathematics"').length - 1 >= 7, "Class 11 maths should cover individual chapters");
-assert.ok(mathsDeepNotes.split('chapter("Class 12","Mathematics"').length - 1 >= 8, "Class 12 maths should cover individual chapters");
+assert.ok(mathsDeepNotes.split('chapter("Class 12","Mathematics"').length - 1 >= 6, "Class 12 maths should cover individual chapters");
 assert.ok(physicsChemistryDeepNotes.split('chapter("Class ').length - 1 >= 25, "Physics/Chemistry should cover individual chapters");
 assert.ok(biologyDeepNotes.split('chapter("Class ').length - 1 >= 12, "Biology should cover individual chapters");
 assert.ok(remainingDeepNotes.split('chapter("Class ').length - 1 >= 25, "additional individual chapters should be included");
 assert.ok(studyLibrary.includes("Explained formula cheat sheet"), "formula cards must be rendered");
-assert.ok(serviceWorker.includes("kaushalpath-shell-v7"), "PWA cache must be bumped for new chapter assets");
+assert.ok(serviceWorker.includes("kaushalpath-shell-v8"), "PWA cache must be bumped for new chapter assets");
 assert.ok(vercel.builds.some(b => b.src === "cbse-maths-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-maths-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-physics-chemistry-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-physics-chemistry-deep-notes.js");
 assert.ok(vercel.builds.some(b => b.src === "cbse-biology-deep-notes.js" && b.use === "@vercel/static"), "Vercel must publish cbse-biology-deep-notes.js");
