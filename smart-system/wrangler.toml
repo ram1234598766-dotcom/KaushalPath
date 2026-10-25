@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2026-10-25"
 
 [vars]
-FRONTEND_ORIGINS = "https://kaushal-path.vercel.app,http://localhost:5173,http://localhost:4173"
+FRONTEND_ORIGINS = "https://kaushal-path.vercel.app,https://kaushalpath.kaushalpath.workers.dev,http://localhost:5173,http://localhost:4173"
 ANALYTICS_WRITE_ENABLED = "true"
 D1_CATALOG_FALLBACK_ENABLED = "true"
 D1_BENCHMARKS_ENABLED = "true"
