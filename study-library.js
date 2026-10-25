@@ -602,7 +602,11 @@
       "A mood analysis should identify an image or word choice and explain how it shapes the reader's response.",
       ["What makes textual evidence relevant to a claim?","How does analysis differ from summary?"])
   ];
+  const schoolGuides = Array.isArray(window.KP_SCHOOL_CHAPTER_GUIDES) ? window.KP_SCHOOL_CHAPTER_GUIDES : [];
+  const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
   if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
+  notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
+  notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
@@ -630,6 +634,13 @@
       String(section.heading || "Detailed concept") + "\n" + String(section.body || "") +
       (Array.isArray(section.points) && section.points.length ? "\n" + section.points.map((x) => "- " + x).join("\n") : "")
     );
+    const formulaCards = (item.formulaCheatSheet || []).map((card, index) =>
+      (index + 1) + ". " + String(card.formula || "Formula") + "\n" +
+      "Meaning: " + String(card.meaning || "") + "\n" +
+      "When to use: " + String(card.when || "") + "\n" +
+      "Units/notation: " + String(card.units || "") + "\n" +
+      "Common trap: " + String(card.trap || "")
+    );
     const worked = (item.workedExamples || []).map((example, index) =>
       (index + 1) + ". " + String(example.title || "Worked method") + "\n" +
       (example.steps || []).map((x, i) => "   " + (i + 1) + ". " + x).join("\n")
@@ -641,6 +652,7 @@
       ...deepSections,
       "KEY IDEAS\n" + item.points.map((x) => "- " + x).join("\n"),
       item.formulas.length ? "FORMULAS / RULES\n" + item.formulas.map((x) => "- " + x).join("\n") : "",
+      formulaCards.length ? "EXPLAINED FORMULA CHEAT SHEET\n" + formulaCards.join("\n\n") : "",
       "WORKED EXAMPLE\n" + item.example,
       worked.length ? "ADDITIONAL WORKED METHODS\n" + worked.join("\n\n") : "",
       item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\n" + item.commonMistakes.map((x) => "- " + x).join("\n") : "",
@@ -678,7 +690,7 @@
       const meta = document.createElement("div"); meta.className = "notes-meta"; meta.textContent = item.level + " · " + item.subject;
       const h3 = document.createElement("h3"); h3.textContent = item.chapter;
       const summary = document.createElement("p"); summary.className = "notes-summary"; summary.textContent = item.intro;
-      const pill = document.createElement("span"); pill.className = "notes-tag"; pill.textContent = item.depth === "detailed" ? "Detailed notes" : "Curated notes";
+      const pill = document.createElement("span"); pill.className = "notes-tag"; pill.textContent = item.formulaCheatSheet && item.formulaCheatSheet.length ? "Formula cheat sheet" : item.depth === "detailed" ? "Detailed notes" : "Curated notes";
       head.append(meta, pill); card.append(head, h3, summary);
       const actions = document.createElement("div"); actions.className = "notes-card-actions";
       const read = document.createElement("button"); read.type = "button"; read.className = "btn btn-light"; read.textContent = "Read notes"; read.addEventListener("click", () => showNote(item));
@@ -731,6 +743,19 @@
       const fl = document.createElement("ul"); item.formulas.forEach((text) => { const li = document.createElement("li"); li.textContent = text; fl.appendChild(li); });
       detail.append(fh, fl);
     }
+    if (item.formulaCheatSheet && item.formulaCheatSheet.length) {
+      const ch = document.createElement("h3"); ch.textContent = "Explained formula cheat sheet";
+      detail.appendChild(ch);
+      item.formulaCheatSheet.forEach((card, index) => {
+        const box = document.createElement("section"); box.className = "formula-card";
+        const title = document.createElement("h4"); title.className = "notes-subhead"; title.textContent = (index + 1) + ". " + String(card.formula || "Formula");
+        const meaning = document.createElement("p"); meaning.className = "formula-card-copy"; meaning.textContent = "Meaning: " + String(card.meaning || "");
+        const when = document.createElement("p"); when.className = "formula-card-copy"; when.textContent = "When to use: " + String(card.when || "");
+        const units = document.createElement("p"); units.className = "formula-card-copy"; units.textContent = "Units / notation: " + String(card.units || "");
+        const trap = document.createElement("p"); trap.className = "formula-card-trap"; trap.textContent = "Common trap: " + String(card.trap || "");
+        box.append(title, meaning, when, units, trap); detail.appendChild(box);
+      });
+    }
     const eh = document.createElement("h3"); eh.textContent = "Worked example";
     const ep = document.createElement("p"); ep.textContent = item.example;
     detail.append(eh, ep);
@@ -781,6 +806,13 @@
         '<h2>' + esc(section.heading || "Detailed concept") + '</h2><p>' + esc(section.body || "") + '</p>' +
         (Array.isArray(section.points) && section.points.length ? '<ul>' + section.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "")
       ).join("");
+      const formulaCards = (item.formulaCheatSheet || []).map((card, idx) =>
+        '<section class="formula-card"><h3>' + esc((idx + 1) + ". " + (card.formula || "Formula")) + '</h3>' +
+        '<p><strong>Meaning:</strong> ' + esc(card.meaning || "") + '</p>' +
+        '<p><strong>When to use:</strong> ' + esc(card.when || "") + '</p>' +
+        '<p><strong>Units / notation:</strong> ' + esc(card.units || "") + '</p>' +
+        '<p class="formula-trap"><strong>Common trap:</strong> ' + esc(card.trap || "") + '</p></section>'
+      ).join("");
       const worked = (item.workedExamples || []).map((example, idx) =>
         '<h3>' + esc((idx + 1) + ". " + (example.title || "Worked method")) + '</h3><ol>' +
         (example.steps || []).map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>'
@@ -790,7 +822,7 @@
       const glossary = item.glossary && item.glossary.length ? '<h2>Glossary</h2><ul>' + item.glossary.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       return '<article class="note-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) + '</div><h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p>' + deep +
         '<h2>Key ideas</h2><ul>' + item.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' +
-        (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") +
+        (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") + formulaCards +
         '<h2>Worked example</h2><p>' + esc(item.example) + '</p>' + worked + mistakes + examFocus + glossary +
         '<h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol><p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
     }).join("");
