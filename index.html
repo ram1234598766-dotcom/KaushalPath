@@ -657,6 +657,22 @@ html,body,*{scrollbar-width:none!important;-ms-overflow-style:none!important}
 #examWorkspace .question-nav{max-height:180px;overflow-y:auto;overscroll-behavior:contain;padding:3px}
 #tests .section-head p{max-width:740px}
 
+
+/* Full-length entrance mocks open in their own focused window. */
+body.mock-test-window .sidebar,
+body.mock-test-window .topbar,
+body.mock-test-window main>section:not(#tests),
+body.mock-test-window .site-footer,
+body.mock-test-window #tests>.section-head,
+body.mock-test-window #tests>.callout,
+body.mock-test-window #tests>p.tiny,
+body.mock-test-window #testGrid,
+body.mock-test-window #resumeTestBanner,
+body.mock-test-window #pwaUpdateBanner{display:none!important}
+body.mock-test-window .content-shell{margin-left:0!important}
+body.mock-test-window #tests{max-width:1260px!important;min-height:100vh;margin:0 auto!important;padding:24px 18px 48px!important}
+body.mock-test-window #examWorkspace,
+body.mock-test-window #resultWorkspace{max-width:1200px;margin:0 auto!important;min-height:calc(100vh - 48px);padding:clamp(18px,3vw,36px)}
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
