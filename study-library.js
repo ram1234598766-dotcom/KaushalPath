@@ -604,9 +604,11 @@
   ];
   const schoolGuides = Array.isArray(window.KP_SCHOOL_CHAPTER_GUIDES) ? window.KP_SCHOOL_CHAPTER_GUIDES : [];
   const formulaSheets = Array.isArray(window.KP_FORMULA_SHEETS) ? window.KP_FORMULA_SHEETS : [];
+  const humanitiesGuides = Array.isArray(window.KP_HUMANITIES_GUIDES) ? window.KP_HUMANITIES_GUIDES : [];
   if (Array.isArray(window.KP_DEEP_NOTES)) notes.push(...window.KP_DEEP_NOTES);
   notes.push(...schoolGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
   notes.push(...formulaSheets.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
+  notes.push(...humanitiesGuides.filter((item) => !notes.some((existing) => existing.level === item.level && existing.subject === item.subject && existing.chapter === item.chapter)));
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
