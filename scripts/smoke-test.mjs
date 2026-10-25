@@ -220,8 +220,8 @@ for (const asset of offlineAssets) {
 }
 
 assert.ok(vercel.builds.some(b => b.src === "local-ai.js" && b.use === "@vercel/static"), "the consent-gated local model controller should be published to the browser");
-assert.match(JSON.stringify(vercel), /esm\\.run/, "CSP should allow the pinned WebLLM runtime after local mode is selected");
-assert.match(JSON.stringify(vercel), /cdn\\.jsdelivr\\.net/, "CSP should allow the official CDN delivery route used by WebLLM");
+assert.match(JSON.stringify(vercel), /esm[.]run/, "CSP should allow the pinned WebLLM runtime after local mode is selected");
+assert.match(JSON.stringify(vercel), /cdn[.]jsdelivr[.]net/, "CSP should allow the official CDN delivery route used by WebLLM");
 assert.match(JSON.stringify(vercel), /huggingface\.co/, "CSP should allow model-weight downloads after explicit local installation consent");
 assert.ok(vercel.builds.some(b => b.src === "api/study-guide.mjs" && b.use === "@vercel/node"), "AI endpoint should be deployed as a Node function");
 assert.ok(existsSync(new URL("../api/study-guide.mjs", import.meta.url)), "Vercel AI route exists");
