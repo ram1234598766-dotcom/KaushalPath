@@ -692,6 +692,7 @@ async function sendChat(raw,regenerate){
  }finally{
   if(activeChatController===controller)activeChatController=null;
   chatBusy=false;send.disabled=false;send.textContent="Send question ↗";input.disabled=false;stop.disabled=true;messages.setAttribute("aria-busy","false");input.focus();renderChatSessions();
+  if(localApi&&!localApi.isPreferred()&&localApi.isReady()&&typeof localApi.unload==="function")localApi.unload().catch(function(){});
  }
 }
 $("chatForm").addEventListener("submit",function(ev){ev.preventDefault();const value=$("chatInput").value.trim();if($("chatImage").files&&$("chatImage").files.length&&!chatAttachment){toast("Wait for the selected file to finish preparing, then send your question.");return;}if(value&&!chatBusy){$("chatInput").value="";sendChat(value,false);}});
