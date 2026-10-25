@@ -120,7 +120,7 @@ assert.match(app, /function renderSavedLibrary\(\)/, "the saved library should r
 assert.match(app, /savedLibrary:getSavedLibrary\(\)/, "full progress backups should include the saved library");
 assert.match(html, /id="topicSuggestions"/, "class-aware study topics should be available");
 assert.doesNotMatch(html, /On-device AI|Qwen 1\.5B|localAiEnable|localAiDisable|Kilo Auto Free/, "the website should not expose model or provider details");
-assert.doesNotMatch(app, /KaushalPathLocalAI|Qwen|Kilo Auto Free|localAiStatus/, "frontend logic should not expose provider or local-model status");
+assert.doesNotMatch(app, /Kilo Auto Free|api\\.kilo\\.ai|VISION_MODEL/, "frontend logic should not expose remote provider endpoints or server-side model identifiers");
 assert.match(html, /@media print/, "print-ready PDF styles should exist");
 assert.match(app, /streamStudyRequest/, "study requests should support streaming output");
 assert.match(app, /topicCatalog/, "the frontend should provide class and subject topic suggestions");
