@@ -51,6 +51,8 @@ assert.ok(studyLibrary.includes("Detailed chapter packs replace compact starter 
 assert.ok(studyLibrary.includes("individualChapterSets"), "the library must merge individual chapter packs");
 assert.ok(studyLibrary.includes("KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES"), "detailed humanities/commerce/computer chapters must be considered by the merge logic");
 assert.ok(studyLibrary.includes("practiceProblems"), "chapter practice answers must be part of the notes model");
+assert.ok(existsSync(new URL("../scripts/note-content-audit.mjs", import.meta.url)), "the detailed chapter-content audit must exist");
+assert.match(pkg.scripts.test, /node scripts\/note-content-audit\.mjs/, "CI must run the detailed note audit");
 assert.ok(studyLibrary.includes("Practice questions with worked answers"), "reader must render solved practice");
 assert.ok(studyLibrary.includes("PRACTICE QUESTIONS WITH WORKED ANSWERS"), "saved note export must retain solved practice");
 assert.ok(studyLibrary.includes("const practice = item.practiceProblems"), "PDF export must retain solved practice");
