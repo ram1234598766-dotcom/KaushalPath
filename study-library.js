@@ -1126,7 +1126,9 @@
     window.KP_REMAINING_CHAPTER_DEEP_NOTES,
     window.KP_HUMANITIES_INDIVIDUAL_DEEP_NOTES,
     window.KP_NCERT_CHAPTER_NOTES,
-    window.KP_JEE_NEET_CHAPTER_NOTES
+    window.KP_JEE_NEET_CHAPTER_NOTES,
+    window.KP_CBSE_ENGLISH_CHAPTER_NOTES,
+    window.KP_CBSE_COMMERCE_COMPUTING_HINDI_NOTES
   ].filter(Array.isArray);
   const chapterKey = (item) => [item.level, item.subject, item.chapter].map((x) => String(x || "").trim().toLowerCase()).join("::");
   const detailScore = (item) => (item.sections || []).length * 10 +
