@@ -643,6 +643,75 @@
     ["Random variable: numeric outcome mapping.","Expectation: probability-weighted mean.","Variance: expected squared deviation from mean."],
     [practice("If X has probabilities P(0)=0.4 and P(1)=0.6, find E(X).","0.6.","E(X)=0(0.4)+1(0.6)=0.6."),practice("For a fair coin tossed twice, what is P(exactly one head)?","1/2.","2C1(1/2)(1/2)=2/4=1/2.")])
   ];
+
+  all.push(
+  chapter("Class 11","Limits and Derivatives",
+    "Study the limiting value of functions and the derivative as a local rate of change, with algebraic and standard-trigonometric limits.",
+    [
+      ["Meaning of a limit","The limit of f(x) as x approaches a describes the value the function approaches near a, not necessarily f(a). The function may be undefined at a yet have a finite limit. For a two-sided limit to exist, the left-hand and right-hand limits must exist and agree. Start with substitution; when it produces 0/0, factor, rationalise or use a known limit."],
+      ["Standard limits and algebra","The limit of (x^n-a^n)/(x-a) as x approaches a equals n a^(n-1) for positive integer n, reflecting factorisation. The standard trigonometric limits are defined in radians. When rationalising a square-root expression, multiply numerator and denominator by the conjugate so a difference of squares appears. Do not cancel terms across addition; only common factors can be cancelled."],
+      ["Derivative as a limit","The derivative f'(a)=lim(h->0)[f(a+h)-f(a)]/h is the slope of the tangent and instantaneous rate of change. Expanding f(a+h), simplifying and only then taking h to zero avoids the common 0/0 error. At this level, derivatives of simple polynomials and basic trigonometric functions can be obtained from first principles before rules are generalised."]
+    ],
+    [
+      formula("lim(x->a) [f(x)-f(a)]/(x-a)=f'(a)","First-principles derivative at a.","Derive a derivative from its definition.","Derivative units are output/input units.","Set x=a+h to match the common h-form."),
+      formula("lim(x->0) sin x/x=1","Standard trigonometric limit in radians.","Evaluate small-angle limits.","Dimensionless.","It is not generally 1 if x is measured in degrees inside the formula."),
+      formula("lim(x->0) (1-cos x)/x^2=1/2","Standard cosine limit in radians.","Evaluate expressions involving 1-cos x.","Dimensionless.","Rationalising or using an identity may be needed before applying it."),
+      formula("d(x^n)/dx=n x^(n-1)","Derivative of a power.","Differentiate a monomial.","If x has units, derivative units follow calculus rate rules.","The exponent moves down and is reduced by one.")
+    ],
+    [
+      {title:"Evaluate lim(x->2)(x^2-4)/(x-2)",steps:["Direct substitution yields 0/0, so factor the numerator.","x^2-4=(x-2)(x+2).","For x not equal 2, cancel the common factor to get x+2.","The limit is 4; this does not require the original quotient to be defined at x=2."]},
+      {title:"Differentiate x^2 from first principles",steps:["Write f'(x)=lim(h->0)[(x+h)^2-x^2]/h.","Expand to x^2+2xh+h^2-x^2=2xh+h^2.","Divide by h: 2x+h.","Let h approach zero; derivative is 2x."]
+    }],
+    ["Cancelling terms that are not factors.","Substituting before resolving a 0/0 form.","Using trigonometric standard limits in degree mode.","Confusing the derivative at a point with the derivative function."],
+    ["Show the algebraic transformation before substituting a limit. In first-principles derivatives, expand and cancel h before taking the limit."],
+    ["Can a limit exist if f(a) is undefined?","Why is cancellation allowed for x!=a in a limit?","What does the derivative represent geometrically?"],
+    ["Limit: value approached near a point.","Derivative: instantaneous rate of change.","Indeterminate form: expression such as 0/0 needing further analysis."],
+    [practice("Find lim(x->3)(x^2-9)/(x-3).","6.","Factor to (x-3)(x+3), cancel and take x->3."),practice("Differentiate 4x^3 from the power rule.","12x^2.","Multiply by the exponent 3 and reduce the power by one, retaining the coefficient 4.")]),
+  chapter("Class 11","Straight Lines",
+    "Represent lines using slope, point-slope/intercept forms, angles, parallelism and perpendicularity, and calculate distances.",
+    [
+      ["Slope and line forms","The slope m=(y2-y1)/(x2-x1) measures vertical change per horizontal change for a non-vertical line. A vertical line has undefined slope and equation x=a. Point-slope form y-y1=m(x-x1) fixes a line through a known point. Slope-intercept y=mx+c is useful when y-intercept is known, and general form Ax+By+C=0 highlights a normal vector."],
+      ["Angles and special lines","Parallel non-vertical lines have equal slopes; perpendicular non-vertical lines have slope product -1. These slope tests should not be used uncritically for vertical lines. The angle between line directions can also be found through the tangent formula. A line through the origin is y=mx unless it is vertical."],
+      ["Distance and families of lines","The perpendicular distance from point (x0,y0) to line Ax+By+C=0 is the absolute expression value divided by sqrt(A^2+B^2). It is not the length to an arbitrary point on the line. When a parameter appears in the line equation and a condition such as parallel/perpendicular is given, first extract the slope or normal direction and then impose the condition."]
+    ],
+    [
+      formula("m=(y2-y1)/(x2-x1)","Slope between two points.","Find line direction or equation.","Coordinate units cancel if x and y use the same scale.","If x2=x1, the line is vertical and slope is undefined."),
+      formula("y-y1=m(x-x1)","Point-slope equation.","Line through a point with known slope.","Units follow coordinates.","Use the actual point coordinates with matching signs."),
+      formula("m1*m2=-1","Perpendicular slopes when both are finite and nonzero.","Check perpendicularity.","Dimensionless slopes.","Vertical and horizontal lines are perpendicular but one slope is undefined."),
+      formula("Distance=|Ax0+By0+C|/sqrt(A^2+B^2)","Perpendicular point-to-line distance.","Compute shortest distance.","Same units as coordinates.","Absolute value and normal magnitude are both required.")
+    ],
+    [
+      {title:"Equation through (2,-1) with slope 3",steps:["Use y-y1=m(x-x1).","y+1=3(x-2).","Expand: y=3x-7.","Check the line passes through the point and has slope 3."]},
+      {title:"Distance from (1,2) to 3x+4y-10=0",steps:["Substitute into the line expression: 3(1)+4(2)-10=1.","Normal magnitude is sqrt(3^2+4^2)=5.","Distance=|1|/5=0.2 units."]
+    }],
+    ["Using the slope formula for a vertical line.","Thinking perpendicular lines always have negative reciprocals when one is vertical/horizontal.","Forgetting the absolute value in distance.","Mixing x/y coordinates while writing point-slope form."],
+    ["Draw or identify the slope before choosing a line form. For distance questions, use the coefficient form rather than substituting a convenient but non-perpendicular point."],
+    ["What is the equation of a vertical line?","How can a pair of slopes establish perpendicularity?","What direction is normal to Ax+By+C=0?"],
+    ["Slope: line steepness/direction ratio.","Normal vector: vector perpendicular to a line.","Intercept: point where a line meets an axis."],
+    [practice("Find slope through (-1,2) and (3,10).","2.","(10-2)/(3-(-1))=8/4=2."),practice("Are 2x+3y=5 and 3x-2y=4 perpendicular?","Yes.","Their slopes are -2/3 and 3/2; their product is -1.")]),
+  chapter("Class 11","Probability",
+    "Define sample spaces and events, calculate classical probability and use complement, union, mutually exclusive and independent-event rules.",
+    [
+      ["Sample space and events","A random experiment has a set S of possible outcomes. An event A is a subset of S. For equally likely outcomes P(A)=n(A)/n(S). Check whether outcomes really are equally likely; the formula is not simply a ratio of counts for a biased spinner or a loaded coin. The empty event has probability zero and the sample space itself has probability one."],
+      ["Event operations","The complement A' includes outcomes in S that are not in A, so P(A')=1-P(A). For mutually exclusive events, the events cannot occur together and P(A union B)=P(A)+P(B). In the general case, subtract the overlap: P(A union B)=P(A)+P(B)-P(A intersection B). Use a Venn diagram to avoid double counting."],
+      ["Independence and conditional information","Events A and B are independent if P(A intersection B)=P(A)P(B), equivalently the occurrence of one does not change the probability of the other under valid non-zero conditions. Mutually exclusive events with positive probabilities are not independent. Conditional probability restricts attention to outcomes where the given event occurred. In repeated independent trials, the multiplication rule comes from multiplying stage probabilities."]
+    ],
+    [
+      formula("P(A)=n(A)/n(S)","Classical probability for equally likely outcomes.","Count finite outcomes.","0<=P(A)<=1.","Verify the equally-likely assumption."),
+      formula("P(A')=1-P(A)","Complement rule.","Find probability of not-A.","Dimensionless.","Complement is defined relative to S."),
+      formula("P(A union B)=P(A)+P(B)-P(A intersection B)","Addition rule for two events.","Find probability that A or B occurs.","Dimensionless.","Subtract overlap exactly once."),
+      formula("Independent: P(A intersection B)=P(A)P(B)","Independence criterion.","Combine independent events.","Dimensionless.","Disjointness and independence are different ideas.")
+    ],
+    [
+      {title:"Probability of at least one head in two fair-coin tosses",steps:["The outcomes are HH, HT, TH, TT, each equally likely.","At least one head occurs in HH, HT and TH.","Probability=3/4.","Alternatively use complement: 1-P(TT)=1-1/4=3/4."]},
+      {title:"Union of events with overlap",steps:["Suppose P(A)=0.5, P(B)=0.4 and P(A intersection B)=0.2.","Use P(A union B)=0.5+0.4-0.2.","P(A union B)=0.7.","The overlap is subtracted because it was counted in both original terms."]
+    }],
+    ["Assuming all outcomes are equally likely without checking.","Adding event probabilities without subtracting their overlap.","Calling mutually exclusive events independent.","Confusing P(A|B) with P(B|A)."],
+    ["Draw a sample space for small experiments. For compound events, identify whether the events are disjoint, independent or conditioned before selecting a rule."],
+    ["Can two disjoint positive-probability events be independent?","Why does the union formula subtract the intersection?","What is the complement of an event?"],
+    ["Sample space: set of all possible outcomes.","Mutually exclusive: events whose intersection is empty.","Independent events: occurrence of one does not change the probability of the other."],
+    [practice("A fair die is rolled. Find probability of an even number.","1/2.","Even outcomes are 2,4,6, so 3/6=1/2."),practice("If P(A)=0.6, find P(A').","0.4.","Use 1-0.6=0.4.")])
+  );
   const existing = Array.isArray(window.KP_NCERT_CHAPTER_NOTES) ? window.KP_NCERT_CHAPTER_NOTES : [];
   window.KP_NCERT_CHAPTER_NOTES = existing.concat(all);
 })();
