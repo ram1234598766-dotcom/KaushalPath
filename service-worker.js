@@ -1,9 +1,14 @@
-const CACHE_NAME = "kaushalpath-shell-v5";
+const CACHE_NAME = "kaushalpath-shell-v10";
 const SHELL_FILES = [
   "/",
   "/index.html",
   "/app.js",
   "/school-chapter-guides.js",
+  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-biology-chapter-notes.js",
+  "/ncert-other-chapter-notes.js",
+  "/ncert-physics-chapter-notes.js",
+  "/ncert-chemistry-chapter-notes.js",
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
@@ -17,11 +22,17 @@ const SHELL_FILES = [
 const STATIC_FILES = new Set([
   "/app.js",
   "/school-chapter-guides.js",
+  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-biology-chapter-notes.js",
+  "/ncert-other-chapter-notes.js",
+  "/ncert-physics-chapter-notes.js",
+  "/ncert-chemistry-chapter-notes.js",
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
   "/study-library.js",
   "/question-bank.js",
+  "/local-ai.js",
   "/manifest.webmanifest",
   "/app-icon.svg"
 ]);

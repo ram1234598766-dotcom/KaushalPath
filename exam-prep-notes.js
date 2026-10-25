@@ -1014,10 +1014,331 @@
     ["How do exponential and logistic curves differ?","What is carrying capacity?","How do commensalism and mutualism differ."],
     ["Carrying capacity: population size the environment can support under stated conditions.","Conformer: organism whose internal state varies with external conditions.","Logistic growth: limited-resource model approaching carrying capacity."]);
 
+
+  const mathematicsDifferentialEquations = pack("JEE Main", "Mathematics", "Differential Equations: Methods and Modelling",
+    "A dedicated JEE chapter on order/degree, variable separation, first-order linear equations, initial conditions and checking solutions.",
+    [
+      "A differential equation relates an unknown function to one or more derivatives. Order is the highest derivative order; degree is the power of that derivative after the equation is made polynomial in derivatives, when degree is defined. General solutions include arbitrary constants; an initial condition selects a particular member of the family.",
+      "For separable equations, rearrange so y-dependent expressions occur with dy and x-dependent expressions with dx, then integrate both sides. Before dividing by a function of y, check whether that function can be zero, because a constant solution may otherwise be lost.",
+      "A first-order linear equation has form dy/dx+P(x)y=Q(x). The integrating factor exp(integral P(x)dx) converts the left side into the derivative of a product. Apply the initial condition after obtaining the general solution, and differentiate/substitute the candidate back to check it.",
+      "Modelling questions require an explicit dependent variable, independent variable, domain and initial value. A mathematically valid solution may still be physically inappropriate outside its context or domain."
+    ],
+    ["Order = highest derivative order present","Separable: integral dy/h(y)=integral g(x)dx for dy/dx=g(x)h(y)","Linear integrating factor: IF=e^(integral P(x)dx)","d(IF*y)/dx=IF*Q(x) for y'+P(x)y=Q(x)"],
+    "Solve dy/dx+y=2x: IF=e^x; d(e^x y)/dx=2xe^x; integrate e^x(2x-2)+C, so y=2x-2+Ce^(-x).",
+    [
+      {heading:"1. Classify before solving",body:"Write the differential equation clearly and identify the highest derivative. If degree is asked, ensure the equation is polynomial in derivatives after clearing relevant radicals/fractions; if the highest derivative occurs under a radical or in a non-polynomial form, degree may not be defined. A first-order equation can be linear or nonlinear, and order alone does not choose the method."},
+      {heading:"2. Solve a separable equation",body:"For dy/dx=g(x)h(y), divide by h(y) only on intervals where h(y) is non-zero and integrate dy/h(y)=g(x)dx. Use substitution or partial fractions where required. Then solve for y if possible. Finally, substitute any constant solutions that were excluded by division and apply the initial condition."},
+      {heading:"3. Use an integrating factor",body:"Standardise the equation as y'+P(x)y=Q(x). Calculate IF=e^(integral P dx), multiply all terms by IF and recognise the left side as d(IF*y)/dx. Integrate to get IF*y=integral(IF*Q dx)+C; divide by IF for y. An integrating factor computed from Q(x) instead of P(x) is a common error."},
+      {heading:"4. Verify the solution",body:"Differentiate the proposed function, substitute the derivative and function into the original equation, and simplify both sides. Then apply the given initial condition. Verification is particularly valuable when an integration constant, logarithm or exponential has appeared; it catches sign mistakes and lost branches."}
+    ],
+    [
+      {title:"Solve dy/dx=2xy",steps:["Separate: dy/y=2x dx, for y not zero.","Integrate: ln|y|=x^2+C.","Exponentiate and absorb the sign into the constant: y=Ce^(x^2).","Check y=0 is also a solution and is included by C=0."]},
+      {title:"Solve y'-2y=4 with y(0)=1",steps:["P(x)=-2, so IF=e^(-2x).","Multiply: d(e^(-2x)y)/dx=4e^(-2x).","Integrate: e^(-2x)y=-2e^(-2x)+C; thus y=-2+Ce^(2x).","Use y(0)=1 to get C=3, so y=-2+3e^(2x)."]
+    }],
+    ["Dividing by h(y) and losing constant solutions.","Confusing order and degree.","Using Q(x) rather than P(x) in the integrating factor.","Applying initial conditions before solving for the general constant."],
+    ["For a linear equation, write the standard form, integrating factor and product-derivative step explicitly. For separable equations, identify excluded zero-factor cases and verify the final answer in the original equation."],
+    ["What is the difference between order and degree?","Why should constant solutions be checked after separation?","Which coefficient defines the integrating factor?"],
+    ["Initial condition: given value used to determine a constant.","Separable equation: equation rearrangeable into independent x and y integrals.","Integrating factor: multiplier converting a linear ODE into a product derivative."]);
+  mathematicsDifferentialEquations.practiceQuestions = [
+    {question:"Solve dy/dx=3x^2 with y(0)=4.",answer:"y=x^3+4.",explanation:"Integrate to y=x^3+C. The initial condition gives C=4."},
+    {question:"Find the order of y''+(y')^3+y=0.",answer:"Second order.",explanation:"The highest derivative is y'', so the order is two; the first derivative's power does not change the order."}
+  ];
+
+  const mathematicsDefiniteIntegrals = pack("JEE Main", "Mathematics", "Definite Integration: Properties, Symmetry and Area",
+    "Use integral properties, substitutions, symmetry, limits and area interpretation to reduce lengthy JEE integrals.",
+    [
+      "A definite integral represents signed accumulation. Reversing limits changes the sign; adjacent intervals add; a zero-width interval has integral zero. These properties can simplify a problem before any antiderivative is calculated.",
+      "For symmetric limits [-a,a], an even integrand gives twice the integral from 0 to a; an odd integrand integrates to zero. Verify the parity of the entire expression, not only one factor, and ensure the limits are symmetric.",
+      "The substitution x=a+b-u can reflect an integral across a midpoint. For limits 0 to a, replacing x with a-x can show that the integral of f(x) equals that of f(a-x); adding forms may simplify expressions such as f(x)+f(a-x).",
+      "Geometric area is non-negative while a definite integral is signed. Split at zeros/intersections; use upper-minus-lower for areas between curves. Infinite or improper integrals require convergence checks and are not solved merely by substituting an endpoint."
+    ],
+    ["Integral_a^b f(x)dx = -Integral_b^a f(x)dx","Integral_a^c f + Integral_c^b f = Integral_a^b f","Even f: Integral_-a^a f=2 Integral_0^a f; odd f: Integral_-a^a f=0","Area between curves=Integral_a^b (top-bottom) dx when ordering is fixed"],
+    "If f(x)+f(2-x)=6, then integral_0^2 f(x)dx=6: substitution x->2-x shows the integral equals the reflected integral, and summing them gives 2I=12.",
+    [
+      {heading:"1. Simplify before integrating",body:"Check limit reversal, interval decomposition, substitution, periodicity and symmetry. If the integrand has both f(x) and f(a-x), adding the original and reflected expressions may remove complicated terms. Do not immediately integrate a difficult expression when the interval itself offers a simplification."},
+      {heading:"2. Even/odd symmetry",body:"An even function satisfies f(-x)=f(x); an odd function satisfies f(-x)=-f(x). With symmetric limits, paired contributions cancel for odd functions and double for even functions. If the integrand is a product, evaluate parity of all factors together: even times odd is odd, while odd times odd is even."},
+      {heading:"3. Area and sign changes",body:"For area under a curve, find where it crosses the x-axis; portions below the axis contribute negative signed integral and must be negated to obtain geometric area. For two curves, solve intersections and confirm which is above on each interval. A sketch can reveal where the integral must be split."},
+      {heading:"4. Substitution and convergence",body:"When using substitution in a definite integral, transform both endpoints with the variable, or return to the original variable before evaluating. If the integrand is unbounded at an endpoint, treat the integral as a limit and test convergence rather than evaluating an undefined expression directly."}
+    ],
+    [
+      {title:"Use symmetry for an odd integral",steps:["Evaluate parity of f(x)=x^3 cos(x^2): x^3 is odd and cos(x^2) is even, so the product is odd.","The limits are symmetric [-a,a].","Therefore the integral is zero without finding an antiderivative.","Check both the function parity and limit symmetry before applying this shortcut."]},
+      {title:"Area between intersecting curves",steps:["Solve y=x and y=x^2 intersections: x=0 and x=1.","On [0,1], x is above x^2.","Area=integral_0^1(x-x^2)dx=[x^2/2-x^3/3]_0^1=1/6.","If the curves change order in a larger interval, split at each crossing."]
+    }],
+    ["Using odd/even shortcuts when the limits are not symmetric.","Treating a negative signed integral as negative geometric area.","Using top-minus-bottom without checking which curve is higher.","Transforming the integrand but not the limits in a definite substitution."],
+    ["JEE integrals frequently reward a property-based reduction. Check symmetry/reflection and interval structure first, then compute only what remains."],
+    ["What is the integral of an odd function over symmetric limits?","Why can area require splitting even when a definite integral does not?","What must change in a substitution of a definite integral?"],
+    ["Even function: f(-x)=f(x).","Odd function: f(-x)=-f(x).","Improper integral: integral defined through a limiting process because of an unbounded endpoint/infinite interval."]);
+  mathematicsDefiniteIntegrals.practiceQuestions = [
+    {question:"Evaluate integral from -3 to 3 of x^5 dx.",answer:"0.",explanation:"x^5 is odd and the integration limits are symmetric."},
+    {question:"If integral_0^4 f(x)dx=7, what is integral_4^0 f(x)dx?",answer:"-7.",explanation:"Reversing the limits reverses the sign."}
+  ];
+
+  const mathematicsConicsJEE = pack("JEE Main", "Mathematics", "Conic Sections: Focus, Directrix, Tangent and Chord",
+    "A JEE-oriented reference to circle/parabola/ellipse/hyperbola parameters, focal properties, tangents and common coordinate traps.",
+    [
+      "Conics can be defined by a fixed focus and directrix with constant distance ratio e. Circle, ellipse, parabola and hyperbola correspond to distinct eccentricity cases and produce different geometric features. Translate the definition into a standard equation only after identifying the coordinate orientation.",
+      "For a parabola y^2=4ax, the axis is horizontal, the vertex is at origin, focus is (a,0), directrix x=-a and latus rectum length is 4a. For x^2=4ay, the axis is vertical. Comparing the squared variable and sign with the standard form avoids swapping x/y coordinates.",
+      "In an ellipse x^2/a^2+y^2/b^2=1 with a>b>0, c^2=a^2-b^2, foci are (±c,0) and eccentricity c/a. For a horizontal hyperbola x^2/a^2-y^2/b^2=1, c^2=a^2+b^2 and asymptotes are y=±(b/a)x. The formulas change with orientation.",
+      "Tangents and normals express local geometry. For a circle, a tangent is perpendicular to the radius at contact. For standard conics, tangent equations can be derived from the curve condition and slope/differentiation or from the recognised standard form; always confirm the point lies on the conic."
+    ],
+    ["Parabola y^2=4ax: focus (a,0), directrix x=-a, latus rectum 4a","Ellipse: c^2=a^2-b^2, e=c/a for a>=b","Hyperbola: c^2=a^2+b^2, asymptotes y=±(b/a)x for horizontal form","Circle: (x-h)^2+(y-k)^2=r^2; tangent at (x1,y1): (x1-h)(x-h)+(y1-k)(y-k)=r^2"],
+    "For y^2=16x, compare y^2=4ax, so a=4; focus=(4,0), directrix x=-4 and latus rectum length=16.",
+    [
+      {heading:"1. Read orientation first",body:"Inspect which variable is squared in a parabola and the sign pattern between squared terms in an ellipse/hyperbola. The centre is explicit for central conics, while a parabola has a vertex. If the equation is translated, complete squares or shift coordinates before applying standard formulae."},
+      {heading:"2. Recover focal parameters",body:"For ellipses, the major-axis denominator is larger and c^2=a^2-b^2. For hyperbolas, the positive term identifies the transverse-axis direction and c^2=a^2+b^2. Eccentricity is dimensionless; keep a,b,c as lengths and avoid mixing radius, semi-axis and full-axis lengths."},
+      {heading:"3. Tangent construction",body:"A tangent can be found using the standard tangent form for the conic, or by differentiating to obtain the tangent slope at a point where the derivative exists. Confirm the given point satisfies the conic equation. If a line is described as tangent, a repeated intersection/root or a zero-discriminant condition may be the fastest route."},
+      {heading:"4. Use geometry to verify",body:"Sketch the centre/vertex, focal points, axis and asymptotes. A proposed focus should lie along the symmetry axis, and the directrix should be perpendicular to that axis. For a circle, the tangent-radius right angle provides a direct proof/check."}
+    ],
+    [
+      {title:"Find ellipse foci and eccentricity",steps:["For x^2/25+y^2/9=1, a=5 and b=3.","c=sqrt(a^2-b^2)=sqrt(25-9)=4.","Foci are (±4,0), and e=c/a=4/5.","Check that foci lie along the major axis."]},
+      {title:"Tangent to a circle",steps:["For x^2+y^2=25 at point (3,4), first check 3^2+4^2=25.","Use xx1+yy1=r^2 for the circle centred at origin.","The tangent is 3x+4y=25.","The point satisfies both the circle and the tangent equation."]
+    }],
+    ["Using the ellipse relation for a hyperbola.","Swapping focus/directrix orientation for vertical parabola.","Forgetting to verify the point lies on the conic.","Confusing semi-major axis with full major-axis length."],
+    ["JEE questions commonly combine conic equations with focus/directrix, eccentricity, tangent slopes, chords and line-intersection conditions. Draw the axis and mark parameters before substitution."],
+    ["How does c^2 differ between ellipse and hyperbola?","How can you check that a line is tangent to a conic?","What is the eccentricity of a parabola?"],
+    ["Eccentricity: focus-distance/directrix-distance ratio.","Latus rectum: chord through a focus parallel to the directrix.","Asymptote: line approached by a curve at large distance."]);
+  mathematicsConicsJEE.practiceQuestions = [
+    {question:"For x^2/36+y^2/20=1, find c.",answer:"4.",explanation:"c^2=36-20=16, so c=4."},
+    {question:"What is the focus of x^2=20y?",answer:"(0,5).",explanation:"Compare with x^2=4ay; a=5 and the axis is vertical."}
+  ];
+
+  const mathematicsCombinatoricsJEE = pack("JEE Main", "Mathematics", "Permutations, Combinations and Binomial Coefficients",
+    "JEE problem-solving for ordered selections, arrangements with restrictions, complementary counting, repeated objects and coefficient extraction.",
+    [
+      "Define when two outcomes count as different before selecting a formula. Roles, seat positions and code positions make order important; an unlabelled committee usually does not. Fundamental counting multiplies independent stages, while mutually exclusive cases are added. A problem may combine both operations across several cases.",
+      "For n distinct objects selected/arranged r at a time, nPr=n!/(n-r)! and nCr=n!/[r!(n-r)!]. Repeated identical objects reduce the number of distinct arrangements because interchanging identical copies does not create a new order. For restrictions, placing constrained objects first or subtracting forbidden arrangements from total can be simpler than direct enumeration.",
+      "Binomial expansion uses T_(r+1)=nCr a^(n-r)b^r. To identify the coefficient of x^k, track the powers of x in both a and b, solve for the index and check its allowed range. Coefficients are symmetric, and the sum of coefficients follows by substituting appropriate values into the expansion.",
+      "Complementary counting is useful for phrases such as at least one, no two adjacent, or not all. Define the forbidden/allowed event clearly, count the easier side, and subtract from the total only if the sample space is exhaustive and the events are counted consistently."
+    ],
+    ["nPr=n!/(n-r)!","nCr=n!/[r!(n-r)!]","nPr=nCr*r!","T_(r+1)=nCr a^(n-r)b^r","Sum of coefficients in (a+b)^n = 2^n by setting a=b=1"],
+    "Coefficient of x^3 in (1+2x)^5 is 5C3(2^3)=10x8=80.",
+    [
+      {heading:"1. Decide order and repetition",body:"Write one sentence explaining what makes outcomes distinct. If positions/roles differ, arrangements are ordered. If only group membership matters, use combinations. Repeated objects require adjustment for identical copies; repeated choice with replacement is a different model again and should not be confused with identical items."},
+      {heading:"2. Restrictions and complementary counting",body:"For restrictions such as vowels together or two people not adjacent, count an easier arrangement and then place the constrained group, or count the forbidden cases and subtract. Use the complement only after confirming the cases partition the full sample space. If cases overlap, use inclusion-exclusion rather than plain subtraction."},
+      {heading:"3. Binomial general term",body:"Set up T_(r+1) before plugging in values. Remember r starts at zero for the first term. If b contains x, its exponent contributes to the target power. For a term independent of x, set the total exponent to zero and check whether the resulting index is an integer within 0..n."},
+      {heading:"4. Sanity checks",body:"The total number of r-element subsets is at most the number of ordered selections; nCr=nC(n-r). Coefficients are non-negative integers for non-negative integer n. A probability calculated from a combinatorial count should remain in [0,1], and a final count should be an integer."}
+    ],
+    [
+      {title:"Arrange letters with repeats",steps:["Count all letters, then identify repeated letters.","Start with n! arrangements of labelled positions.","Divide by the factorial of each identical-letter count.","If additional restrictions exist, handle them after obtaining a correct unrestricted count."]},
+      {title:"Find a binomial coefficient",steps:["Write T_(r+1)=nCr a^(n-r)b^r.","Collect every factor that contains x and form the full exponent.","Set the exponent equal to the requested power and solve for r.","Substitute that integer index and simplify the coefficient."]
+    }],
+    ["Using nPr when order does not matter.","Forgetting to divide by repeated-object factorials.","Using the wrong zero-based index in a general term.","Subtracting forbidden cases that overlap or do not cover the intended complement."],
+    ["Write the outcome model and count logic before calculations. In binomial problems, make the exponent match explicit so the coefficient selection is auditable."],
+    ["When should you use combinations?","Why is the first binomial term indexed r=0?","When is complementary counting more efficient?"],
+    ["Permutation: ordered arrangement.","Combination: unordered selection.","Complementary counting: count total outcomes minus forbidden outcomes."]);
+  mathematicsCombinatoricsJEE.practiceQuestions = [
+    {question:"How many 4-letter arrangements can be made from 7 distinct letters without repetition?",answer:"840.",explanation:"7P4=7x6x5x4=840."},
+    {question:"Find the coefficient of x^2 in (3+x)^4.",answer:"54.",explanation:"The x^2 term uses r=2: 4C2 3^2 x^2=6x9x^2."}
+  ];
+
+  const mathematicsProbabilityJEE = pack("JEE Main", "Mathematics", "Conditional Probability, Bayes Theorem and Independence",
+    "Use a clearly defined sample space and conditional structure to distinguish independent events, dependent draws, total probability and Bayes updates.",
+    [
+      "Conditional probability restricts attention to outcomes where B has occurred: P(A|B)=P(A intersection B)/P(B). It is defined when P(B)>0. The condition changes the relevant denominator/sample space; it is not a swap of the A and B labels.",
+      "Independence means that learning B does not change P(A), so P(A intersection B)=P(A)P(B). Mutually exclusive positive-probability events cannot be independent because their intersection is zero while the product is positive. For sequential draws without replacement, independence usually fails because the first outcome changes the second draw's composition.",
+      "If B1,...,Bn partition the possible causes, total probability sums P(A|Bi)P(Bi). Bayes theorem reverses the direction of conditioning and updates the probability of a cause after observing evidence. Enumerate the cause groups and check their prior probabilities sum to one.",
+      "Tree diagrams or two-way tables reduce mistakes: write branch probabilities conditional on the path so far, multiply along a path, then add disjoint paths that reach the target event. Verify the final probability lies between zero and one."
+    ],
+    ["P(A|B)=P(A intersection B)/P(B), P(B)>0","Independent: P(A intersection B)=P(A)P(B)","P(A)=sum_i P(A|B_i)P(B_i) for a partition","Bayes: P(B_j|A)=P(A|B_j)P(B_j)/sum_i P(A|B_i)P(B_i)"],
+    "A test is positive 90% of the time for a condition and 5% of the time for people without it. If prevalence is 1%, P(condition|positive)=0.9(0.01)/(0.9(0.01)+0.05(0.99))≈15.4%.",
+    [
+      {heading:"1. Conditional sample spaces",body:"When B is known to occur, eliminate all outcomes outside B. Within the reduced space, identify how many also satisfy A. This gives P(A|B). In a discrete equally likely model, the count version is n(A intersection B)/n(B); in general probability, use the ratio of probabilities."},
+      {heading:"2. Independence vs mutual exclusion",body:"Independence is about whether one event changes the probability of the other. Mutual exclusion is about whether they can occur together. They are not synonyms. With positive probabilities, disjoint events are dependent, since observing one rules the other out."},
+      {heading:"3. Total probability",body:"Split all possibilities into mutually exclusive and collectively exhaustive cases such as different factories, bags or population groups. Compute the probability of the target event within each case and weight it by the probability of that case. The sum gives the overall target probability."},
+      {heading:"4. Bayes update",body:"Bayes theorem calculates the probability of a cause after seeing evidence. Numerator is the probability of the evidence under that cause times the cause's prior probability. Denominator adds the evidence probability across all possible causes. The base rate matters: a highly accurate test can still produce many false positives when the condition is rare."}
+    ],
+    [
+      {title:"Draw without replacement",steps:["A box contains 3 red and 2 blue balls; two are drawn without replacement.","P(first red)=3/5.","Given first red, only 2 red and 2 blue remain, so P(second red|first red)=2/4.","Joint probability of two red=3/5 x 2/4=3/10; the draws are not independent."]},
+      {title:"Use Bayes with two sources",steps:["List prior probability of each source and likelihood of the observation from each source.","Multiply each likelihood by its prior to get joint contributions.","Add the contributions to get total probability of the observation.","Divide the target source's contribution by the total observation probability."]
+    }],
+    ["Confusing P(A|B) and P(B|A).","Assuming draws without replacement are independent.","Forgetting prior probability in Bayes theorem.","Ignoring rare-event base rates when interpreting test results."],
+    ["For JEE, draw a probability tree and annotate conditional branches. In Bayes questions, keep priors, likelihoods and posterior probabilities in separate rows."],
+    ["What makes events independent?","Why aren't mutually exclusive positive-probability events independent?","What denominator is used in Bayes theorem?"],
+    ["Conditional probability: probability restricted to a given event.","Likelihood: probability of observed evidence under a specified cause/model.","Prior: probability of a cause before the new evidence." ]);
+  mathematicsProbabilityJEE.practiceQuestions = [
+    {question:"If P(A intersection B)=0.12 and P(B)=0.3, find P(A|B).",answer:"0.4.",explanation="P(A|B)=0.12/0.3=0.4."},
+    {question:"Can two disjoint events with non-zero probabilities be independent?",answer:"No.",explanation:"Their intersection probability is zero, but the product of their positive probabilities is non-zero."}
+  ];
+
+  const mathematicsLimitsJEE = pack("JEE Main", "Mathematics", "Limits, Continuity and Differentiability: JEE Techniques",
+    "A focused guide to indeterminate forms, algebraic transformations, standard limits, continuity of piecewise functions and derivative rules.",
+    [
+      "Start with direct substitution. If the result is 0/0, transform the expression by factoring, rationalising, a standard identity, substitution or a known limit. Infinity/infinity requires comparing dominant growth rather than direct substitution. An indeterminate form is a signal for further work, not an answer.",
+      "Standard trigonometric limits assume radians. Identities such as 1-cos x=2 sin^2(x/2) convert cosine expressions to a standard form. For exponential/logarithmic limits, apply the formula appropriate to the exact expression and check its domain. Keep higher-order terms only when needed by the requested limit.",
+      "Continuity at a requires equal left/right limits that also equal f(a). For piecewise functions, solve the parameter using both one-sided limits and the function value. Differentiability requires the left/right derivatives to match; corners such as |x| at zero are continuous but not differentiable.",
+      "Derivative rules include product, quotient and chain rules. The chain rule is especially important for nested functions; implicit differentiation treats y as a function of x. For an inverse function, differentiability and non-zero derivative conditions matter where the inverse-derivative formula is applied."
+    ],
+    ["lim(x->0) sin x/x=1 (radians)","lim(x->0) (1-cos x)/x^2=1/2 (radians)","Continuity at a: lim(x->a-)f = lim(x->a+)f = f(a)","Chain rule: d f(g(x))/dx=f'(g(x))g'(x)"],
+    "Evaluate lim(x->0) (1-cos 2x)/x^2: use 1-cos 2x=2sin^2 x, so the expression is 2(sin x/x)^2 and the limit is 2.",
+    [
+      {heading:"1. Factor and cancel",body:"If polynomial numerator and denominator both vanish at a, factor out x-a if possible. Cancellation is valid for x not equal a around the limit point; the simplified expression may have a different value at a and still the same limit. Always return to the limit after simplification."},
+      {heading:"2. Rationalise radical expressions",body:"Multiply by the conjugate to turn a difference of square roots into a difference of squares. Simplify common factors and evaluate the limit only after the indeterminate form has been removed. Check denominator non-zero conditions and do not cancel terms that are not factors."},
+      {heading:"3. Continuity and differentiability parameters",body:"For a piecewise definition at x=a, compute left limit, right limit and f(a) separately. Solve equality conditions for the unknown parameter. For differentiability, compute left and right derivatives or use the definition; satisfying continuity alone is not enough."},
+      {heading:"4. Derivative discipline",body:"For a composite function, write outer and inner functions explicitly. Product and quotient rules need all changing factors; a common mistake is differentiating only the numerator/factor. Implicit differentiation requires dy/dx for every occurrence of y."}
+    ],
+    [
+      {title:"Rationalise a square-root limit",steps:["For lim(x->0)(sqrt(1+x)-1)/x, direct substitution gives 0/0.","Multiply numerator and denominator by sqrt(1+x)+1.","Numerator becomes x; cancel x for x!=0.","Limit is 1/2 after substituting x=0 in the simplified denominator."]},
+      {title:"Test differentiability of |x| at zero",steps:["For x>0, |x|=x, so right derivative at zero is 1.","For x<0, |x|=-x, so left derivative at zero is -1.","The one-sided derivatives differ; the derivative does not exist at zero.","The function is nevertheless continuous at zero because both sides and f(0) equal zero."]
+    }],
+    ["Treating 0/0 as zero.","Using degrees in standard trigonometric limit formulae.","Assuming continuity guarantees differentiability.","Forgetting the inner derivative in chain rule."],
+    ["Choose the transformation based on the indeterminate form. For piecewise continuity/differentiability, write left limit, right limit and function value on separate lines."],
+    ["What does 0/0 indicate?","Why is |x| not differentiable at zero?","What condition is needed for continuity at a?"],
+    ["Indeterminate form: a form requiring further limit analysis.","One-sided limit: value approached from one side.","Derivative: instantaneous rate/tangent slope." ]);
+  mathematicsLimitsJEE.practiceQuestions = [
+    {question:"Evaluate lim(x->0) sin(5x)/(2x).",answer:"5/2.",explanation="Rewrite as (5/2) times sin(5x)/(5x), whose limit is 1."},
+    {question:"Is f(x)=x^2 continuous but not differentiable at x=1?",answer:"No; it is both continuous and differentiable.",explanation,"Polynomials are continuous and differentiable for every real x; derivative is 2x."}
+  ];
+
+  const mathematics3DLinesJEE = pack("JEE Main", "Mathematics", "Three-Dimensional Geometry: Lines, Planes and Shortest Distance",
+    "A deeper JEE reference to vector/Cartesian equations, angles between lines/planes, point-plane distance and skew-line separation.",
+    [
+      "A line in three dimensions requires a point and a non-zero direction vector. Parametric form is robust even when a direction component is zero; symmetric form divides coordinate differences by direction ratios and must be adapted where a component is zero. Two lines intersect only if one common pair of parameters satisfies all three coordinate equations.",
+      "A plane ax+by+cz+d=0 has normal vector (a,b,c). The angle between planes can be found through their normals; the angle between a line and a plane is complementary to the angle between the line direction and plane normal. Use absolute value if the problem requests the acute angle.",
+      "The shortest distance from point P to a plane uses the absolute plane expression divided by normal magnitude. For two skew lines, the common perpendicular direction is the cross product of their direction vectors; the distance is the projection of the displacement between a point on each line onto that common perpendicular.",
+      "Parallel, intersecting and skew are distinct in 3D. Non-parallel lines need not intersect: solve for all coordinates, not just x and y. Parallel-line distance can be found from the cross-product-based point-to-line distance relation, while intersecting lines have zero distance."
+    ],
+    ["Line: r=a+lambda d","Plane normal n=(A,B,C) for Ax+By+Cz+D=0","Point-plane distance=|Ax0+By0+Cz0+D|/sqrt(A^2+B^2+C^2)","Skew-line distance=| (b-a) dot (d1 x d2) | / |d1 x d2| for non-parallel directions"],
+    "For plane 2x-y+2z-5=0 and point (1,2,3), distance=|2-2+6-5|/sqrt(4+1+4)=1/3.",
+    [
+      {heading:"1. Line equations and intersection",body:"For each line, write r=a+lambda d, where a is a position vector and d is a direction vector. Equating two line equations yields three scalar equations in two parameters. An intersection exists only if the same parameter pair solves all three; failure may mean the lines are parallel or skew, so check direction vectors before classifying."},
+      {heading:"2. Angles and normals",body:"Plane coefficients give a normal vector directly. Angle between two lines uses their direction vectors; angle between two planes uses their normals. To find the line-plane angle, take the complementary relation because the plane's normal is perpendicular to the plane. Use dot products with correct magnitudes and ensure inverse cosine arguments lie in [-1,1]."},
+      {heading:"3. Point-plane distance",body:"The normal direction is perpendicular to every line in the plane. The shortest point-plane segment lies along that normal. The distance formula evaluates the plane expression at the point and normalises by normal magnitude; absolute value makes distance non-negative regardless of which side of the plane contains the point."},
+      {heading:"4. Skew-line distance",body:"If directions d1,d2 are not parallel, their cross product is perpendicular to both, along the common-normal direction. Let b-a be the vector joining any point on line 1 to any point on line 2. Project this displacement onto the unit cross-product direction using a dot product and absolute value. The formula fails for parallel directions because cross-product magnitude is zero; use a parallel-line formula instead."}
+    ],
+    [
+      {title:"Check if two lines intersect",steps:["Write both lines in parametric form.","Equate their x coordinates and solve for parameter relation.","Substitute that relation into y and z equations.","Only if one parameter pair satisfies all three does an intersection exist; otherwise distinguish parallel from skew using direction vectors."]},
+      {title:"Shortest distance between skew lines",steps:["Extract direction vectors d1 and d2 and points a,b from the lines.","Compute d1 x d2; if it is non-zero, the directions are not parallel.","Project b-a onto d1 x d2 using the scalar triple product and divide by its magnitude.","Take absolute value to obtain a non-negative length."]
+    }],
+    ["Classifying lines using only two coordinate equations.","Confusing line-plane angle with line-normal angle.","Forgetting absolute value in distance.","Using skew-line formula when directions are parallel."],
+    ["In 3D questions, explicitly state position and direction vectors. For line intersection, check all three coordinates; for shortest distance, identify the common-normal direction."],
+    ["What vector is normal to a plane?","Why do two non-parallel lines in 3D sometimes fail to intersect?","What does the scalar triple product measure in skew-line distance?"],
+    ["Direction vector: parallel to a line.","Normal vector: perpendicular to a plane.","Skew lines: non-parallel, non-intersecting lines." ]);
+  mathematics3DLinesJEE.practiceQuestions = [
+    {question:"Find distance from (1,2,3) to plane x+2y+2z-9=0.",answer:"2/3 units.",explanation:"The plane-expression value is 1+4+6-9=2 and the normal magnitude is sqrt(1+4+4)=3, so distance=2/3."},
+    {question:"What condition shows two 3D lines are parallel?",answer:"Their direction vectors are scalar multiples.",explanation:"Parallel directions are linearly dependent; this alone does not make the two lines coincide."}
+  ];
+
+  const mathematicsSeriesJEE = pack("JEE Main", "Mathematics", "Sequences and Series: Advanced JEE Patterns",
+    "Use recurrence/partial sums, AP/GP identities, telescoping, arithmetic-geometric patterns and convergence conditions.",
+    [
+      "Given an explicit nth term, substitute n to find a term; given partial sums S_n, recover a_n by a_n=S_n-S_(n-1) for n>=2. A common error is treating S_n as a_n or forgetting the shifted index in S_(n-1).",
+      "Arithmetic-geometric sequences combine a linear term with a geometric factor, for example a+(n-1)d multiplied by r^(n-1). The sum can be simplified by writing the sum and r times the sum and subtracting to cancel most terms. Check r=1 separately and preserve finite limits.",
+      "Telescoping sums simplify when terms are differences such as 1/k-1/(k+1), because most interior terms cancel after expansion. Partial fractions can reveal this form. Never cancel across a sum before writing the telescoping terms explicitly.",
+      "An infinite geometric series converges only when |r|<1. Some other series require additional tests; do not use a geometric-series formula for a generic infinite sum without proving or identifying its form. In JEE problems, the condition on r or n often decides which expression is valid."
+    ],
+    ["AP nth term: a_n=a+(n-1)d","GP nth term: a_n=ar^(n-1)","Finite GP: S_n=a(r^n-1)/(r-1), r!=1; if r=1 then S_n=na","Infinite GP: S=a/(1-r), only for |r|<1","If S_n known, a_n=S_n-S_(n-1) for n>=2"],
+    "Sum S=sum(k=1 to n)(1/k-1/(k+1))=1-1/(n+1)=n/(n+1), because intermediate fractions cancel.",
+    [
+      {heading:"1. Recover term from partial sum",body:"When S_n is supplied, shift n to n-1 carefully and subtract. Expand the two expressions only as much as required. This difference can turn a quadratic/cubic sum expression into a simpler nth-term pattern. Check n=1 separately if the definition of S_0 is not stated."},
+      {heading:"2. Telescoping sums",body:"Rewrite a term into partial fractions or a difference of adjacent expressions. Expand first several terms to see the cancellation pattern, then keep the first and last surviving terms. The finite limit n matters: a telescoping result often leaves an end term depending on n."},
+      {heading:"3. Arithmetic-geometric sums",body:"For sums involving k r^(k-1), let S be the target sum, multiply the entire sum by r and align terms. Subtract to cancel like powers; solve for S. Keep the endpoints and power indices precise. If r=1, the algebraic division by 1-r is invalid and the sum must be evaluated as the AP/natural-number sum."},
+      {heading:"4. Convergence and sanity checks",body:"The infinite geometric formula needs |r|<1 so r^n approaches zero. A finite sum has no such convergence requirement. Check that a positive-term sum remains non-negative and grows consistently with n; an answer that becomes negative for positive terms signals an algebra/indexing error."}
+    ],
+    [
+      {title:"Recover the nth term",steps:["If S_n=n(n+1), compute S_(n-1)=(n-1)n.","a_n=S_n-S_(n-1)=n(n+1)-n(n-1)=2n.","Check n=1 gives a_1=2, matching S_1=2."]},
+      {title:"Sum a telescoping sequence",steps:["Use 1/[k(k+1)]=1/k-1/(k+1).","Sum from k=1 to n: (1-1/2)+(1/2-1/3)+...+(1/n-1/(n+1)).","Interior terms cancel; result is 1-1/(n+1)=n/(n+1).","The form is valid for positive integer n."]
+    }],
+    ["Confusing the nth term with its partial sum.","Dropping the first or last term in telescoping cancellation.","Using infinite GP formula for |r|>=1.","Dividing by 1-r when r=1."],
+    ["For a sequence/series question, first classify AP/GP/telescoping/recurrence. Expand a few terms to expose cancellation and check special parameter values before simplifying."],
+    ["How do partial sums recover terms?","What condition is needed for an infinite GP?","Why should r=1 be handled separately?"],
+    ["Partial sum: sum of a finite initial set of terms.","Telescoping: cancellation of adjacent terms in a sum.","Convergence: existence of a finite limit for partial sums." ]);
+  mathematicsSeriesJEE.practiceQuestions = [
+    {question:"Find S_n=sum(k=1 to n) 1/[k(k+1)].",answer:"n/(n+1).",explanation:"Rewrite each term as 1/k-1/(k+1); all interior terms cancel."},
+    {question:"For which r does an infinite GP converge?",answer:"|r|<1.",explanation:"Only then does r^n approach zero, allowing the finite-sum limit to exist."}
+  ];
+
+  const mathematicsMatricesJEE = pack("JEE Main", "Mathematics", "Matrices and Determinants: Inverse, Rank and Systems",
+    "A JEE-focused matrix toolkit for dimensions, elementary row operations, determinants, inverse, singular systems and verification.",
+    [
+      "Dimensions must be checked before every product. If A is m x n and B is n x p, AB exists with order m x p. Multiplication is not commutative in general. Matrix identities must preserve order; for example, multiplying AX=B by A^-1 on the left gives X=A^-1B when A is square and invertible.",
+      "Determinant row operations have different effects. Swapping rows reverses sign; multiplying a row by a non-zero scalar multiplies determinant; adding a multiple of one row to another preserves determinant. Use operations that create zeros or triangular form, while tracking the determinant effect.",
+      "A non-zero determinant for a square coefficient matrix guarantees a unique solution to AX=B. If determinant is zero, the matrix is singular; the system may be inconsistent or have infinitely many solutions, so examine augmented consistency/rank rather than guessing. Verify any computed solution in the original equations.",
+      "Inverse and determinant methods are useful but can be algebraically expensive. For a small system, elimination may be faster. In exam work, state the condition for the method you choose, keep arithmetic organised and confirm the result."
+    ],
+    ["For 2x2 A=[[a,b],[c,d]], det(A)=ad-bc","A^-1=adj(A)/det(A), if det(A)!=0","AX=B has unique solution X=A^-1B when A is invertible","(AB)^T=B^T A^T","Row swap reverses determinant sign; row addition preserves it"],
+    "For A=[[2,1],[5,3]], det=1 and A^-1=[[3,-1],[-5,2]]. This inverse can be checked by multiplying A A^-1=I.",
+    [
+      {heading:"1. Multiply only compatible dimensions",body:"Check inner dimensions before multiplication. Each output entry is a dot product of a row from the left matrix and a column from the right matrix. Avoid applying scalar commutativity: AB and BA can be different or one may be undefined."},
+      {heading:"2. Simplify determinants using operations",body:"Choose a row/column with zeros or create zeros by adding/subtracting multiples of other rows. Track row swaps and row scaling. A triangular determinant is the product of diagonal entries. If a row/column is a multiple of another, determinant is zero."},
+      {heading:"3. Solve a matrix equation",body:"Before using an inverse, calculate or establish det(A)!=0. If A is singular, the inverse formula is invalid. For a singular system, inspect the original equations, row-reduced form or ranks to determine consistency. A zero determinant does not itself tell the full number of solutions."},
+      {heading:"4. Verify the result",body:"Multiply A by the proposed inverse to check identity, or substitute a solution vector in AX=B. Dimensions should match at each operation. If numerical fractions are involved, keep exact fractions as long as possible to avoid rounding-induced mistakes."}
+    ],
+    [
+      {title:"Classify a system from determinant",steps:["Write the coefficient matrix A.","Compute det(A). If non-zero, A is invertible and the system has a unique solution.","If det(A)=0, the inverse/Cramer's method cannot be applied directly.","Inspect consistency separately: a singular system can have no solution or infinitely many solutions."]},
+      {title:"Use a row operation",steps:["For a 3x3 determinant, choose a row with a useful entry pattern.","Apply R2 <- R2-kR1 to create a zero; this operation preserves determinant.","Expand along a row/column with zeros or continue to triangular form.","If you swap rows or multiply a row, track the determinant change."]
+    }],
+    ["Applying inverse formula to a singular matrix.","Assuming det(A)=0 means no solution in every case.","Ignoring determinant changes after row swaps/scaling.","Multiplying in the wrong order in a matrix equation."],
+    ["For every method, write its validity condition first. In a singular system, continue to consistency analysis instead of stopping at determinant zero."],
+    ["What does det(A)!=0 guarantee for AX=B?","Which row operation reverses determinant sign?","Why is matrix multiplication order important?"],
+    ["Singular matrix: square matrix with zero determinant.","Rank: dimension of row/column space.","Adjugate: transpose of cofactor matrix." ]);
+  mathematicsMatricesJEE.practiceQuestions = [
+    {question:"Can a 2x2 matrix with determinant zero have an inverse?",answer:"No.",explanation:"Invertibility requires a non-zero determinant."},
+    {question:"If det(A) is non-zero for square A, how many solutions does AX=B have?",answer:"Exactly one for any compatible B.",explanation:"A is invertible, so X=A^-1B is uniquely determined."}
+  ];
+
+  const mathematicsTrigJEE = pack("JEE Main", "Mathematics", "Trigonometric Equations and Inverse Trigonometric Functions",
+    "Solve periodic equations completely, simplify inverse-trigonometric expressions and respect principal ranges and domain restrictions.",
+    [
+      "A trigonometric equation generally has multiple solutions due to periodicity. For sin x=c or cos x=c, first determine the reference angle and signs in each quadrant, then include integer periods and restrict to the required interval. Do not return only one principal solution when all solutions are requested.",
+      "Inverse trigonometric functions return principal values from specified ranges. Therefore arcsin(sin x) is not always x; it reduces the angle to the arcsin principal range. Compositions depend on the interval/range of the inner function and must be checked at endpoints.",
+      "Identity transformations can simplify equations, but dividing by sin x, cos x or another expression may remove solutions where the divisor is zero. Squaring both sides can introduce extraneous solutions. Substitute final candidates in the original equation.",
+      "The unit circle is a reliable way to reason about signs and angle ranges. Use one angle unit consistently; standard limits use radians, while many trigonometry exercises state degrees."
+    ],
+    ["sin^2 x+cos^2 x=1","sin x=sin alpha -> x=n pi+(-1)^n alpha for integer n (radian form)","tan x has period pi; sin/cos have period 2pi","Principal arcsin range [-pi/2,pi/2] and arccos range [0,pi] in standard conventions"],
+    "Solve sin x=1/2 on [0,2pi): reference angle pi/6; sine is positive in quadrants I and II, so x=pi/6 and 5pi/6.",
+    [
+      {heading:"1. Solve by quadrant",body:"Find the reference angle for the absolute trig ratio, then use the sign of the requested function to decide the allowed quadrants. Include all solutions in the interval and verify endpoints. When the requested function is tangent, remember its period is pi rather than 2pi."},
+      {heading:"2. Keep principal values separate",body:"arcsin, arccos and arctan map a ratio to an angle in a chosen principal interval. If the input angle is outside that range, reduce it using periodicity/symmetry before evaluating. A formal cancellation of inverse and direct trigonometric functions may fail outside the principal interval."},
+      {heading:"3. Preserve lost cases",body:"If you divide by a trigonometric factor, separately check where it equals zero. If you square an equation, substitute candidates back into the original equation because squaring can erase sign information. State denominator restrictions in any identity proof."},
+      {heading:"4. Exact form and degree/radian consistency",body:"Keep exact angles and radicals where possible. Confirm all angles are in the unit specified by the question. Use a unit-circle sketch for signs rather than relying on a memorised pattern without context."}
+    ],
+    [
+      {title:"Solve cos x= -sqrt(3)/2 on [0,2pi)",steps:["The reference angle is pi/6.","Cosine is negative in quadrants II and III.","Solutions are 5pi/6 and 7pi/6.","Both satisfy the original equation and interval."]},
+      {title:"Simplify arcsin(sin(5pi/6))",steps:["5pi/6 lies outside the principal arcsin interval [-pi/2,pi/2].","Its sine is 1/2.","The principal angle in the arcsin range with sine 1/2 is pi/6.","Thus arcsin(sin(5pi/6))=pi/6, not 5pi/6."]
+    }],
+    ["Giving one solution for a periodic equation.","Assuming arcsin(sin x)=x for all real x.","Dividing away zero cases.","Mixing degrees and radians."],
+    ["In equations, write the reference angle, quadrants and complete solution set. In inverse-trig questions, explicitly compare the angle with the principal range."],
+    ["What is the period of tan x?","Why can squaring create extraneous solutions?","What is the principal range of arccos?"],
+    ["Reference angle: acute angle associated with a trig ratio.","Principal value: selected inverse-function output.","Period: smallest positive interval over which a function repeats." ]);
+  mathematicsTrigJEE.practiceQuestions = [
+    {question:"Solve cos x=1/2 on [0,2pi).",answer:"pi/3 and 5pi/3.",explanation:"Cosine is positive in quadrants I and IV with reference angle pi/3."},
+    {question:"Is arccos(cos(5pi/3)) equal to 5pi/3?",answer:"No; it equals pi/3.",explanation:"arccos returns a principal value in [0,pi], and cos(5pi/3)=1/2."}
+  ];
+
+  const mathematicsApplicationsDerivatives = pack("JEE Main", "Mathematics", "Applications of Derivatives: Monotonicity, Tangents and Optimisation",
+    "Use derivative signs, critical points, tangent/normal equations and boundary checks to solve JEE rate and optimisation problems.",
+    [
+      "A derivative gives the instantaneous rate of change and tangent slope. The tangent at x=a is y-f(a)=f'(a)(x-a), while the normal is perpendicular to the tangent when a finite slope exists. A horizontal tangent has a vertical normal, which should be expressed as x=a rather than assigned an infinite numeric slope.",
+      "Monotonicity follows from the sign of f'. Find domain points where f'=0 or is undefined, then create a sign chart. A stationary point is only a candidate for an extremum; a derivative may keep the same sign on both sides as with x^3 at zero.",
+      "Optimisation requires an objective function and feasible domain. Use constraints to express all quantities in one variable, identify interior critical points and compare function values at boundaries for absolute maxima/minima on a closed interval. Check physical restrictions such as positive lengths and exclude points where the model is undefined.",
+      "For related-rate problems, differentiate the relation linking changing quantities with respect to time before substituting the instant-specific values. Distinguish the derivative dV/dt from the derivative with respect to a dimensionless parameter or spatial variable."
+    ],
+    ["Tangent: y-f(a)=f'(a)(x-a)","Normal slope=-1/f'(a) if f'(a)!=0","f'>0 increasing; f'<0 decreasing","Closed-interval absolute extrema: compare critical points and both endpoints"],
+    "For f(x)=x^3-3x, f'=3x^2-3=3(x-1)(x+1), so f increases on (-infinity,-1), decreases on (-1,1) and increases on (1,infinity).",
+    [
+      {heading:"1. Build the derivative sign chart",body:"Find every critical number in the domain. Partition the number line into intervals and test the sign of f' on each interval. A positive-to-negative change signals a local maximum, negative-to-positive a local minimum, and no sign change may indicate neither. Do not infer the global extremum from local behaviour alone."},
+      {heading:"2. Tangent and normal",body:"Calculate f(a) and f'(a) separately. Insert the point (a,f(a)) and slope f'(a) into the point-slope equation. If the tangent slope is zero, the normal is vertical. Check the resulting line passes through the point."},
+      {heading:"3. Absolute optimisation",body:"Translate a word problem into an objective such as area, cost, volume or distance. Use the constraints to reduce it to one variable. Solve f'=0, check where the derivative is undefined within the feasible domain and evaluate permitted endpoints. Verify the result has sensible units and satisfies the original constraints."},
+      {heading:"4. Marginal interpretation",body:"When f(x) represents cost/revenue/production, f'(x) approximates the change in output for a small change in input near x. In an applied response, state units such as rupees per unit or metres per second squared. An optimum depends on the model assumptions and domain, not on derivative algebra alone."}
+    ],
+    [
+      {title:"Find local extrema of f=x^3-3x",steps:["f'=3x^2-3=0 gives x=-1 and x=1.","The sign is positive for |x|>1 and negative for -1<x<1.","There is a local maximum at x=-1 and a local minimum at x=1.","Compute f(-1)=2 and f(1)=-2 for the corresponding values."]},
+      {title:"Maximise a rectangular area with fixed perimeter",steps:["Let sides be x and y and perimeter 2x+2y=P.","Constraint gives y=P/2-x, so area A=x(P/2-x).","A'=P/2-2x=0 gives x=P/4 and y=P/4.","Second derivative A''=-2<0 confirms a maximum; both sides are positive within the feasible interval."]
+    }],
+    ["Assuming every stationary point is a maximum/minimum.","Forgetting boundaries in absolute optimisation.","Using f'(a) as the y-coordinate of the tangent point.","Ignoring units or feasible-domain constraints."],
+    ["Show the derivative sign chart for monotonicity. In optimisation, define variables, derive the constraint, check the critical point and justify max/min with sign or second derivative."],
+    ["What does a positive derivative imply on an interval?","Why do endpoints matter in absolute optimisation?","How do you write the normal at a horizontal tangent?"],
+    ["Critical point: domain point where derivative vanishes or is not defined.","Marginal value: local derivative of an economic/physical function.","Feasible domain: values allowed by the problem constraints."]);
+  mathematicsApplicationsDerivatives.practiceQuestions = [
+    {question:"Find the tangent to y=x^2 at x=3.",answer:"y=6x-9.",explanation:"Point is (3,9), slope is 6; y-9=6(x-3)."},
+    {question:"Can f'(a)=0 without a local extremum?",answer:"Yes.",explanation:"For example f=x^3 at zero has derivative zero but remains increasing across the point."}
+  ];
+
   const base = [
     physicsMechanics, physicsForces, physicsThermal, physicsElectro, physicsCurrent, physicsMagnet, physicsOptics, physicsModern, physicsRotation, physicsFluids,
     chemistryMole, chemistryBond, chemistryThermo, chemistryElectro, chemistryOrganic, chemistrySolutions, chemistryKinetics, chemistryCoordination, chemistryTransition,
     mathematicsCalculus, mathematicsIntegrals, mathematicsMatrices, mathematicsVectors, mathematicsProbability, mathematicsComplex, mathematicsTrigonometry, mathematicsCoordinate, mathematicsSeries,
+    mathematicsDifferentialEquations, mathematicsDefiniteIntegrals, mathematicsConicsJEE, mathematicsCombinatoricsJEE, mathematicsProbabilityJEE, mathematicsLimitsJEE, mathematics3DLinesJEE, mathematicsSeriesJEE, mathematicsMatricesJEE, mathematicsTrigJEE, mathematicsApplicationsDerivatives,
     biologyCells, biologyGenetics, biologyPhysiology, biologyPlant, biologyEcology, biologyReproduction, biologyEvolution, biologyHealth, biologyDiversity, biologyMolecular, biologyPlantRepro, biologyMicrobes, biologyMorphology, biologyPopulation
   ];
   const examDupes = [];
