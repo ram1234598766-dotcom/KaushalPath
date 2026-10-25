@@ -81,6 +81,9 @@ assert.match(studyLibrary, /function printNotes\(items\)/, "chapter notes should
 assert.match(studyLibrary, /html2pdf\.js@0\.10\.3\/dist\/html2pdf\.bundle\.min\.js/, "chapter export should load the browser PDF generator");
 assert.match(studyLibrary, /html2pdf\(\)\.set\(/, "the export action should generate and download a real PDF file");
 assert.match(studyLibrary, /filename: fileName/, "each chapter PDF should have a useful file name");
+assert.match(studyLibrary, /const pageTitle = chapter\s*\?\s*\(chapter\.chapter \|\| "Chapter"\) \+ " · Complete Chapter Notes"/, "the chapter PDF title should be defined before the packet HTML is built");
+assert.match(studyLibrary, /\x27<title>\x27 \+ esc\(pageTitle\) \+ \x27<\\/title><style>\x27/, "the chapter PDF HTML should use its defined title");
+assert.doesNotMatch(studyLibrary, /esc\(title\)/, "the chapter PDF generator must not reference an undefined title variable");
 assert.match(studyLibrary, /id="chapterPdfContent"/, "only the chapter content should be included in the exported PDF");
 assert.match(studyLibrary, /printButton\.addEventListener\("click", startPrint\)/, "print-to-PDF should remain available as a fallback");
 assert.match(studyLibrary, /The automatic download didn’t finish/, "the preview should explain how to recover if direct PDF creation fails");
