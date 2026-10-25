@@ -716,6 +716,13 @@
       (index + 1) + ". " + String(example.title || "Worked method") + "\n" +
       (example.steps || []).map((x, i) => "   " + (i + 1) + ". " + x).join("\n")
     );
+    const practice = (item.practiceQuestions || []).map((entry, index) =>
+      (index + 1) + ". " + String(entry.question || "Practice question") + "\n" +
+      "Answer: " + String(entry.answer || "") + "\n" +
+      "Explanation: " + String(entry.explanation || "")
+    );
+    const referenceHeading = item.subject === "Biology" ? "NCERT PROCESS & FACT SHEET" :
+      (["Mathematics", "Physics", "Chemistry"].includes(item.subject) ? "EXPLAINED FORMULA CHEAT SHEET" : "QUICK REFERENCE SHEET");
     return [
       item.level + " · " + item.subject,
       item.chapter,
@@ -723,12 +730,13 @@
       ...deepSections,
       "KEY IDEAS\n" + item.points.map((x) => "- " + x).join("\n"),
       item.formulas.length ? "FORMULAS / RULES\n" + item.formulas.map((x) => "- " + x).join("\n") : "",
-      formulaCards.length ? "EXPLAINED FORMULA CHEAT SHEET\n" + formulaCards.join("\n\n") : "",
+      formulaCards.length ? referenceHeading + "\n" + formulaCards.join("\n\n") : "",
       "WORKED EXAMPLE\n" + item.example,
       worked.length ? "ADDITIONAL WORKED METHODS\n" + worked.join("\n\n") : "",
       item.commonMistakes && item.commonMistakes.length ? "COMMON MISTAKES\n" + item.commonMistakes.map((x) => "- " + x).join("\n") : "",
       item.examFocus && item.examFocus.length ? "EXAM APPROACH\n" + item.examFocus.map((x) => "- " + x).join("\n") : "",
       item.glossary && item.glossary.length ? "GLOSSARY\n" + item.glossary.map((x) => "- " + x).join("\n") : "",
+      practice.length ? "GUIDED PRACTICE WITH ANSWERS\n" + practice.join("\n\n") : "",
       "QUICK SELF-CHECK\n" + item.recall.map((x, i) => (i + 1) + ". " + x).join("\n"),
       "Source note: " + String(item.sourceNote || NOTE_SOURCE)
     ].filter(Boolean).join("\n\n");
@@ -858,6 +866,16 @@
       item.glossary.forEach((text) => { const li = document.createElement("li"); li.textContent = text; gl.appendChild(li); });
       detail.append(gh, gl);
     }
+    if (item.practiceQuestions && item.practiceQuestions.length) {
+      const qh = document.createElement("h3"); qh.textContent = "Guided practice with worked answers";
+      detail.appendChild(qh);
+      item.practiceQuestions.forEach((entry, index) => {
+        const qh4 = document.createElement("h4"); qh4.className = "notes-subhead"; qh4.textContent = (index + 1) + ". " + String(entry.question || "Practice question");
+        const answer = document.createElement("p"); answer.className = "practice-answer"; answer.textContent = "Answer: " + String(entry.answer || "");
+        const explanation = document.createElement("p"); explanation.className = "notes-deep-body"; explanation.textContent = "Explanation: " + String(entry.explanation || "");
+        detail.append(qh4, answer, explanation);
+      });
+    }
     const rh = document.createElement("h3"); rh.textContent = "Quick self-check";
     const rl = document.createElement("ol"); item.recall.forEach((text) => { const li = document.createElement("li"); li.textContent = text; rl.appendChild(li); });
     const actions = document.createElement("div"); actions.className = "notes-card-actions";
@@ -888,17 +906,23 @@
         '<h3>' + esc((idx + 1) + ". " + (example.title || "Worked method")) + '</h3><ol>' +
         (example.steps || []).map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol>'
       ).join("");
+      const practice = (item.practiceQuestions || []).map((entry, idx) =>
+        '<section class="practice-card"><h3>' + esc((idx + 1) + ". " + (entry.question || "Practice question")) + '</h3>' +
+        '<p><strong>Answer:</strong> ' + esc(entry.answer || "") + '</p><p>' + esc(entry.explanation || "") + '</p></section>'
+      ).join("");
+      const referenceHeading = item.subject === "Biology" ? "NCERT process & fact sheet" :
+        (["Mathematics", "Physics", "Chemistry"].includes(item.subject) ? "Explained formula cheat sheet" : "Quick reference sheet");
       const mistakes = item.commonMistakes && item.commonMistakes.length ? '<h2>Common mistakes to avoid</h2><ul>' + item.commonMistakes.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       const examFocus = item.examFocus && item.examFocus.length ? '<h2>Exam approach</h2><ul>' + item.examFocus.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       const glossary = item.glossary && item.glossary.length ? '<h2>Glossary</h2><ul>' + item.glossary.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "";
       return '<article class="note-page"><div class="eyebrow">' + esc(item.level + " · " + item.subject) + '</div><h1>' + esc(item.chapter) + '</h1><p class="intro">' + esc(item.intro) + '</p>' + deep +
         '<h2>Key ideas</h2><ul>' + item.points.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' +
-        (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") + formulaCards +
+        (item.formulas.length ? '<h2>Formulas and rules</h2><ul>' + item.formulas.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ul>' : "") + (formulaCards ? '<h2>' + esc(referenceHeading) + '</h2>' + formulaCards : "") +
         '<h2>Worked example</h2><p>' + esc(item.example) + '</p>' + worked + mistakes + examFocus + glossary +
         '<h2>Quick self-check</h2><ol>' + item.recall.map((x) => '<li>' + esc(x) + '</li>').join("") + '</ol><p class="source">' + esc(item.sourceNote || NOTE_SOURCE) + '</p></article>';
     }).join("");
     const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title><style>' +
-      'body{font:11pt/1.62 Arial,sans-serif;color:#211735;max-width:800px;margin:28px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin:10px 0}h2{font-size:14pt;margin:21px 0 8px;border-bottom:1px solid #e2d8f2;padding-bottom:4px;break-after:avoid}h3{font-size:12pt;margin:16px 0 6px;break-after:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:9pt;font-weight:bold}.intro{font-size:12pt;color:#594b6f}.note-page{page-break-after:always;break-after:page}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 7px;page-break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line}.source{border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#6e6678}@page{size:A4;margin:17mm} @media screen{body{padding:26px;box-shadow:0 3px 24px #20123a14;border-radius:12px}}' +
+      'body{font:11pt/1.62 Arial,sans-serif;color:#211735;max-width:800px;margin:28px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin:10px 0}h2{font-size:14pt;margin:21px 0 8px;border-bottom:1px solid #e2d8f2;padding-bottom:4px;break-after:avoid}h3{font-size:12pt;margin:16px 0 6px;break-after:avoid}h4{font-size:11pt;margin:13px 0 5px;break-after:avoid}.practice-card{border-left:3px solid #8e6bd6;padding:8px 13px;margin:10px 0;break-inside:avoid}.eyebrow{color:#6f42bd;letter-spacing:.08em;text-transform:uppercase;font-size:9pt;font-weight:bold}.intro{font-size:12pt;color:#594b6f}.note-page{page-break-after:always;break-after:page}.note-page:last-child{page-break-after:auto;break-after:auto}li{margin:0 0 7px;page-break-inside:avoid}p{orphans:3;widows:3;white-space:pre-line}.source{border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#6e6678}@page{size:A4;margin:17mm} @media screen{body{padding:26px;box-shadow:0 3px 24px #20123a14;border-radius:12px}}' +
       '</style></head><body><p class="eyebrow">KaushalPath · Original revision notes</p>' + sections + '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});<\/script></body></html>';
     const printWindow = window.open("", "_blank");
     if (!printWindow) { toast("Allow pop-ups to create the PDF, then choose Save as PDF in the print dialog."); return; }
