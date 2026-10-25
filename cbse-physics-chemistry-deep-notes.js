@@ -265,7 +265,7 @@
        card("V=−GM/r","Potential per unit mass with zero at infinity.","Use for potential difference and energy reasoning.","J/kg.","Potential is negative under this reference choice."),
        card("v_orbit=√(GM/r)","Circular orbital speed at orbital radius r.","Use for an ideal circular orbit.","m/s.","Satellite mass cancels; orbit radius is from the centre."),
        card("v_esc=√(2GM/R)","Minimum ideal escape speed from radius R without propulsion/air resistance.","Use for launch/escape energy.","m/s.","Escape and orbital speed differ by √2 at the same radius.")],
-      [worked("Distance doubled",["F∝1/r².","If r becomes 2r, F_new/F_old=(r/2r)²=1/4.","The new force is one-quarter of the original."),
+      [worked("Distance doubled",["F∝1/r².","If r becomes 2r, F_new/F_old=(r/2r)²=1/4.","The new force is one-quarter of the original."]),
        worked("Escape speed from Earth in terms of g and R",["At the surface, ½mv²=GMm/R.","Cancel the object's mass: v²=2GM/R.","Since g=GM/R², GM/R=gR; therefore v_esc=√(2gR)."]),
        worked("Potential energy change from R to 2R",["U₁=−GMm/R; U₂=−GMm/(2R).","ΔU=U₂−U₁=GMm/(2R)>0.","Positive change means energy must be added to move outward."]),
        worked("Circular orbit reasoning",["Gravity is the inward net force: GMm/r²=mv²/r.","Cancel m and solve v=√(GM/r).","Larger orbital radius produces a lower circular speed."])],
