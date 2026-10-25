@@ -517,6 +517,8 @@ assert.ok(studyLibrary.includes('const fileStemSource = String('), "chapter file
 assert.match(html, /id="commandPalette"/, "the app should provide an accessible global quick-launch dialog");
 assert.match(html, /id="openCommandPalette"/, "the workspace should expose a visible quick-search trigger");
 assert.match(app, /function initCommandPalette\(\)/, "quick launch should be initialized as a reusable feature");
+assert.match(app, /if\(document\.body\.classList\.contains\("mock-test-window"\)\)return/, "the command palette must not interrupt a focused full-length mock-test window");
+assert.match(html, /body\.mock-test-window \.mobile-dock\{display:none!important\}/, "mobile quick navigation must stay hidden during a focused mock test");
 assert.ok(app.includes('String(event.key).toLowerCase()==="k"') && app.includes('event.key==="/"'), "quick search should support Ctrl/Cmd+K and the slash shortcut");
 assert.match(app, /dashboardAccuracyBar/, "dashboard accuracy should be calculated from local practice results");
 assert.match(app, /mobile-dock \[data-view\]/, "mobile quick navigation should track the active workspace");
