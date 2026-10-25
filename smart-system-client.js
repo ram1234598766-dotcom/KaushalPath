@@ -1,7 +1,7 @@
 /* KaushalPath Smart Study Loop. Student-specific history and planner data stay local. */
 (function () {
   "use strict";
-  const WORKER="https://kaushalpath-smart-system.kaushalpath.workers.dev";
+  const WORKER=window.location.origin;
   const HISTORY_KEY="kp-results", PLANNER_KEY="kp-planner-tasks";
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||"").normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
