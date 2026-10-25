@@ -7,17 +7,50 @@
   const method = (title, when, steps, caution) => ({ title, when, steps, caution });
   const worked = (title, steps) => ({ title, steps });
   const problem = (question, answer, solution) => ({ question, answer, solution });
-  const make = (level, subject, chapter, intro, sections, formulaCheatSheet, workedExamples, fastMethods, practiceProblems, commonMistakes, examFocus, recall, glossary) => ({
-    level, subject, chapter, intro,
-    sections: sections.map(([heading, body]) => ({ heading, body })),
-    formulaCheatSheet,
-    formulas: formulaCheatSheet.map(item => item.formula),
-    workedExamples, fastMethods, practiceProblems, commonMistakes, examFocus, recall, glossary,
-    points: sections.map(([heading, body]) => heading + ": " + body.split(/[.!?]/)[0] + "."),
-    example: workedExamples.length ? workedExamples[0].steps.join(" ") : "Identify the governing principle, state assumptions, then check the units and limiting case.",
-    depth: "detailed",
-    sourceNote: "Original, expanded chapter lesson for JEE Main / NEET UG preparation. Cross-check the current official NTA syllabus and prescribed NCERT edition; methods and shortcuts apply only under their stated conditions."
-  });
+  const make = (level, subject, chapter, intro, sections, formulaCheatSheet, workedExamples, fastMethods, practiceProblems, commonMistakes, examFocus, recall, glossary) => {
+    const formulaCards = Array.isArray(formulaCheatSheet) ? formulaCheatSheet : [];
+    const methods = Array.isArray(fastMethods) ? fastMethods : [];
+    const examples = Array.isArray(workedExamples) ? workedExamples : [];
+    const formulaConnections = formulaCards.slice(0, 3).map(card =>
+      card.formula + " means " + card.meaning + " Use it when " + card.when +
+      " Units/check: " + card.units + " Common trap: " + card.trap
+    ).join(" ");
+    const methodConnections = methods.slice(0, 3).map(item =>
+      item.title + " is useful " + item.when + " Work through it in this order: " +
+      item.steps.join(" ") + " Check before finalising: " + item.caution
+    ).join(" ");
+    const sectionHeadings = sections.map(item => item[0]).join(" → ");
+    const applicationSection = [
+      "Concept connections and how to recognise the problem type.",
+      "First identify what the question asks for: a definition, a relationship, a derivation, a numerical value, a graph interpretation, a proof or a choice among options. In this chapter, the main learning path is " + sectionHeadings + ". Treat these as connected ideas: establish the physical, chemical or mathematical meaning first, then choose the model that matches the assumptions in the question.",
+      "For a quantitative problem, list known quantities with units, identify what is unknown, draw a diagram or write the relevant mathematical/chemical representation, and only then select an equation. Do not use a memorised formula solely because a keyword appears; check that the conditions under which it was derived actually apply.",
+      formulaConnections,
+      "For a conceptual question, explain the cause-and-effect link rather than repeating a definition. State what changes, what remains fixed, and why the predicted result follows. If two answer choices look similar, compare their assumptions, units, direction/sign and limiting cases."
+    ].filter(Boolean).join(" ");
+    const workflowSection = [
+      "Step-by-step method selection, execution and checking.",
+      "A reliable workflow is to classify the question, state the governing principle, write the applicable relation in symbols before substituting numbers, and keep intermediate arithmetic separate from conceptual reasoning. Show units in every numerical line. For a derivation, explain why each step is allowed; for a proof, state the condition used at every implication; for a graph, connect slope, area, sign or curvature to the quantity being asked about.",
+      methodConnections,
+      examples.slice(0, 2).map(example => example.title + ": " + example.steps.join(" ")).join(" "),
+      "After obtaining an answer, check dimensions, signs, domain restrictions and limiting behaviour. Ask whether the result is physically possible, whether it satisfies the original equation/conditions, and whether rounding changes the requested precision. In multiple-choice questions, estimate the magnitude before comparing options; reject options that violate units, conservation, mathematical domain or an explicit condition.",
+      "Use the worked examples as templates, not as recipes to memorise. Change one given quantity and predict how the answer should change; then solve it. This tests whether you understand the dependency and is especially effective for preparation under timed exam conditions."
+    ].filter(Boolean).join(" ");
+    const expandedSections = sections.map(([heading, body]) => ({ heading, body })).concat([
+      { heading: "Concept connections and recognising problem types", body: applicationSection },
+      { heading: "Formula selection, worked method and answer checks", body: workflowSection }
+    ]);
+    return {
+      level, subject, chapter, intro,
+      sections: expandedSections,
+      formulaCheatSheet: formulaCards,
+      formulas: formulaCards.map(item => item.formula),
+      workedExamples: examples, fastMethods: methods, practiceProblems, commonMistakes, examFocus, recall, glossary,
+      points: expandedSections.map(item => item.heading + ": " + item.body.split(/[.!?]/)[0] + "."),
+      example: examples.length ? examples[0].steps.join(" ") : "Identify the governing principle, state assumptions, then check the units and limiting case.",
+      depth: "detailed",
+      sourceNote: "Original, expanded chapter lesson for JEE Main / NEET UG preparation. Cross-check the current official NTA syllabus and prescribed NCERT edition; methods and shortcuts apply only under their stated conditions."
+    };
+  };
 
   const mathsQuadratic = make("JEE Main","Mathematics","Quadratic Equations and Inequalities — JEE Deep Notes",
     "Master root behaviour, coefficient relations, parameter questions, sign charts and fast options-based solving. First classify the question; do not automatically expand and solve every quadratic.",
