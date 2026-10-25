@@ -50,6 +50,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ncert-other-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "ncert-mathematics-chapter-notes.js",
       "use": "@vercel/static"
     },
