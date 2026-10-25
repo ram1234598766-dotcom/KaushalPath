@@ -31,7 +31,10 @@ async function readBoundedBody(request) {
   const declaredLength = request.headers.get("Content-Length");
   if (declaredLength != null) {
     const size = Number(declaredLength);
-    if (Number.isFinite(size) && size > MAX_BYTES) return { error: "request_too_large" };
+    if (Number.isFinite(size) && size > MAX_BYTES) {
+      try { await request.body?.cancel("request body limit exceeded"); } catch {}
+      return { error: "request_too_large" };
+    }
   }
 
   if (!request.body) return { text: "" };
@@ -72,7 +75,9 @@ async function readBoundedBody(request) {
 async function catalog(req,env,ctx,url,kind) {
   const cls=classLevel(url.searchParams.get("class")), subject=label(url.searchParams.get("subject"),80);
   if(!cls||!subject) return json(req,env,{error:"valid_class_and_subject_required",allowedClasses:[10,11,12]},400);
-  const subjectKey=slug(subject), key=`${kind}:cbse:class${cls}:${subjectKey}`;
+  const subjectKey=slug(subject);
+  if (!subjectKey) return json(req,env,{error:"valid_class_and_subject_required",allowedClasses:[10,11,12]},400);
+  const key=`${kind}:cbse:class${cls}:${subjectKey}`;
   try { const hit=await env.STATIC_DATA.get(key,"json"); if(hit && typeof hit==="object") return json(req,env,{data:hit,source:"kv"},200,{"Cache-Control":"public, max-age=300, stale-while-revalidate=3600"}); } catch(e) { console.warn("KV read failed; falling back to D1",e?.name); }
   if(env.D1_CATALOG_FALLBACK_ENABLED==="false") return json(req,env,{error:"catalog_cache_miss_d1_fallback_disabled"},503,{"Retry-After":"300"});
   const table=kind==="syllabus"?"syllabus_catalog":"formula_catalog", column=kind==="syllabus"?"structure_json":"content_json";
@@ -83,6 +88,33 @@ async function catalog(req,env,ctx,url,kind) {
     ctx.waitUntil(env.STATIC_DATA.put(key,JSON.stringify(data),{expirationTtl:TTL}).catch(e=>console.warn("KV cache write skipped",e?.name)));
     return json(req,env,{data,source:"d1"},200,{"Cache-Control":"public, max-age=300, stale-while-revalidate=3600"});
   } catch(e) { console.warn("D1 catalog fallback failed",e?.name); return json(req,env,{error:"catalog_temporarily_unavailable"},503,{"Retry-After":"60"}); }
+}
+async function edgeRateLimit(req, env, requestId, route, keyPrefix) {
+  const limiter = env.ANALYTICS_RATE_LIMITER;
+  const clientIp = req.headers.get("CF-Connecting-IP");
+  if (!limiter || typeof limiter.limit !== "function" || !clientIp) {
+    console.error(JSON.stringify({
+      event: "smart_system_rate_limiter_unavailable",
+      requestId,
+      route
+    }));
+    return json(req, env, { error: "temporarily_unavailable" }, 503, { "Retry-After": "30" });
+  }
+  try {
+    const verdict = await limiter.limit({ key: keyPrefix + ":" + clientIp });
+    if (!verdict || verdict.success !== true) {
+      return json(req, env, { error: "rate_limited" }, 429, { "Retry-After": "60" });
+    }
+    return null;
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "smart_system_rate_limiter_error",
+      requestId,
+      route,
+      errorName: error && error.name ? error.name : "UnknownError"
+    }));
+    return json(req, env, { error: "temporarily_unavailable" }, 503, { "Retry-After": "30" });
+  }
 }
 async function submit(req,env) {
   if (env.ANALYTICS_WRITE_ENABLED === "false") {
@@ -177,33 +209,15 @@ export default {
 
           // Analytics writes are public and anonymous, so fail closed if either
           // the edge limiter or Cloudflare's connection IP is unavailable.
-          const limiter = env.ANALYTICS_RATE_LIMITER;
-          const clientIp = req.headers.get("CF-Connecting-IP");
-          if (!limiter || typeof limiter.limit !== "function" || !clientIp) {
-            console.error(JSON.stringify({
-              event: "smart_system_rate_limiter_unavailable",
-              requestId,
-              route: "analytics_submit"
-            }));
-            return json(req, env, { error: "analytics_temporarily_unavailable" }, 503, { "Retry-After": "30" });
-          }
-          try {
-            const verdict = await limiter.limit({ key: "attempt:" + clientIp });
-            if (!verdict || verdict.success !== true) {
-              return json(req, env, { error: "rate_limited" }, 429, { "Retry-After": "60" });
-            }
-          } catch (error) {
-            console.error(JSON.stringify({
-              event: "smart_system_rate_limiter_error",
-              requestId,
-              route: "analytics_submit",
-              errorName: error && error.name ? error.name : "UnknownError"
-            }));
-            return json(req, env, { error: "analytics_temporarily_unavailable" }, 503, { "Retry-After": "30" });
-          }
+          const limited = await edgeRateLimit(req, env, requestId, "analytics_submit", "attempt");
+          if (limited) return limited;
           return await submit(req, env);
         }
         if (method === "GET" && path === API + "/analytics/benchmarks") {
+          if (env.D1_BENCHMARKS_ENABLED !== "false") {
+            const limited = await edgeRateLimit(req, env, requestId, "analytics_benchmarks", "benchmark");
+            if (limited) return limited;
+          }
           return await benchmark(req, env, url);
         }
 
