@@ -1564,7 +1564,7 @@
         const panelH = 164;
         const chipH = Math.max(24, Math.min(52, (panelH - gapY * (rows - 1)) / rows));
         const top = y - ((rows * chipH + (rows - 1) * gapY) / 2);
-        const fontSize = 8.2;
+        const fontSize = 11.4;
         const maxChars = Math.max(16, Math.floor((chipW - 14) / (fontSize * 0.56)));
         items.forEach((label, itemIndex) => {
           const col = itemIndex % columns;
