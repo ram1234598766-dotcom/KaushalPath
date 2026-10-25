@@ -726,7 +726,8 @@
         {formula:"a sinθ≈λ for first single-slit minimum",meaning:"Diffraction first minimum.",when:"Estimate angular spread.",units:"Lengths cancel.",trap:"a is slit width, not separation between two slits."}
       ],
       [
-        {title:"Select the correct optical model",steps:["An image on a lens screen question is usually ray optics.","A fringe-spacing question requires wave interference.","A slit-width broadening question is diffraction.","State assumptions and convert quantities to common units before using the formula."]}
+        {title:"Select the correct optical model",steps:["An image on a lens screen question is usually ray optics.","A fringe-spacing question requires wave interference.","A slit-width broadening question is diffraction.","State assumptions and convert quantities to common units before using the formula."]},
+        {title:"Calculate the double-slit fringe spacing",steps:["Record wavelength λ, screen distance D and slit separation d with compatible units.","Check the screen is far compared with slit separation so the small-angle approximation is suitable.","Apply β=λD/d and convert the result to the requested length unit.","Sanity-check: increasing D or λ should widen fringes, while increasing d should narrow them."]}
       ],
       ["Mixing up lens sign convention and diffraction geometry.","Confusing slit width with slit separation.","Using full-length degrees/radians interchangeably in wave formulas.","Claiming ray optics explains a stable interference fringe pattern."],
       ["Use this companion as a checklist alongside the individual chapter notes; it does not replace derivations and worked examples."],

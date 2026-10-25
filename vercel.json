@@ -58,7 +58,43 @@
       "use": "@vercel/static"
     },
     {
+      "src": "ncert-physics-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-chemistry-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-mathematics-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "ncert-biology-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "app.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-maths-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-physics-chemistry-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-biology-deep-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-remaining-chapter-notes.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "cbse-humanities-computer-deep-notes.js",
       "use": "@vercel/static"
     },
     {

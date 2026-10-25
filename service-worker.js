@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaushalpath-shell-v5";
+const CACHE_NAME = "kaushalpath-shell-v8";
 const SHELL_FILES = [
   "/",
   "/index.html",
@@ -7,12 +7,21 @@ const SHELL_FILES = [
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
+  "/cbse-maths-deep-notes.js",
+  "/cbse-physics-chemistry-deep-notes.js",
+  "/cbse-biology-deep-notes.js",
+  "/cbse-remaining-chapter-notes.js",
   "/study-library.js",
   "/question-bank.js",
   "/local-ai.js",
   "/manifest.webmanifest",
   "/app-icon.svg",
-  "/offline.html"
+  "/offline.html",
+  "/cbse-humanities-computer-deep-notes.js",
+  "/ncert-physics-chapter-notes.js",
+  "/ncert-chemistry-chapter-notes.js",
+  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-biology-chapter-notes.js"
 ];
 const STATIC_FILES = new Set([
   "/app.js",
@@ -20,10 +29,19 @@ const STATIC_FILES = new Set([
   "/school-humanities-commerce-guides.js",
   "/formula-cheat-sheets.js",
   "/exam-prep-notes.js",
+  "/cbse-maths-deep-notes.js",
+  "/cbse-physics-chemistry-deep-notes.js",
+  "/cbse-biology-deep-notes.js",
+  "/cbse-remaining-chapter-notes.js",
   "/study-library.js",
   "/question-bank.js",
   "/manifest.webmanifest",
-  "/app-icon.svg"
+  "/app-icon.svg",
+  "/cbse-humanities-computer-deep-notes.js",
+  "/ncert-physics-chapter-notes.js",
+  "/ncert-chemistry-chapter-notes.js",
+  "/ncert-mathematics-chapter-notes.js",
+  "/ncert-biology-chapter-notes.js"
 ]);
 
 self.addEventListener("install", (event) => {
