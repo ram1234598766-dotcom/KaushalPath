@@ -466,7 +466,7 @@ function buildCbseAnnualPaper(className, subject){
  return {
   id:id,title:"CBSE-Style Annual Exam · "+className+" · "+subject,exam:"CBSE Annual",subject:subject,level:className,
   duration:cfg.duration,mark:1,negativeMark:0,maxMarks:cfg.marks,annualExam:true,fullLength:false,
-  desc:fallback?"Original subject-format competency scaffold because class-specific curated chapters were not available. Check coverage against the current official curriculum.":"Original syllabus-mapped competency model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
+  desc:fallback?"Original subject-format competency scaffold because class-specific curated chapters were not available. Check coverage against the current official curriculum. This is not an official CBSE paper.":"Original syllabus-mapped competency model paper with objective, constructed-response and case/source-based questions. Not an official CBSE paper.",
   sourceScope:source.scope,subjectFormatFallback:fallback,qs:qs
  };
 }
