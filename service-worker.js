@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaushalpath-shell-v11";
+const CACHE_NAME = "kaushalpath-shell-v12";
 const SHELL_FILES = [
   "/",
   "/index.html",
