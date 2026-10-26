@@ -90,6 +90,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "quantum-study-lab.js",
+      "use": "@vercel/static"
+    },
+    {
       "src": "app.js",
       "use": "@vercel/static"
     },
