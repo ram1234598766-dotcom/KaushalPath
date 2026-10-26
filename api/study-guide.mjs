@@ -578,25 +578,27 @@ function quantumQasmFromArgs(args) {
   return { qasm: qasm };
 }
 
-async function qbraidGet(path, signal) {
+async function qbraidRequest(method, path, body, signal) {
   const apiKey = String(process.env.QBRAID_API_KEY || "").trim();
   if (!apiKey) {
     return {
       ok: false,
       configured: false,
-      error: "qBraid cloud tools are not configured on the KaushalPath server. Add QBRAID_API_KEY to Vercel Environment Variables. Local quantum validation and simulation still work without a key."
+      error: "qBraid cloud tools are not configured on the KaushalPath server. Add QBRAID_API_KEY as a Vercel server-side environment variable. Local planning, calculations, and small-circuit simulation work without it."
     };
   }
   let response;
   try {
-    const timeout = AbortSignal.timeout(9000);
+    const timeout = AbortSignal.timeout(12000);
     const requestSignal = signal ? AbortSignal.any([timeout, signal]) : timeout;
-    response = await fetch("https://api-v2.qbraid.com/api/v1/" + path, {
-      method: "GET",
-      headers: { Accept: "application/json", "X-API-KEY": apiKey },
+    const options = {
+      method: method,
+      headers: { Accept: "application/json", "X-API-KEY": apiKey, ...(body ? { "Content-Type": "application/json" } : {}) },
       signal: requestSignal,
       redirect: "error"
-    });
+    };
+    if (body) options.body = JSON.stringify(body);
+    response = await fetch("https://api-v2.qbraid.com/api/v1/" + path, options);
   } catch (error) {
     if (signal && signal.aborted) throw error;
     return { ok: false, configured: true, error: "The qBraid service could not be reached right now. Try again shortly." };
@@ -607,11 +609,138 @@ async function qbraidGet(path, signal) {
     const status = response.status;
     const error = status === 401 ? "The configured qBraid API key was rejected. Check QBRAID_API_KEY in Vercel." :
       status === 403 ? "The configured qBraid account does not have access to this device or operation." :
+      status === 409 ? "qBraid says this result is not ready yet." :
+      status === 410 ? "This qBraid device or resource has been retired." :
+      status === 422 ? "qBraid rejected the request as invalid. Check the circuit format, device QRN, and shot count." :
       status === 429 ? "qBraid is rate-limiting requests. Try again shortly." :
       "qBraid returned an error (HTTP " + status + "). Check the device QRN and account permissions.";
-    return { ok: false, configured: true, error: error };
+    return { ok: false, configured: true, status: status, error: error };
   }
-  return { ok: true, configured: true, data: payload.data === undefined ? payload : payload.data };
+  return { ok: true, configured: true, status: response.status, data: payload.data === undefined ? payload : payload.data };
+}
+
+async function qbraidGet(path, signal) {
+  return qbraidRequest("GET", path, null, signal);
+}
+async function qbraidPost(path, body, signal) {
+  return qbraidRequest("POST", path, body, signal);
+}
+
+function validateRemoteQasm(source) {
+  if (typeof source !== "string" || !source.trim()) return { valid: false, errors: ["Add OpenQASM source first."] };
+  if (source.length > 50000) return { valid: false, errors: ["Remote circuit source is limited to 50,000 characters."] };
+  const cleaned = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "").trim();
+  const header = cleaned.match(/^\s*OPENQASM\s+(2\.0|3\.0)\s*;/i);
+  if (!header) return { valid: false, errors: ["Start the source with OPENQASM 2.0; or OPENQASM 3.0;."] };
+  const version = header[1];
+  const statements = cleaned.split(";").map((item) => item.trim()).filter(Boolean);
+  const quantum = new Map(), classical = new Map(), counts = {};
+  let gateCount = 0, depth = 0;
+  const supported = new Set([
+    "H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "ID", "RX", "RY", "RZ", "P",
+    "U", "U1", "U2", "U3", "SX", "SXDG", "CX", "CNOT", "CY", "CZ", "CH", "CP",
+    "CRX", "CRY", "CRZ", "CU1", "CCX", "TOFFOLI", "CCZ", "SWAP", "CSWAP", "ISWAP",
+    "RESET", "MEASURE", "BARRIER"
+  ]);
+  function addRegister(kind, name, size) {
+    if (!Number.isInteger(size) || size < 1 || size > 64) throw new Error("Remote circuit register sizes must be between 1 and 64 qubits/bits.");
+    const target = kind === "q" ? quantum : classical;
+    if (quantum.has(name) || classical.has(name)) throw new Error("Register names must be unique.");
+    target.set(name, size);
+    if (target.size > 1) throw new Error("Remote QASM currently accepts one quantum register and one classical register.");
+  }
+  try {
+    for (const statement of statements) {
+      if (/^OPENQASM\b/i.test(statement) || /^include\s+["'](?:stdgates\.inc|qelib1\.inc)["']$/i.test(statement) || /^pragma\b/i.test(statement)) continue;
+      let match = statement.match(/^(qubit|bit)\s*(?:\[\s*(\d+)\s*\])?\s+([A-Za-z_]\w*)$/i);
+      if (match) {
+        addRegister(match[1].toLowerCase() === "qubit" ? "q" : "c", match[3], Number(match[2] || 1));
+        continue;
+      }
+      match = statement.match(/^(qreg|creg)\s+([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]$/i);
+      if (match) {
+        addRegister(match[1].toLowerCase() === "qreg" ? "q" : "c", match[2], Number(match[3]));
+        continue;
+      }
+    }
+    if (quantum.size !== 1) throw new Error("Declare one quantum register, such as qubit[12] q; or qreg q[12];");
+    for (const statement of statements) {
+      if (/^OPENQASM\b/i.test(statement) || /^include\s+["'](?:stdgates\.inc|qelib1\.inc)["']$/i.test(statement) ||
+          /^pragma\b/i.test(statement) ||
+          /^(?:qubit|bit)\s*(?:\[\s*\d+\s*\])?\s+[A-Za-z_]\w*$/i.test(statement) ||
+          /^(?:qreg|creg)\s+[A-Za-z_]\w*\s*\[\s*\d+\s*\]$/i.test(statement)) continue;
+      const upper = statement.toUpperCase();
+      if (/^BARRIER\b/.test(upper)) continue;
+      if (/^RESET\s+/.test(upper)) {
+        const target = statement.slice(5).trim();
+        if (!operandReferencesValid(target, quantum)) throw new Error("Reset uses an undeclared or out-of-range qubit.");
+        counts.RESET = (counts.RESET || 0) + 1; gateCount++; depth++;
+        continue;
+      }
+      if (/^(?:MEASURE\b|[A-Za-z_]\w*(?:\[\s*\d+\s*\])?\s*=\s*MEASURE\b)/i.test(statement)) {
+        const qRefs = [...statement.matchAll(/([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]/g)];
+        if (qRefs.some((ref) => quantum.has(ref[1]) && Number(ref[2]) >= quantum.get(ref[1]))) throw new Error("Measurement uses a qubit index outside the declared register.");
+        const hasQuantumReference = [...statement.matchAll(/\b([A-Za-z_]\w*)\b/g)].some((ref) => quantum.has(ref[1]));
+        if (!hasQuantumReference) throw new Error("Measurement must reference the declared quantum register.");
+        const classicalRefs = [...statement.matchAll(/\b([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]/g)];
+        if (classicalRefs.some((ref) => classical.has(ref[1]) && Number(ref[2]) >= classical.get(ref[1]))) throw new Error("Measurement uses a classical index outside its register.");
+        counts.MEASURE = (counts.MEASURE || 0) + 1; gateCount++; depth++;
+        continue;
+      }
+      const gate = statement.match(/^([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?\s+(.+)$/);
+      if (!gate) throw new Error("Could not understand circuit statement: " + statement.slice(0, 100));
+      const name = gate[1].toUpperCase();
+      if (!supported.has(name)) throw new Error("Unsupported remote gate or statement: " + gate[1]);
+      if (!operandReferencesValid(gate[3], quantum)) throw new Error(name + " uses an undeclared or out-of-range qubit.");
+      const refs = [...gate[3].matchAll(/\b([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]/g)];
+      const required = ["CX", "CNOT", "CY", "CZ", "CH", "CP", "CRX", "CRY", "CRZ", "CU1", "SWAP", "ISWAP"].includes(name) ? 2 :
+        ["CCX", "TOFFOLI", "CCZ", "CSWAP"].includes(name) ? 3 : 1;
+      if (refs.length < required && !/^BARRIER\b/i.test(statement)) throw new Error(name + " has too few explicit qubit operands.");
+      counts[name] = (counts[name] || 0) + 1; gateCount++; depth++;
+      if (gateCount > 3000) throw new Error("Remote source must contain at most 3,000 gate/measurement statements.");
+    }
+    return {
+      valid: true,
+      version: version,
+      stats: {
+        numQubits: quantum.values().next().value,
+        numClbits: classical.size ? classical.values().next().value : 0,
+        gateCount: gateCount,
+        depth: depth
+      },
+      gateCounts: counts,
+      note: "This is a conservative structural check for common OpenQASM gates, not a complete OpenQASM compiler. qBraid/device acceptance is authoritative."
+    };
+  } catch (error) {
+    return { valid: false, errors: [String(error && error.message || error).slice(0, 240)] };
+  }
+}
+
+function operandReferencesValid(value, registers) {
+  const refs = [...String(value || "").matchAll(/([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]/g)];
+  if (!refs.length) {
+    const names = [...String(value || "").matchAll(/\b([A-Za-z_]\w*)\b/g)].map((item) => item[1]);
+    return names.length > 0 && names.every((name) => {
+      if (["pi", "i"].includes(name.toLowerCase())) return true;
+      return registers.has(name) && registers.get(name) === 1;
+    });
+  }
+  return refs.every((ref) => registers.has(ref[1]) && Number(ref[2]) >= 0 && Number(ref[2]) < registers.get(ref[1]));
+}
+
+function parseExplicitQuantumApproval(value) {
+  const text = String(value || "");
+  if (!/\bCONFIRM\s+QUANTUM\s+RUN\b/i.test(text)) return { confirmed: false };
+  const device = text.match(/\bdevice(?:\s+qrn)?\s*[:=]\s*([A-Za-z0-9._:-]{3,255})/i);
+  const shots = text.match(/\bshots?\s*[:=]\s*(\d{1,6})\b/i);
+  const cost = text.match(/\bestimated[\s_-]*cost\s*[:=]\s*(\d+(?:\.\d+)?)/i);
+  if (!device || !shots || !cost) return { confirmed: true, complete: false };
+  return {
+    confirmed: true, complete: true,
+    deviceQrn: device[1],
+    shots: Number(shots[1]),
+    estimatedCost: Number(cost[1])
+  };
 }
 
 export async function executeQuantumTool(name, args, signal) {
