@@ -103,7 +103,7 @@ The AI Study Guide has private server-side adapters for several open public data
 - **News headlines:** public BBC News RSS feeds. The integration returns a small set of headlines, short descriptions, publication timestamps and links, not full articles. Respect publisher terms and keep attribution.
 - **Public holidays:** [Nager.Date](https://github.com/nager/Nager.Date) public holiday API. Calendar data can be revised and some lunar holidays depend on local announcements.
 
-Responses have bounded timeouts and sizes with opportunistic in-process caching to reduce repeated requests. These services are free/keyless, but not unlimited or guaranteed; if one provider is unavailable or rate-limits traffic, the tool reports the failure rather than inventing data. The adapters are implemented as local source code in api/free-live-data.mjs, so no third-party SDK package is required.
+Responses have bounded timeouts and sizes with opportunistic in-process caching to reduce repeated requests. These services are free/keyless, but not unlimited or guaranteed; if one provider is unavailable or rate-limits traffic, the tool reports the failure rather than inventing data. The adapters are implemented as local source code in api/free-live-data.mjs, so no third-party SDK package is required. The Cloudflare Worker also serves clear direct live-data requests itself and exposes an origin-restricted CORS endpoint for a Vercel frontend fallback, so these queries do not depend on the model gateway being available. Unsupported/empty provider coverage is reported instead of fabricating values.
 
 ## Cloudflare Workers deployment
 
