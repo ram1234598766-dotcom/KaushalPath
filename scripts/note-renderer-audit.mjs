@@ -12,6 +12,10 @@ assert.ok(pdfExport.includes('printButton.textContent = "Print / Save PDF"') && 
 assert.ok(source.includes('pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal")'), "PDF export should embed a Unicode-capable font when it is available");
 assert.ok(pdfExport.includes("@media print{html,body{width:100%!important;max-width:none!important;"), "print layout must remove portrait-width constraints before rendering the landscape map");
 assert.ok(pdfExport.includes("Download PDF saves a real .pdf file directly. Print / Save PDF opens the browser print dialog as a separate option."), "the preview must distinguish direct download from the separate print workflow");
+const pageHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+assert.ok(pageHtml.includes("Choose <strong>Download PDF</strong> to save a real chapter file directly."), "the Study Hub must describe the real direct-download behavior");
+assert.ok(pageHtml.includes("Print / Save PDF</strong> remains a separate option"), "the Study Hub must not imply that chapter download opens the print dialog");
+
 const helperStart = source.indexOf("  function uniqueNoteText(");
 const helperEnd = source.indexOf("function printNotes(items)", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "the pure chapter map and packet helpers must be present");
