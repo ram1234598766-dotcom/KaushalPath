@@ -6,6 +6,7 @@ import { runInNewContext } from "node:vm";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
+const aiSkillRegistry = readFileSync(new URL("../api/ai-skill-registry.mjs", import.meta.url), "utf8");
 const questionBank = readFileSync(new URL("../question-bank.js", import.meta.url), "utf8");
 const studyLibrary = readFileSync(new URL("../study-library.js", import.meta.url), "utf8");
 const examPrepNotes = readFileSync(new URL("../exam-prep-notes.js", import.meta.url), "utf8");
@@ -456,6 +457,9 @@ assert.match(api, /kilo-auto\/free/, "AI should use Kilo Auto Free");
 assert.match(api, /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "AI should use the documented Kilo Gateway chat endpoint");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
 
+assert.match(aiSkillRegistry, /if \(SKILLS\.length < 150\)/, "the private auto-activated AI skill catalogue must contain at least 150 skills");
+assert.match(aiSkillRegistry, /export const AI_SKILL_COUNT = AI_SKILLS\.length/, "the private skill registry should expose its internal size to tests");
+assert.doesNotMatch(html + app + localAI + quantumStudyLab, /ai-skill-registry|selectActiveSkills|formatActiveSkills|qbraid_submit_job|qbraid_get_job|quantum_solve_qubo/, "private AI tools and skills must not be shipped as frontend UI or client-side code");
 assert.match(api, /features: \{ liveSearch: true, readPublicUrls: true, imageAnalysis: true, quantumTools: true, qBraidCloud: Boolean\(process\.env\.QBRAID_API_KEY\) \}/, "health metadata should expose quantum tools without model identifiers");
 assert.doesNotMatch(api.slice(api.indexOf('if (req.method === "GET")'), api.indexOf('if (req.method !== "POST")')), /visionModel|localModel|Qwen|kilo-auto\/free|inclusionai/i, "health response must not expose model or provider details");
 assert.match(api, /Promise\.all\(\[\s*Promise\.all\(urls\.map/, "selected public pages should be fetched concurrently");
