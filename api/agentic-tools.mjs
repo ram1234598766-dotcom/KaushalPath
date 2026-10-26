@@ -147,16 +147,19 @@ function safeArtifactName(value) {
 
 function normalizePdfGlyphs(value) {
   const substitutions = {
-    "—": "-", "–": "-", "−": "-", "…": "...", "‘": "'", "’": "'", "“": "\\"", "”": "\\"",
+    "—": "-", "–": "-", "−": "-", "…": "...", "‘": "'", "’": "'", "“": "\"", "”": "\"",
     "•": "-", "→": "->", "←": "<-", "↔": "<->", "×": "x", "÷": "/", "≤": "<=", "≥": ">=", "≠": "!=", "≈": "~",
     "∞": "infinity", "π": "pi", "θ": "theta", "α": "alpha", "β": "beta", "γ": "gamma", "δ": "delta",
     "λ": "lambda", "μ": "mu", "σ": "sigma", "Σ": "Sigma", "Ω": "Ohm", "ω": "omega", "Δ": "Delta",
     "√": "sqrt", "∑": "sum", "∫": "integral", "°": " degrees", "¹": "^1", "²": "^2", "³": "^3",
     "₀": "_0", "₁": "_1", "₂": "_2", "₃": "_3", "₄": "_4", "₅": "_5", "₆": "_6", "₇": "_7", "₈": "_8", "₉": "_9"
   };
-  return String(value || "").replace(/[—–−…‘’“”•→←↔×÷≤≥≠≈∞πθαβγδλμσΣΩωΔ√∑∫°¹²³₀₁₂₃₄₅₆₇₈₉]/g, (char) => substitutions[char] || "?")
-    .replace(/[^\x00-\xFF]/g, "?")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, " ");
+  return Array.from(String(value || "")).map((char) => {
+    if (Object.prototype.hasOwnProperty.call(substitutions, char)) return substitutions[char];
+    if (char === "\n" || char === "\r" || char === "\t") return char;
+    const code = char.codePointAt(0);
+    return code >= 32 && code <= 126 ? char : "?";
+  }).join("").replace(/\r\n?/g, "\n");
 }
 function stripInlineMarkdown(value) {
   return normalizePdfGlyphs(String(value || "").replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
