@@ -1,5 +1,5 @@
 import { lookup } from "node:dns/promises";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { isIP } from "node:net";
 import { request as requestHttp } from "node:http";
 import { request as requestHttps } from "node:https";
@@ -741,6 +741,332 @@ function parseExplicitQuantumApproval(value) {
     shots: Number(shots[1]),
     estimatedCost: Number(cost[1])
   };
+}
+
+function planQuantumProblem(input) {
+  const type = String(input.problemType || "custom").toLowerCase();
+  const size = Math.max(1, Math.min(100000, Number(input.size) || 1));
+  const map = {
+    maxcut: ["QAOA", "Encode graph edges as a cost Hamiltonian; compare against greedy/local-search MaxCut and report cut quality.", "A graph with n vertices commonly uses O(n) logical qubits for a simple encoding. The actual circuit and connectivity requirements depend on the graph."],
+    tsp: ["QAOA or quantum annealing", "Use a one-hot city-position encoding with exactly-one constraints and edge costs; compare against Held–Karp for small n or a classical routing heuristic.", "A straightforward one-hot TSP encoding can use O(n^2) binary variables, so resource use grows quickly."],
+    scheduling: ["QAOA or quantum annealing", "Encode assignments and conflicts into a QUBO/Ising objective with explicit penalty weights; compare with integer programming or constraint programming.", "The variable count depends on jobs, time slots, and machines; constraints can dominate qubit count."],
+    sat: ["Grover for unstructured search; QAOA for an optimization formulation", "Estimate oracle cost and clause structure; benchmark against a classical SAT solver before claiming a quantum advantage.", "Grover is not automatically preferable when classical structure is strong."],
+    qubo: ["QAOA or quantum annealing", "Normalize the binary objective, preserve coefficient signs, test a classical exact/heuristic baseline, then evaluate repeated shots and solution quality.", "The QUBO variable count is the first resource estimate; constraints may require penalty variables."],
+    chemistry: ["VQE", "Choose an active space, map the Hamiltonian, select an ansatz, estimate state-preparation and measurement cost, and compare with a classical chemistry baseline.", "Chemistry simulations require Hamiltonian and ansatz details; qubit count alone does not establish feasibility."],
+    search: ["Grover/amplitude amplification when an efficient oracle exists", "Define the search space, oracle, and success condition; estimate the oracle depth and repetitions; compare with classical search.", "The oracle can dominate cost and may remove the theoretical advantage."],
+    factorization: ["Shor as a theoretical algorithm; classical factorization baseline for practical sizes", "State the input size and required logical error-corrected resources. Do not imply today's small noisy circuits can factor arbitrary large integers.", "Large practical Shor runs require fault-tolerant logical qubits and are outside ordinary small-device demonstrations."],
+    qml: ["Quantum kernels or variational quantum classifiers as research baselines", "Define dataset size, feature map, labels, and leakage-safe evaluation; compare against a simple classical model.", "Encoding data and measuring outputs can outweigh benefits; no accuracy advantage should be assumed."],
+    portfolio: ["QUBO/QAOA for an explicitly supplied constrained objective", "Use bounded, user-supplied coefficients, add risk/diversification constraints carefully, and compare with classical quadratic optimization.", "A quantum formulation does not create reliable investment returns or remove data uncertainty."],
+    routing: ["QAOA/annealing formulation for bounded routing instances", "Specify vehicle/capacity/time-window constraints, then compare with a classical vehicle-routing solver.", "Naive binary encodings scale rapidly as locations and constraints grow."],
+    custom: ["Choose an algorithm only after formalizing the objective and input structure", "Write objective, constraints, input/output, and a classical baseline before choosing a quantum circuit.", "A quantum approach is justified only when its encoding, resources, and comparison make sense."]
+  };
+  const details = map[type] || map.custom;
+  return {
+    ok: true,
+    problemType: map[type] ? type : "custom",
+    size: size,
+    recommendedAlgorithm: details[0],
+    workflow: [
+      "Formalize the objective and all constraints.",
+      details[1],
+      "Estimate logical/physical qubits, gate count, depth, connectivity, shot count and noise.",
+      "Use a classical baseline and compare solution quality, runtime and total cost.",
+      "Run locally first where supported; inspect live qBraid devices and estimate credits before any remote job."
+    ],
+    resourceNotes: details[2],
+    remoteExecution: "No job has been submitted. qBraid execution requires a server-side QBRAID_API_KEY and an explicit confirmation of circuit fingerprint, device, shot count and current estimated credit cost."
+  };
+}
+
+function solveQuboExactly(input) {
+  const n = Number(input.variables);
+  const linear = input.linear;
+  const quadratic = Array.isArray(input.quadratic) ? input.quadratic : [];
+  const sense = input.sense === "maximize" ? "maximize" : "minimize";
+  const constant = input.constant == null ? 0 : Number(input.constant);
+  if (!Number.isInteger(n) || n < 1 || n > 18) return { ok: false, error: "Exact QUBO baseline supports 1 to 18 binary variables." };
+  if (!Array.isArray(linear) || linear.length !== n || linear.some((v) => !Number.isFinite(Number(v)))) {
+    return { ok: false, error: "linear must contain exactly one finite numeric coefficient per variable." };
+  }
+  if (!Number.isFinite(constant) || quadratic.length > 200) return { ok: false, error: "Use a finite constant and at most 200 quadratic terms." };
+  const terms = [];
+  for (const term of quadratic) {
+    const i = Number(term && term.i), j = Number(term && term.j), coefficient = Number(term && term.coefficient);
+    if (!Number.isInteger(i) || !Number.isInteger(j) || i < 0 || j < 0 || i >= n || j >= n || !Number.isFinite(coefficient)) {
+      return { ok: false, error: "Each quadratic term needs valid zero-based i/j indices and a finite coefficient." };
+    }
+    terms.push({ i, j, coefficient });
+  }
+  let bestMask = 0, bestValue = sense === "minimize" ? Infinity : -Infinity;
+  const count = 1 << n;
+  for (let mask = 0; mask < count; mask++) {
+    let value = constant;
+    for (let i = 0; i < n; i++) if ((mask & (1 << i)) !== 0) value += Number(linear[i]);
+    for (const term of terms) {
+      if ((mask & (1 << term.i)) !== 0 && (mask & (1 << term.j)) !== 0) value += term.coefficient;
+    }
+    if (!Number.isFinite(value)) return { ok: false, error: "The objective overflowed; rescale the coefficients." };
+    if ((sense === "minimize" && value < bestValue) || (sense === "maximize" && value > bestValue)) {
+      bestValue = value; bestMask = mask;
+    }
+  }
+  return {
+    ok: true, method: "exact exhaustive classical baseline",
+    variables: n, assignmentsChecked: count, sense,
+    bestValue: bestValue,
+    assignment: Array.from({ length: n }, (_, i) => (bestMask & (1 << i)) ? 1 : 0),
+    note: "This is an exact classical result for the supplied coefficients. It is a baseline for comparing a later quantum heuristic, not a quantum execution."
+  };
+}
+
+function evaluateNumericExpression(expression) {
+  if (typeof expression !== "string" || expression.length > 1000) throw new Error("Expression must be text of at most 1,000 characters.");
+  const source = expression.trim().toLowerCase().replace(/π/g, "pi").replace(/\s+/g, "");
+  const tokens = source.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|[a-z]+|[()+\-*/^,]/g) || [];
+  if (!source || tokens.join("") !== source) throw new Error("Expression contains unsupported characters or operators.");
+  let position = 0;
+  const functions = {
+    sqrt: (x) => Math.sqrt(x), abs: (x) => Math.abs(x), sin: (x) => Math.sin(x),
+    cos: (x) => Math.cos(x), tan: (x) => Math.tan(x), asin: (x) => Math.asin(x),
+    acos: (x) => Math.acos(x), atan: (x) => Math.atan(x), log: (x) => Math.log10(x),
+    ln: (x) => Math.log(x), exp: (x) => Math.exp(x), min: (...x) => Math.min(...x),
+    max: (...x) => Math.max(...x), floor: (x) => Math.floor(x), ceil: (x) => Math.ceil(x)
+  };
+  function peek() { return tokens[position]; }
+  function consume(token) { if (peek() !== token) throw new Error("Expected " + token + " in expression."); position++; }
+  function parseAdd() {
+    let value = parseMultiply();
+    while (peek() === "+" || peek() === "-") {
+      const op = tokens[position++];
+      const right = parseMultiply();
+      value = op === "+" ? value + right : value - right;
+    }
+    return value;
+  }
+  function parseMultiply() {
+    let value = parseUnary();
+    while (peek() === "*" || peek() === "/") {
+      const op = tokens[position++];
+      const right = parseUnary();
+      if (op === "/" && right === 0) throw new Error("Division by zero is undefined.");
+      value = op === "*" ? value * right : value / right;
+    }
+    return value;
+  }
+  function parseUnary() {
+    if (peek() === "+") { position++; return parseUnary(); }
+    if (peek() === "-") { position++; return -parseUnary(); }
+    return parsePower();
+  }
+  function parsePower() {
+    let value = parsePrimary();
+    if (peek() === "^") { position++; value = Math.pow(value, parseUnary()); }
+    return value;
+  }
+  function parsePrimary() {
+    const token = peek();
+    if (!token) throw new Error("Expression ends unexpectedly.");
+    if (token === "(") {
+      position++; const value = parseAdd(); consume(")"); return value;
+    }
+    if (/^(?:\d|\.)/.test(token)) { position++; return Number(token); }
+    if (/^[a-z]+$/.test(token)) {
+      position++;
+      if (token === "pi") return Math.PI;
+      if (token === "e") return Math.E;
+      if (!Object.prototype.hasOwnProperty.call(functions, token)) throw new Error("Unsupported function or constant: " + token);
+      if (peek() !== "(") throw new Error("Function " + token + " requires parentheses.");
+      position++;
+      const args = [];
+      if (peek() !== ")") {
+        args.push(parseAdd());
+        while (peek() === ",") { position++; args.push(parseAdd()); }
+      }
+      consume(")");
+      const unaryFunctions = new Set(["sqrt", "abs", "sin", "cos", "tan", "asin", "acos", "atan", "log", "ln", "exp", "floor", "ceil"]);
+      if ((unaryFunctions.has(token) && args.length !== 1) || (["min", "max"].includes(token) && args.length < 1)) throw new Error("Wrong number of arguments for " + token + ".");
+      return functions[token](...args);
+    }
+    throw new Error("Unexpected token in expression: " + token);
+  }
+  const result = parseAdd();
+  if (position !== tokens.length || !Number.isFinite(result)) throw new Error("Expression did not produce a finite numeric result.");
+  return result;
+}
+
+function normalizeMatrix(matrix, name) {
+  if (!Array.isArray(matrix) || matrix.length < 1 || matrix.length > 40 ||
+      matrix.some((row) => !Array.isArray(row) || row.length < 1 || row.length > 40 || row.some((v) => !Number.isFinite(Number(v))))) {
+    throw new Error(name + " must be a rectangular numeric matrix with dimensions 1 to 40.");
+  }
+  const width = matrix[0].length;
+  if (matrix.some((row) => row.length !== width)) throw new Error(name + " must be rectangular.");
+  return matrix.map((row) => row.map(Number));
+}
+
+function matrixCompute(input) {
+  const op = input.operation;
+  const a = normalizeMatrix(input.matrixA, "matrixA");
+  const rows = a.length, cols = a[0].length;
+  if (op === "transpose") return { ok: true, operation: op, result: a[0].map((_, j) => a.map((row) => row[j])) };
+  if (op === "multiply") {
+    const b = normalizeMatrix(input.matrixB, "matrixB");
+    if (cols !== b.length) return { ok: false, error: "matrixA columns must equal matrixB rows." };
+    const result = Array.from({ length: rows }, (_, i) => Array.from({ length: b[0].length }, (_, j) => {
+      let sum = 0; for (let k = 0; k < cols; k++) sum += a[i][k] * b[k][j]; return sum;
+    }));
+    return { ok: true, operation: op, result };
+  }
+  if (op === "determinant") {
+    if (rows !== cols) return { ok: false, error: "Determinant requires a square matrix." };
+    const m = a.map((row) => row.slice()); let det = 1;
+    for (let i = 0; i < rows; i++) {
+      let pivot = i;
+      for (let r = i + 1; r < rows; r++) if (Math.abs(m[r][i]) > Math.abs(m[pivot][i])) pivot = r;
+      if (Math.abs(m[pivot][i]) < 1e-12) return { ok: true, operation: op, determinant: 0 };
+      if (pivot !== i) { [m[pivot], m[i]] = [m[i], m[pivot]]; det *= -1; }
+      const p = m[i][i]; det *= p;
+      for (let r = i + 1; r < rows; r++) {
+        const factor = m[r][i] / p;
+        for (let j = i + 1; j < rows; j++) m[r][j] -= factor * m[i][j];
+      }
+    }
+    return { ok: true, operation: op, determinant: det };
+  }
+  if (op === "solve") {
+    if (rows !== cols) return { ok: false, error: "Solving a linear system requires a square matrixA." };
+    let b = Array.isArray(input.vectorB) ? input.vectorB.map(Number) :
+      Array.isArray(input.matrixB) && input.matrixB.every((row) => Array.isArray(row) && row.length === 1) ? input.matrixB.map((row) => Number(row[0])) : null;
+    if (!b || b.length !== rows || b.some((v) => !Number.isFinite(v))) return { ok: false, error: "Provide vectorB with one finite number per matrixA row." };
+    const m = a.map((row, i) => row.concat(b[i]));
+    for (let i = 0; i < rows; i++) {
+      let pivot = i;
+      for (let r = i + 1; r < rows; r++) if (Math.abs(m[r][i]) > Math.abs(m[pivot][i])) pivot = r;
+      if (Math.abs(m[pivot][i]) < 1e-12) return { ok: false, error: "The system is singular or ill-conditioned; a unique solution was not found." };
+      [m[pivot], m[i]] = [m[i], m[pivot]];
+      const p = m[i][i]; for (let j = i; j <= rows; j++) m[i][j] /= p;
+      for (let r = 0; r < rows; r++) {
+        if (r === i) continue;
+        const factor = m[r][i]; for (let j = i; j <= rows; j++) m[r][j] -= factor * m[i][j];
+      }
+    }
+    return { ok: true, operation: op, solution: m.map((row) => row[rows]), residualNote: "Verify the solution against the original system if coefficients are poorly conditioned." };
+  }
+  return { ok: false, error: "Unsupported matrix operation." };
+}
+
+function computeStatistics(input) {
+  if (!Array.isArray(input.values) || input.values.length < 1 || input.values.length > 10000 ||
+      input.values.some((v) => !Number.isFinite(Number(v)))) return { ok: false, error: "values must contain 1 to 10,000 finite numbers." };
+  const values = input.values.map(Number).sort((a, b) => a - b), n = values.length;
+  const mean = values.reduce((sum, value) => sum + value, 0) / n;
+  const variance = n > 1 ? values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (n - 1) : 0;
+  function quantile(p) {
+    const index = (n - 1) * p, low = Math.floor(index), high = Math.ceil(index);
+    return values[low] + (values[high] - values[low]) * (index - low);
+  }
+  return {
+    ok: true, count: n, mean, median: quantile(0.5),
+    sampleVariance: variance, sampleStandardDeviation: Math.sqrt(variance),
+    min: values[0], max: values[n - 1], q1: quantile(0.25), q3: quantile(0.75),
+    quartileMethod: "linear interpolation between sorted observations"
+  };
+}
+
+function convertUnit(input) {
+  const value = Number(input.value);
+  if (!Number.isFinite(value)) return { ok: false, error: "value must be finite." };
+  const normalize = (u) => String(u || "").trim().toLowerCase().replace(/°/g, "").replace(/\s+/g, "");
+  const from = normalize(input.from), to = normalize(input.to);
+  const groups = {
+    length: { m: 1, meter: 1, meters: 1, km: 1000, cm: 0.01, mm: 0.001, um: 1e-6, nm: 1e-9, mi: 1609.344, mile: 1609.344, ft: 0.3048, in: 0.0254 },
+    mass: { kg: 1, g: 0.001, mg: 1e-6, tonne: 1000, lb: 0.45359237, oz: 0.028349523125 },
+    time: { s: 1, sec: 1, ms: 0.001, us: 1e-6, ns: 1e-9, min: 60, h: 3600, hr: 3600, day: 86400 },
+    angle: { rad: 1, radians: 1, deg: Math.PI / 180, degree: Math.PI / 180, degrees: Math.PI / 180 },
+    data: { bit: 1, b: 1, byte: 8, bytes: 8, kb: 8000, mb: 8e6, gb: 8e9, kib: 8192, mib: 8388608, gib: 8589934592 },
+    energy: { j: 1, kj: 1000, cal: 4.184, kcal: 4184, ev: 1.602176634e-19, wh: 3600, kwh: 3.6e6 },
+    volume: { l: 1, liter: 1, ml: 0.001, m3: 1000, m^3: 1000, gallon: 3.785411784 },
+    speed: { "m/s": 1, "km/h": 1 / 3.6, mph: 0.44704, knot: 0.5144444444444445 },
+    pressure: { pa: 1, kpa: 1000, bar: 100000, atm: 101325, psi: 6894.757293168 }
+  };
+  const temp = (u) => ({ c: "c", celsius: "c", f: "f", fahrenheit: "f", k: "k", kelvin: "k" }[u] || "");
+  if (temp(from) || temp(to)) {
+    if (!temp(from) || !temp(to)) return { ok: false, error: "Temperature units can only convert to other temperature units." };
+    const t = temp(from), target = temp(to);
+    const kelvin = t === "c" ? value + 273.15 : t === "f" ? (value - 32) * 5 / 9 + 273.15 : value;
+    const result = target === "c" ? kelvin - 273.15 : target === "f" ? (kelvin - 273.15) * 9 / 5 + 32 : kelvin;
+    return { ok: true, value, from: input.from, to: input.to, result };
+  }
+  for (const [category, units] of Object.entries(groups)) {
+    if (Object.prototype.hasOwnProperty.call(units, from) && Object.prototype.hasOwnProperty.call(units, to)) {
+      return { ok: true, category, value, from: input.from, to: input.to, result: value * units[from] / units[to] };
+    }
+  }
+  return { ok: false, error: "Those units are not in the same supported conversion category." };
+}
+
+function booleanTruthTable(input) {
+  if (typeof input.expression !== "string" || input.expression.length > 300) return { ok: false, error: "Boolean expression must be at most 300 characters." };
+  let source = input.expression.toUpperCase()
+    .replace(/\bAND\b/g, "&").replace(/\bOR\b/g, "|").replace(/\bXOR\b/g, "^").replace(/\bNOT\b/g, "!")
+    .replace(/\bTRUE\b/g, "1").replace(/\bFALSE\b/g, "0")
+    .replace(/\+/g, "|").replace(/\*/g, "&").replace(/~|¬/g, "!");
+  source = source.replace(/\b([A-Z][A-Z0-9_]*)'/g, "!$1");
+  const tokens = source.match(/[A-Z][A-Z0-9_]*|[01]|&&|\|\||[!&|^()]/g) || [];
+  if (tokens.join("") !== source.replace(/\s+/g, "")) return { ok: false, error: "Use variables, 0/1, parentheses, NOT/!, AND/*/&, OR/+/|, and XOR/^ only." };
+  const variables = [...new Set(tokens.filter((token) => /^[A-Z][A-Z0-9_]*$/.test(token)))].sort();
+  if (variables.length > 8) return { ok: false, error: "Truth tables support at most 8 variables." };
+  function evaluate(assignment) {
+    let pos = 0;
+    const peek = () => tokens[pos];
+    const take = () => tokens[pos++];
+    function parseOr() { let v = parseXor(); while (peek() === "|" || peek() === "||") { take(); const r = parseXor(); v = v || r; } return v; }
+    function parseXor() { let v = parseAnd(); while (peek() === "^") { take(); const r = parseAnd(); v = Boolean(v) !== Boolean(r); } return v; }
+    function parseAnd() { let v = parseNot(); while (peek() === "&" || peek() === "&&") { take(); const r = parseNot(); v = v && r; } return v; }
+    function parseNot() { if (peek() === "!") { take(); return !parseNot(); } return parseAtom(); }
+    function parseAtom() {
+      const token = take();
+      if (token === "(") { const value = parseOr(); if (take() !== ")") throw new Error("Missing closing parenthesis."); return value; }
+      if (token === "0") return false;
+      if (token === "1") return true;
+      if (assignment.hasOwnProperty(token)) return assignment[token];
+      throw new Error("Unexpected token " + String(token) + ".");
+    }
+    const value = parseOr();
+    if (pos !== tokens.length) throw new Error("Unexpected extra Boolean token.");
+    return value ? 1 : 0;
+  }
+  try {
+    const rows = [];
+    for (let mask = 0; mask < (1 << variables.length); mask++) {
+      const assignment = {};
+      variables.forEach((v, index) => { assignment[v] = Boolean(mask & (1 << (variables.length - index - 1))); });
+      rows.push({ ...Object.fromEntries(variables.map((v) => [v, assignment[v] ? 1 : 0])), result: evaluate(assignment) });
+    }
+    return { ok: true, variables, rows };
+  } catch (error) {
+    return { ok: false, error: String(error && error.message || error).slice(0, 220) };
+  }
+}
+
+export async function executeGeneralAITool(name, args) {
+  const input = args && typeof args === "object" && !Array.isArray(args) ? args : {};
+  try {
+    if (name === "quantum_plan_problem") return planQuantumProblem(input);
+    if (name === "quantum_solve_qubo") return solveQuboExactly(input);
+    if (name === "math_evaluate_expression") return { ok: true, expression: input.expression, result: evaluateNumericExpression(input.expression) };
+    if (name === "matrix_compute") return matrixCompute(input);
+    if (name === "compute_statistics") return computeStatistics(input);
+    if (name === "convert_units") return convertUnit(input);
+    if (name === "boolean_truth_table") return booleanTruthTable(input);
+    return { ok: false, error: "That AI utility tool is not available." };
+  } catch (error) {
+    return { ok: false, error: String(error && error.message || error).slice(0, 260) };
+  }
+}
+
+export function remoteQasmFingerprint(qasm) {
+  return createHash("sha256").update(String(qasm || "").trim()).digest("hex").slice(0, 12);
 }
 
 export async function executeQuantumTool(name, args, signal) {
