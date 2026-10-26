@@ -66,7 +66,7 @@ const czQasm = [
   "h q[0];", "h q[1];", "cz q[0], q[1];", "c = measure q;"
 ].join("\n");
 const czOutput = quantum.simulateOpenQasm(czQasm).probabilities;
-assert.deepEqual(Object.keys(czOutput), ["00", "01", "10", "11"], "CZ should retain the four basis outcomes in the equal-superposition example");
+assert.deepEqual(Object.keys(czOutput).sort(), ["00", "01", "10", "11"], "CZ should retain the four basis outcomes in the equal-superposition example");
 for (const value of Object.values(czOutput)) assert.ok(Math.abs(value - 0.25) < 1e-9, "CZ should preserve ideal measurement probabilities");
 
 const swapQasm = [
