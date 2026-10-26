@@ -456,7 +456,7 @@ assert.match(api, /kilo-auto\/free/, "AI should use Kilo Auto Free");
 assert.match(api, /api\.kilo\.ai\/api\/gateway\/chat\/completions/, "AI should use the documented Kilo Gateway chat endpoint");
 assert.match(api, /normalizeUrls/, "API validates user URLs");
 
-assert.match(api, /features: \{ liveSearch: true, readPublicUrls: true, imageAnalysis: true \}/, "health metadata should expose capabilities without model identifiers");
+assert.match(api, /features: \{ liveSearch: true, readPublicUrls: true, imageAnalysis: true, quantumTools: true, qBraidCloud: Boolean\(process\.env\.QBRAID_API_KEY\) \}/, "health metadata should expose quantum tools without model identifiers");
 assert.doesNotMatch(api.slice(api.indexOf('if (req.method === "GET")'), api.indexOf('if (req.method !== "POST")')), /visionModel|localModel|Qwen|kilo-auto\/free|inclusionai/i, "health response must not expose model or provider details");
 assert.match(api, /Promise\.all\(\[\s*Promise\.all\(urls\.map/, "selected public pages should be fetched concurrently");
 assert.match(api, /shouldSearch\s*\?\s*searchWeb\(query, signal\)/, "web search should run concurrently with selected page retrieval and support cancellation");
