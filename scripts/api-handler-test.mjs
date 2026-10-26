@@ -38,6 +38,41 @@ assert.equal(noQbraidKey.configured, false, "the qBraid server tools should requ
 assert.match(noQbraidKey.error, /QBRAID_API_KEY/i);
 if (priorQbraidKey === undefined) delete process.env.QBRAID_API_KEY; else process.env.QBRAID_API_KEY = priorQbraidKey;
 
+const originalFetchForQbraidTest = globalThis.fetch;
+const originalKeyForQbraidTest = process.env.QBRAID_API_KEY;
+const qbraidRequests = [];
+process.env.QBRAID_API_KEY = "unit-test-qbraid-key";
+globalThis.fetch = async (url, options = {}) => {
+  qbraidRequests.push({ url: String(url), headers: options.headers || {} });
+  assert.match(String(url), /^https:\/\/api-v2\\.qbraid\\.com\/api\/v1\//, "qBraid calls should use its fixed HTTPS REST host");
+  assert.equal(options.headers && options.headers["X-API-KEY"], "unit-test-qbraid-key", "the key must be sent only from the server");
+  if (String(url).includes("/jobs/cost-estimate?")) {
+    return new Response(JSON.stringify({ success: true, data: { deviceQrn: "simulator.test", shots: 512, pricingAvailable: true, estimatedCost: 2.5 } }), {
+      status: 200, headers: { "content-type": "application/json; charset=utf-8" }
+    });
+  }
+  return new Response(JSON.stringify({ success: true, data: [{
+    name: "Test Simulator", qrn: "simulator.test", vendor: "TestVendor",
+    deviceType: "SIMULATOR", status: "ONLINE", numberQubits: 24,
+    runInputTypes: ["openqasm"], pricingModel: "simulator", directAccess: true
+  }] }), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
+};
+try {
+  const devices = await executeQuantumTool("qbraid_list_devices", { deviceType: "SIMULATOR" });
+  assert.equal(devices.ok, true);
+  assert.equal(devices.devices[0].qrn, "simulator.test");
+  const estimate = await executeQuantumTool("qbraid_estimate_job_cost", { deviceQrn: "simulator.test", shots: 512 });
+  assert.equal(estimate.ok, true);
+  assert.equal(estimate.estimatedCost, 2.5);
+  assert.equal(estimate.shots, 512);
+  assert.equal(qbraidRequests.length, 2);
+  assert.doesNotMatch(JSON.stringify([devices, estimate]), /unit-test-qbraid-key/, "qBraid API keys must never appear in tool results");
+} finally {
+  globalThis.fetch = originalFetchForQbraidTest;
+  if (originalKeyForQbraidTest === undefined) delete process.env.QBRAID_API_KEY; else process.env.QBRAID_API_KEY = originalKeyForQbraidTest;
+}
+
+
 
 function makeResponse({ blockFirstWrite = false, disconnectOnFirstWrite = false } = {}) {
   const events = new EventEmitter();
