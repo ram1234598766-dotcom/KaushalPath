@@ -492,7 +492,7 @@
   }
 
   if (typeof window !== "undefined") {
-    window.KP_QUANTUM_STUDIO = Object.freeze({ parseOpenQasm, validateQasm, simulateQasm, templates: Object.keys(TEMPLATES), maxQubits: MAX_QUBITS });
+    window.KP_QUANTUM_STUDIO = Object.freeze({ parseOpenQasm, validateQasm, simulateQasm, templates: Object.keys(TEMPLATES), examples: Object.fromEntries(Object.entries(TEMPLATES).map((entry) => [entry[0], Object.freeze({ qasm: entry[1].qasm, label: entry[1].label, note: entry[1].note })])), maxQubits: MAX_QUBITS });
   }
   if (typeof document !== "undefined") {
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
