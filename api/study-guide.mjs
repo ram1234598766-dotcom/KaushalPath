@@ -734,12 +734,14 @@ function parseExplicitQuantumApproval(value) {
   const device = text.match(/\bdevice(?:\s+qrn)?\s*[:=]\s*([A-Za-z0-9._:-]{3,255})/i);
   const shots = text.match(/\bshots?\s*[:=]\s*(\d{1,6})\b/i);
   const cost = text.match(/\bestimated[\s_-]*cost\s*[:=]\s*(\d+(?:\.\d+)?)/i);
-  if (!device || !shots || !cost) return { confirmed: true, complete: false };
+  const fingerprint = text.match(/\bcircuit\s*[:=]\s*([a-f0-9]{12})\b/i);
+  if (!device || !shots || !cost || !fingerprint) return { confirmed: true, complete: false };
   return {
     confirmed: true, complete: true,
     deviceQrn: device[1],
     shots: Number(shots[1]),
-    estimatedCost: Number(cost[1])
+    estimatedCost: Number(cost[1]),
+    circuitFingerprint: fingerprint[1].toLowerCase()
   };
 }
 
@@ -1069,18 +1071,36 @@ export function remoteQasmFingerprint(qasm) {
   return createHash("sha256").update(String(qasm || "").trim()).digest("hex").slice(0, 12);
 }
 
-export async function executeQuantumTool(name, args, signal) {
+export async function executeQuantumTool(name, args, signal, approvalContext = {}) {
   const input = args && typeof args === "object" && !Array.isArray(args) ? args : {};
+  if (name === "quantum_plan_problem") return planQuantumProblem(input);
+  if (name === "quantum_solve_qubo") return solveQuboExactly(input);
+
   if (name === "quantum_validate_qasm" || name === "quantum_simulate_qasm") {
     const clean = quantumQasmFromArgs(input);
     if (clean.error) return { ok: false, error: clean.error };
     const validation = quantumLab.validateOpenQasm(clean.qasm);
     if (!validation.valid) {
+      const remoteShape = validateRemoteQasm(clean.qasm);
+      if (name === "quantum_validate_qasm" && remoteShape.valid) {
+        return {
+          ok: true, valid: true, version: remoteShape.version, stats: remoteShape.stats,
+          gateCounts: remoteShape.gateCounts, validationScope: "remote structural check",
+          note: "Validated for common OpenQASM constructs and up to 64 qubits. This is a structural check, not a full compiler or device-acceptance guarantee."
+        };
+      }
+      if (name === "quantum_simulate_qasm" && remoteShape.valid) {
+        return {
+          ok: false, valid: true, requiresRemoteExecution: true,
+          stats: remoteShape.stats,
+          error: "This circuit is too large or uses gates beyond the local learning simulator. Use qbraid_list_devices and qbraid_estimate_job_cost; a remote run can only be submitted after explicit confirmation of the exact circuit, device, shots, and estimated credit cost.",
+          note: "No remote job has been submitted and no qBraid credits were spent."
+        };
+      }
       return {
-        ok: false,
-        valid: false,
-        errors: validation.errors,
-        note: "The circuit was rejected by the KaushalPath learning-simulator parser. It was not run on qBraid or any quantum device."
+        ok: false, valid: false,
+        errors: remoteShape.errors || validation.errors,
+        note: "The circuit has not been run on qBraid or any quantum device."
       };
     }
     const circuit = validation.circuit;
@@ -1088,39 +1108,27 @@ export async function executeQuantumTool(name, args, signal) {
     circuit.gates.forEach(function (gate) { gateCounts[gate.name] = (gateCounts[gate.name] || 0) + 1; });
     if (name === "quantum_validate_qasm") {
       return {
-        ok: true,
-        valid: true,
-        version: circuit.version,
-        stats: circuit.stats,
+        ok: true, valid: true, version: circuit.version, stats: circuit.stats,
         gateCounts: gateCounts,
         supportedGates: ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "ID", "RX", "RY", "RZ", "CX/CNOT", "CZ", "SWAP"],
         note: "This validates the supported KaushalPath learning subset; it is not a claim of complete OpenQASM standard conformance."
       };
     }
     let result;
-    try {
-      result = quantumLab.simulateOpenQasm(clean.qasm);
-    } catch (error) {
-      return { ok: false, valid: true, error: String(error && error.message || error).slice(0, 240) };
-    }
+    try { result = quantumLab.simulateOpenQasm(clean.qasm); }
+    catch (error) { return { ok: false, valid: true, error: String(error && error.message || error).slice(0, 240) }; }
     const outcomes = Object.entries(result.probabilities)
-      .map(function (entry) {
-        return { bitstring: entry[0], probability: entry[1], percentage: Number((entry[1] * 100).toFixed(6)) };
-      })
+      .map(function (entry) { return { bitstring: entry[0], probability: entry[1], percentage: Number((entry[1] * 100).toFixed(6)) }; })
       .sort(function (a, b) { return b.probability - a.probability || a.bitstring.localeCompare(b.bitstring); });
     return {
-      ok: true,
-      engine: "KaushalPath ideal local state-vector simulator",
-      qbraidRemoteExecution: false,
-      idealProbabilities: true,
-      qubits: result.qubits,
-      gateCount: result.gateCount,
-      outcomes: outcomes.slice(0, 64),
-      outcomeCount: outcomes.length,
+      ok: true, engine: "KaushalPath ideal local state-vector simulator", qbraidRemoteExecution: false,
+      idealProbabilities: true, qubits: result.qubits, gateCount: result.gateCount,
+      outcomes: outcomes.slice(0, 64), outcomeCount: outcomes.length,
       omittedOutcomeCount: Math.max(0, outcomes.length - 64),
       note: "These are exact ideal probabilities, not sampled shots or noisy hardware results. No qBraid credits were spent."
     };
   }
+
   if (name === "qbraid_list_devices") {
     const deviceType = ["SIMULATOR", "QPU"].includes(input.deviceType) ? input.deviceType : "";
     const search = typeof input.search === "string" ? input.search.trim().slice(0, 120) : "";
@@ -1131,10 +1139,7 @@ export async function executeQuantumTool(name, args, signal) {
     if (!result.ok) return result;
     const entries = Array.isArray(result.data) ? result.data : [];
     return {
-      ok: true,
-      configured: true,
-      source: "qBraid REST API",
-      count: entries.length,
+      ok: true, configured: true, source: "qBraid REST API", count: entries.length,
       devices: entries.slice(0, 25).map(function (device) {
         return {
           name: String(device.name || "").slice(0, 180),
@@ -1144,38 +1149,163 @@ export async function executeQuantumTool(name, args, signal) {
           status: String(device.status || "").slice(0, 40),
           numberQubits: Number.isFinite(Number(device.numberQubits)) ? Number(device.numberQubits) : null,
           runInputTypes: Array.isArray(device.runInputTypes) ? device.runInputTypes.slice(0, 10) : [],
+          modality: typeof device.modality === "string" ? device.modality.slice(0, 80) : null,
           pricingModel: typeof device.pricingModel === "string" ? device.pricingModel.slice(0, 80) : null,
+          pricing: device.pricing && typeof device.pricing === "object" ? {
+            perTask: Number.isFinite(Number(device.pricing.perTask)) ? Number(device.pricing.perTask) : null,
+            perShot: Number.isFinite(Number(device.pricing.perShot)) ? Number(device.pricing.perShot) : null,
+            perMinute: Number.isFinite(Number(device.pricing.perMinute)) ? Number(device.pricing.perMinute) : null
+          } : null,
           directAccess: Boolean(device.directAccess)
         };
       })
     };
   }
+
   if (name === "qbraid_estimate_job_cost") {
     const deviceQrn = typeof input.deviceQrn === "string" ? input.deviceQrn.trim() : "";
     const shots = Number(input.shots);
-    if (deviceQrn.length < 3 || deviceQrn.length > 255 || /[\r\n]/.test(deviceQrn)) {
-      return { ok: false, error: "Supply a valid device QRN from qbraid_list_devices." };
-    }
-    if (!Number.isInteger(shots) || shots < 1 || shots > 100000) {
-      return { ok: false, error: "shots must be an integer between 1 and 100,000." };
-    }
+    if (!/^[A-Za-z0-9._:-]{3,255}$/.test(deviceQrn)) return { ok: false, error: "Supply a valid device QRN from qbraid_list_devices." };
+    if (!Number.isInteger(shots) || shots < 1 || shots > 100000) return { ok: false, error: "shots must be an integer between 1 and 100,000." };
     const query = new URLSearchParams({ deviceQrn: deviceQrn, shots: String(shots) });
     const result = await qbraidGet("jobs/cost-estimate?" + query.toString(), signal);
     if (!result.ok) return result;
     const quote = result.data && typeof result.data === "object" ? result.data : {};
     return {
-      ok: true,
-      configured: true,
-      source: "qBraid REST API",
+      ok: true, configured: true, source: "qBraid REST API",
       deviceQrn: String(quote.deviceQrn || deviceQrn),
       shots: Number.isFinite(Number(quote.shots)) ? Number(quote.shots) : shots,
       pricingAvailable: quote.pricingAvailable === true,
       estimatedCost: quote.pricingAvailable === true && Number.isFinite(Number(quote.estimatedCost)) ? Number(quote.estimatedCost) : null,
-      reason: quote.pricingAvailable === false ? String(quote.reason || "qBraid did not provide a quote for this device.") : null,
+      reason: quote.pricingAvailable === false ? String(quote.reason || "qBraid did not provide a quote for this device.").slice(0, 200) : null,
       note: "This is a pre-run estimate only. No job was submitted and no credits were spent."
     };
   }
+
+  if (name === "qbraid_get_job") {
+    const jobQrn = typeof input.jobQrn === "string" ? input.jobQrn.trim() : "";
+    if (!/^[A-Za-z0-9._:-]{5,255}$/.test(jobQrn)) return { ok: false, error: "Supply the exact qBraid job QRN returned by a prior submission." };
+    const statusResult = await qbraidGet("jobs/" + encodeURIComponent(jobQrn), signal);
+    if (!statusResult.ok) return statusResult;
+    const job = statusResult.data && typeof statusResult.data === "object" ? statusResult.data : {};
+    const answer = {
+      ok: true, jobQrn: String(job.jobQrn || jobQrn),
+      status: String(job.status || "UNKNOWN"),
+      statusMsg: typeof job.statusMsg === "string" ? job.statusMsg.slice(0, 220) : null,
+      deviceQrn: typeof job.deviceQrn === "string" ? job.deviceQrn.slice(0, 255) : null,
+      shots: Number.isFinite(Number(job.shots)) ? Number(job.shots) : null,
+      estimatedCost: Number.isFinite(Number(job.estimatedCost)) ? Number(job.estimatedCost) : null,
+      cost: Number.isFinite(Number(job.cost)) ? Number(job.cost) : null,
+      createdAt: job.timeStamps && job.timeStamps.createdAt ? job.timeStamps.createdAt : null,
+      endedAt: job.timeStamps && job.timeStamps.endedAt ? job.timeStamps.endedAt : null
+    };
+    if (input.includeResults === true && String(job.status || "").toUpperCase() === "COMPLETED") {
+      const result = await qbraidGet("jobs/" + encodeURIComponent(jobQrn) + "/result", signal);
+      if (result.ok) {
+        const data = result.data && typeof result.data === "object" ? result.data : {};
+        const counts = data.resultData && data.resultData.measurementCounts;
+        answer.resultStatus = data.status || job.status;
+        answer.measurementCounts = counts && typeof counts === "object" ?
+          Object.fromEntries(Object.entries(counts).slice(0, 128).map(([key, value]) => [String(key).slice(0, 80), Number(value)])) : null;
+        answer.resultCost = Number.isFinite(Number(data.cost)) ? Number(data.cost) : answer.cost;
+      } else {
+        answer.resultUnavailable = String(result.error || "The result is not ready.");
+      }
+    }
+    return answer;
+  }
+
+  if (name === "qbraid_submit_job") {
+    const qasm = typeof input.qasm === "string" ? input.qasm.trim() : "";
+    const deviceQrn = typeof input.deviceQrn === "string" ? input.deviceQrn.trim() : "";
+    const shots = Number(input.shots), expectedCost = Number(input.expectedCost);
+    if (!qasm || qasm.length > 50000) return { ok: false, error: "Supply OpenQASM source of 1 to 50,000 characters." };
+    if (!/^[A-Za-z0-9._:-]{3,255}$/.test(deviceQrn)) return { ok: false, error: "Supply an exact device QRN from qbraid_list_devices." };
+    if (!Number.isInteger(shots) || shots < 1 || shots > 100000) return { ok: false, error: "shots must be an integer between 1 and 100,000." };
+    if (!Number.isFinite(expectedCost) || expectedCost < 0) return { ok: false, error: "expectedCost must be the current quoted qBraid credit cost." };
+    const shape = validateRemoteQasm(qasm);
+    if (!shape.valid) return { ok: false, errors: shape.errors, note: "No qBraid job was submitted." };
+    const fingerprint = remoteQasmFingerprint(qasm);
+    const qasmFormat = shape.version === "2.0" ? "qasm2" : "qasm3";
+
+    // Device status, capacity, and accepted program format are verified again immediately before submission.
+    const deviceQuery = new URLSearchParams({ qrn: deviceQrn, limit: "5" });
+    const deviceResponse = await qbraidGet("devices?" + deviceQuery.toString(), signal);
+    if (!deviceResponse.ok) return deviceResponse;
+    const deviceEntries = Array.isArray(deviceResponse.data) ? deviceResponse.data : [];
+    const device = deviceEntries.find((item) => String(item.qrn || "") === deviceQrn);
+    if (!device) return { ok: false, error: "qBraid did not return this device QRN. Refresh the device list and try again." };
+    if (String(device.status || "").toUpperCase() !== "ONLINE") return { ok: false, error: "That device is not currently online. No job was submitted." };
+    if (Number.isFinite(Number(device.numberQubits)) && shape.stats.numQubits > Number(device.numberQubits)) {
+      return { ok: false, error: "The circuit has " + shape.stats.numQubits + " qubits, but the selected device reports only " + Number(device.numberQubits) + ". No job was submitted." };
+    }
+    const acceptedFormats = Array.isArray(device.runInputTypes) ? device.runInputTypes.map((item) => String(item).toLowerCase()) : [];
+    if (acceptedFormats.length && !acceptedFormats.includes(qasmFormat) && !acceptedFormats.includes("openqasm") && !acceptedFormats.includes("qasm")) {
+      return { ok: false, error: "The selected device does not list " + qasmFormat + " as an accepted input format. No job was submitted." };
+    }
+
+    const quoteQuery = new URLSearchParams({ deviceQrn: deviceQrn, shots: String(shots) });
+    const quoteResponse = await qbraidGet("jobs/cost-estimate?" + quoteQuery.toString(), signal);
+    if (!quoteResponse.ok) return quoteResponse;
+    const quote = quoteResponse.data && typeof quoteResponse.data === "object" ? quoteResponse.data : {};
+    if (quote.pricingAvailable !== true || !Number.isFinite(Number(quote.estimatedCost))) {
+      return {
+        ok: false, pricingAvailable: false, requiresDifferentDeviceOrManualReview: true,
+        reason: String(quote.reason || "qBraid did not provide a live cost estimate."),
+        note: "No job was submitted because the user cannot confirm a precise cost. Choose a device with a quote or review the run manually in qBraid Lab."
+      };
+    }
+    const currentCost = Number(quote.estimatedCost);
+    const approval = approvalContext && typeof approvalContext === "object" ? approvalContext : {};
+    const exactApproval = approval.confirmed === true && approval.complete === true &&
+      approval.deviceQrn === deviceQrn && approval.shots === shots &&
+      Math.abs(Number(approval.estimatedCost) - currentCost) < 1e-8 &&
+      Number(input.expectedCost) === Number(approval.estimatedCost) &&
+      approval.circuitFingerprint === fingerprint;
+
+    if (!exactApproval || Math.abs(expectedCost - currentCost) >= 1e-8) {
+      return {
+        ok: false, requiresConfirmation: true,
+        device: { name: String(device.name || deviceQrn).slice(0, 180), qrn: deviceQrn, type: device.deviceType || null },
+        shots: shots, qubits: shape.stats.numQubits, gateCount: shape.stats.gateCount,
+        circuitFingerprint: fingerprint, estimatedCost: currentCost, currency: "qBraid credits",
+        confirmationText: "Reply exactly: CONFIRM QUANTUM RUN device=" + deviceQrn + " shots=" + shots + " estimated_cost=" + currentCost + " circuit=" + fingerprint + " credits",
+        note: "This step only prepared a preview and verified a live quote. No job was submitted and no credits were spent."
+      };
+    }
+
+    const jobName = typeof input.name === "string" ? input.name.trim().slice(0, 100) : "KaushalPath AI quantum run";
+    const submitted = await qbraidPost("jobs", {
+      shots: shots,
+      deviceQrn: deviceQrn,
+      program: { format: qasmFormat, data: qasm },
+      name: jobName || "KaushalPath AI quantum run",
+      tags: { source: "KaushalPath AI", circuitFingerprint: fingerprint },
+      runtimeOptions: {}
+    }, signal);
+    if (!submitted.ok) return submitted;
+    const job = submitted.data && typeof submitted.data === "object" ? submitted.data : {};
+    return {
+      ok: true, submitted: true,
+      jobQrn: String(job.jobQrn || ""),
+      status: String(job.status || "INITIALIZING"),
+      deviceQrn: deviceQrn, shots: shots, qubits: shape.stats.numQubits,
+      estimatedCost: currentCost, currency: "qBraid credits", circuitFingerprint: fingerprint,
+      note: "The remote job was submitted after matching the user's explicit confirmation to the current device, shot count, circuit fingerprint, and live estimate. Check job status/results before describing the outcome."
+    };
+  }
+
   return { ok: false, error: "That quantum tool is not available." };
+}
+
+export async function executeAITool(name, args, signal, approvalContext = {}) {
+  if (name === "quantum_plan_problem" || name === "quantum_solve_qubo" ||
+      name === "math_evaluate_expression" || name === "matrix_compute" ||
+      name === "compute_statistics" || name === "convert_units" ||
+      name === "boolean_truth_table") {
+    return executeGeneralAITool(name, args);
+  }
+  return executeQuantumTool(name, args, signal, approvalContext);
 }
 
 function decodeXml(value) {
