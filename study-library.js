@@ -1960,6 +1960,8 @@
     };
     let pageKind = "landscape";
     let y = 0;
+    let pageTextScale = 1;
+    let fitToCurrentPacketPage = false;
 
     function pageSize() {
       return { width: pdf.internal.pageSize.getWidth(), height: pdf.internal.pageSize.getHeight() };
@@ -1987,22 +1989,18 @@
       pageKind = "portrait";
       drawNotesHeader(Boolean(continued));
     }
-    function drawTextBlock(block) {
-      const text = chapterPdfText(block.text);
-      if (!text) return;
-      const styles = {
-        h1: { size: 16.5, color: palette.ink, font: "bold", before: 1.5, after: 2.5 },
-        h2: { size: 11.6, color: palette.purple, font: "bold", before: 3, after: 2 },
-        h3: { size: 10.2, color: palette.blue, font: "bold", before: 2.5, after: 1.5 },
-        h4: { size: 9.6, color: palette.teal, font: "bold", before: 2.2, after: 1 },
-        paragraph: { size: 9.1, color: palette.ink, font: "normal", before: 0.7, after: 2 },
-        list: { size: 8.8, color: palette.ink, font: "normal", before: 0.3, after: 1.4 }
-      };
-      const style = styles[block.kind] || styles.paragraph;
-      const size = pageSize();
-      const maxWidth = size.width - margin * 2;
-      const indent = block.kind === "list" || /^[-•] /.test(text) ? 3 : 0;
-      let textValue = text.replace(/’/g, "'").replace(/[“”]/g, '"').replace(/[–—−]/g, "-");
+
+    const textBlockStyles = {
+      h1: { size: 16.5, color: palette.ink, font: "bold", before: 1.5, after: 2.5 },
+      h2: { size: 11.6, color: palette.purple, font: "bold", before: 3, after: 2 },
+      h3: { size: 10.2, color: palette.blue, font: "bold", before: 2.5, after: 1.5 },
+      h4: { size: 9.6, color: palette.teal, font: "bold", before: 2.2, after: 1 },
+      paragraph: { size: 9.1, color: palette.ink, font: "normal", before: 0.7, after: 2 },
+      list: { size: 8.8, color: palette.ink, font: "normal", before: 0.3, after: 1.4 }
+    };
+
+    function prepareChapterPdfText(value) {
+      let textValue = String(value || "").replace(/’/g, "'").replace(/[“”]/g, '"').replace(/[–—−]/g, "-");
       if (pdfFontFamily === "helvetica") {
         textValue = textValue
           .replace(/×/g, "x").replace(/÷/g, "/").replace(/≤/g, "<=").replace(/≥/g, ">=")
@@ -2018,25 +2016,81 @@
           .replace(/ρ/g, "rho").replace(/σ/g, "sigma").replace(/τ/g, "tau")
           .replace(/φ/g, "phi").replace(/ψ/g, "psi").replace(/ω/g, "omega");
       }
-      const lines = pdf.splitTextToSize(textValue, maxWidth - indent);
-      const lineHeight = style.size * 0.43;
-      const height = lines.length * lineHeight + style.before + style.after + (block.kind === "h2" ? 2 : 0);
-      if (y + height > size.height - 16) addPortraitPage(true);
-      y += style.before;
+      return textValue;
+    }
+
+    function measureChapterPacketPage(blocks, scale) {
+      const size = pageSize();
+      const maxWidth = size.width - margin * 2;
+      let estimatedY = 18;
+      for (const block of blocks) {
+        const text = chapterPdfText(block && block.text);
+        if (!text) continue;
+        const style = textBlockStyles[block.kind] || textBlockStyles.paragraph;
+        const indent = block.kind === "list" || /^[-•] /.test(text) ? 3 : 0;
+        const textValue = prepareChapterPdfText(text);
+        pdf.setFont(pdfFontFamily, pdfFontFamily === "NotoSans" ? "normal" : style.font);
+        pdf.setFontSize(style.size * scale);
+        const lines = pdf.splitTextToSize(textValue, maxWidth - indent);
+        const lineHeight = style.size * scale * 0.43;
+        estimatedY += lines.length * lineHeight +
+          (style.before + style.after + (block.kind === "h2" ? 2 : 0)) * scale;
+      }
+      return estimatedY;
+    }
+
+    function fitChapterPacketPage(blocks) {
+      const size = pageSize();
+      const safeBottom = size.height - 20;
+      let low = 0.42;
+      let high = 1;
+      if (measureChapterPacketPage(blocks, low) > safeBottom) return low;
+      for (let attempt = 0; attempt < 16; attempt += 1) {
+        const middle = (low + high) / 2;
+        if (measureChapterPacketPage(blocks, middle) <= safeBottom) low = middle;
+        else high = middle;
+      }
+      return low;
+    }
+
+    function drawTextBlock(block) {
+      const text = chapterPdfText(block.text);
+      if (!text) return;
+      const baseStyle = textBlockStyles[block.kind] || textBlockStyles.paragraph;
+      const style = {
+        size: baseStyle.size * pageTextScale,
+        color: baseStyle.color,
+        font: baseStyle.font,
+        before: baseStyle.before * pageTextScale,
+        after: baseStyle.after * pageTextScale
+      };
+      const size = pageSize();
+      const maxWidth = size.width - margin * 2;
+      const indent = block.kind === "list" || /^[-•] /.test(text) ? 3 : 0;
+      const textValue = prepareChapterPdfText(text);
       pdf.setFont(pdfFontFamily, pdfFontFamily === "NotoSans" ? "normal" : style.font);
       pdf.setFontSize(style.size);
+      const lines = pdf.splitTextToSize(textValue, maxWidth - indent);
+      const lineHeight = style.size * 0.43;
+      const height = lines.length * lineHeight + style.before + style.after +
+        (block.kind === "h2" ? 2 * pageTextScale : 0);
+      if (y + height > size.height - 16 && !fitToCurrentPacketPage) addPortraitPage(true);
+      y += style.before;
       setColor(style.color, pdf.setTextColor);
       if (block.kind === "h2") {
         pdf.setFillColor(247, 244, 253);
-        pdf.rect(margin - 1, y - 2.4, maxWidth + 2, height - style.before - style.after + 1, "F");
+        pdf.rect(margin - 1, y - 2.4 * pageTextScale, maxWidth + 2,
+          height - style.before - style.after + 1 * pageTextScale, "F");
       } else if (block.tone === "warning" || block.tone === "formula" || block.tone === "highlight") {
         const fill = block.tone === "warning" ? [255, 244, 230] : block.tone === "formula" ? [246, 241, 255] : [239, 250, 246];
         const edge = block.tone === "warning" ? palette.red : block.tone === "formula" ? palette.purple : palette.teal;
         pdf.setFillColor.apply(pdf, fill);
-        pdf.rect(margin - 1, y - 2, maxWidth + 2, lines.length * lineHeight + 2, "F");
+        pdf.rect(margin - 1, y - 2 * pageTextScale, maxWidth + 2,
+          lines.length * lineHeight + 2 * pageTextScale, "F");
         setColor(edge, pdf.setDrawColor);
         pdf.setLineWidth(0.7);
-        pdf.line(margin - 1, y - 2, margin - 1, y - 2 + lines.length * lineHeight + 2);
+        pdf.line(margin - 1, y - 2 * pageTextScale, margin - 1,
+          y - 2 * pageTextScale + lines.length * lineHeight + 2 * pageTextScale);
         setColor(style.color, pdf.setTextColor);
       }
       pdf.text(lines, margin + indent, y, { lineHeightFactor: 1.1, maxWidth: maxWidth - indent });
@@ -2098,7 +2152,15 @@
           pageKind = "portrait";
           drawNotesHeader(false);
         }
-        collectChapterPdfBlocks(article).forEach(drawTextBlock);
+        const blocks = collectChapterPdfBlocks(article);
+        // The complete single-chapter packet has eleven content pages after the map.
+        // Fit each page's text to its own sheet instead of overflowing into extra pages.
+        const isFixedChapterPage = Boolean(chapter && article.classList.contains("packet-page"));
+        pageTextScale = isFixedChapterPage ? fitChapterPacketPage(blocks) : 1;
+        fitToCurrentPacketPage = isFixedChapterPage;
+        blocks.forEach(drawTextBlock);
+        fitToCurrentPacketPage = false;
+        pageTextScale = 1;
       }
       if (status) status.textContent = "Creating your PDF… page " + (index + 1) + " of " + articles.length;
     }
