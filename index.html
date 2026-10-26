@@ -973,6 +973,68 @@ button,input,select,textarea{font-family:inherit}
 @media(max-width:650px){.topbar .nav{align-items:flex-start;flex-direction:column;gap:8px;padding:11px 16px}.topbar .topbar-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.topbar .quick-launch-button,.topbar .tour-launch{width:100%;white-space:nowrap;padding:9px 10px;font-size:.78rem;min-height:40px}.topbar .quick-launch-button kbd{display:none}.dashboard-intro{padding-top:23px;padding-bottom:16px}.workspace-meta{align-items:flex-start;flex-wrap:wrap;gap:7px;margin-top:16px}.workspace-meta .meta-divider{display:none}.overview-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}.overview-actions .btn{white-space:normal;padding:11px 12px;font-size:.82rem}.hero{padding:43px 0 34px}.hero h1{font-size:clamp(2.65rem,12vw,3.6rem)}.quickstats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding-top:12px}.stat{padding:14px;border-radius:14px}.stat strong{font-size:1.28rem}.path-grid{grid-template-columns:1fr}.path-card{min-height:0;padding:18px}.section{padding-top:39px}.section-head{align-items:flex-start;flex-direction:column;gap:12px}.notes-toolbar.panel{padding:13px}.notes-card{padding:16px}.notes-card-actions .btn{flex:1 1 auto}}
 @media(prefers-reduced-motion:reduce){.kp-skip-link,.btn,.stat,.path-card,.notes-card{transition:none!important}.btn:hover,.stat:hover,.path-card:hover,.notes-card:hover{transform:none!important}}
 
+
+/* qBraid-compatible quantum study lab */
+.quantum-lab{margin:22px 0 26px;padding:22px;border:1px solid #dbe5f2;border-radius:20px;background:linear-gradient(135deg,#fff 0%,#f7f9ff 100%);box-shadow:0 10px 28px #17233d08}
+.quantum-lab-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:19px}
+.quantum-lab-header h3{margin:5px 0 7px;color:#182541;font-size:1.35rem;letter-spacing:-.035em}
+.quantum-lab-header p{max-width:680px;margin:0;color:#66728a;font-size:.9rem;line-height:1.65}
+.quantum-lab-badge{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;padding:8px 11px;border:1px solid #dce4ff;border-radius:999px;background:#f1f4ff;color:#344bb1;font-size:.73rem;font-weight:850;white-space:nowrap}
+.quantum-lab-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#2b9c88;box-shadow:0 0 0 3px #2b9c881a}
+.quantum-lab-layout{display:grid;grid-template-columns:minmax(220px,.78fr) minmax(0,1.22fr);gap:15px;align-items:stretch}
+.quantum-lab-settings{min-width:0;padding:17px;border:1px solid #e2e8f2;border-radius:15px;background:#fff}
+.quantum-lab-label{display:block;margin-bottom:7px;color:#374560;font-size:.82rem;font-weight:850}
+#quantumCircuitSelect{display:block;width:100%;min-height:45px;padding:10px 12px;border:1px solid #d8e1ef;border-radius:11px;background:#fff;color:#1d2a44;font:inherit;font-size:.88rem}
+.quantum-lab-concept{min-height:126px;margin-top:13px;padding:13px 14px;border:1px solid #e1e7ff;border-left:3px solid #5f65df;border-radius:11px;background:#f6f7ff}
+.quantum-concept-eyebrow{display:block;margin-bottom:5px;color:#5961bd;font-size:.68rem;font-weight:900;letter-spacing:.1em}
+.quantum-lab-concept p{margin:0;color:#4e5a76;font-size:.83rem;line-height:1.65}
+.quantum-lab-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.quantum-lab-actions .btn{min-height:40px;padding:9px 12px;border-radius:10px;font-size:.79rem}
+.quantum-lab-actions .btn-blue{background:#3d5cde}
+.quantum-lab-actions-secondary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.quantum-lab-actions-secondary .btn,.quantum-lab-actions-secondary a{display:flex;align-items:center;justify-content:center;min-height:39px;padding:8px 10px;border:1px solid #dde5f0;border-radius:10px;background:#fff;color:#42516d;font-size:.75rem;font-weight:800;text-align:center;text-decoration:none}
+.quantum-lab-actions-secondary .qbraid-open{grid-column:1/-1;background:#f0fbf8;border-color:#cde9e1;color:#17685d}
+.quantum-lab-status{margin:12px 0 0;color:#66728a;font-size:.75rem;line-height:1.55}
+.quantum-lab-status[data-tone="success"]{color:#17685d}
+.quantum-lab-status[data-tone="error"]{color:#a13e46}
+.quantum-lab-output{min-width:0;overflow:hidden;padding:17px;border:1px solid #273650;border-radius:15px;background:#131f38;color:#fff}
+.quantum-lab-output-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}
+.quantum-lab-output-head h4{margin:0;color:#f5f7ff;font-size:.92rem;font-weight:850}
+.quantum-lab-output-head span{color:#c0cbe2;font-size:.73rem;font-variant-numeric:tabular-nums}
+.quantum-lab-output-title{margin:0 0 13px;color:#aebfe1;font-size:.73rem}
+.quantum-circuit-diagram{min-width:0;padding:15px 10px;border:1px solid #334463;border-radius:12px;background:#192844;overflow-x:auto}
+.quantum-wire-grid{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:center;min-width:190px}
+.quantum-wire-labels,.quantum-gate-column{display:grid;align-items:center}
+.quantum-wire-label{display:flex;align-items:center;justify-content:flex-start;color:#afbfdb;font:700 .72rem/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+.quantum-gate-columns{display:grid;gap:4px;min-width:0}
+.quantum-gate-column{position:relative;min-width:0}
+.quantum-gate-column.is-controlled-gate:after{position:absolute;z-index:1;top:var(--q-first-top);left:50%;width:2px;height:var(--q-connector-height);background:#a6b5d1;content:"";transform:translateX(-50%)}
+.quantum-gate-cell{position:relative;display:grid;place-items:center;min-width:0}
+.quantum-wire-line{position:absolute;z-index:0;left:0;right:0;top:50%;height:1.5px;background:#667997}
+.quantum-gate{position:relative;z-index:2;display:grid;place-items:center;min-width:28px;height:28px;padding:0 4px;border:1px solid #8195ba;border-radius:8px;background:#263958;color:#f8faff;font:850 .69rem/1 ui-monospace,SFMono-Regular,Consolas,monospace;box-shadow:0 2px 5px #080f1d66}
+.quantum-gate-h{border-color:#8aa3ff;background:#344b86;color:#fff}
+.quantum-gate-x{border-color:#7fd8c7;background:#1d635e;color:#fff}
+.quantum-gate-z{border-color:#e9c27d;background:#775727;color:#fff}
+.quantum-gate-control{min-width:13px;width:13px;height:13px;padding:0;border:0;border-radius:50%;background:#d0dbf3;color:#15223b;font-size:.78rem;box-shadow:none}
+.quantum-gate-target{width:26px;height:26px;padding:0;border-radius:50%;border:2px solid #c4d2f0;background:#263958;color:#fff;font-size:1.05rem}
+.quantum-gate-measurement{min-width:27px;width:27px;height:27px;border-color:#5bd1b8;background:#1c655d;color:#d9fff6}
+.quantum-probability-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:17px 0 10px}
+.quantum-probability-title h4{margin:0;color:#f5f7ff;font-size:.84rem}
+.quantum-probability-title span{color:#b7c5dd;font-size:.7rem}
+.quantum-probability-results{display:grid;gap:8px}
+.quantum-probability-row{display:grid;grid-template-columns:46px minmax(45px,1fr) 52px;align-items:center;gap:10px}
+.quantum-result-bits{display:inline-grid;place-items:center;min-height:27px;border:1px solid #3c4d6d;border-radius:7px;background:#1a2a46;color:#fff;font:800 .78rem/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+.quantum-probability-track{height:10px;overflow:hidden;border-radius:99px;background:#2d3d59}
+.quantum-probability-bar{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#5a89f4,#53d0b3);transition:width .22s ease}
+.quantum-result-percent{text-align:right;color:#f4f7ff;font-size:.78rem;font-variant-numeric:tabular-nums}
+.quantum-qasm{margin-top:15px;border-top:1px solid #31415d;padding-top:12px}
+.quantum-qasm summary{cursor:pointer;color:#d8e2f7;font-size:.77rem;font-weight:800}
+#quantumQasmOutput{display:block;width:100%;margin-top:10px;min-height:150px;padding:12px;border:1px solid #334766;border-radius:10px;background:#0d182d;color:#dce8ff;font: .73rem/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical;white-space:pre;tab-size:2}
+.quantum-lab-footnote{display:flex;align-items:flex-start;gap:9px;margin-top:14px;padding:12px 13px;border:1px solid #d9e8e4;border-radius:11px;background:#f2faf7;color:#476660;font-size:.75rem;line-height:1.65}
+.quantum-lab-footnote strong{color:#1a6458}
+@media(max-width:760px){.quantum-lab{padding:15px;margin-top:17px}.quantum-lab-header{flex-direction:column;gap:11px}.quantum-lab-header h3{font-size:1.2rem}.quantum-lab-layout{grid-template-columns:1fr}.quantum-lab-settings,.quantum-lab-output{padding:13px}.quantum-lab-concept{min-height:0}.quantum-lab-actions .btn{flex:1 1 auto}.quantum-lab-actions-secondary{grid-template-columns:1fr 1fr}.quantum-probability-row{grid-template-columns:42px minmax(35px,1fr) 48px}}
+@media(prefers-reduced-motion:reduce){.quantum-probability-bar{transition:none!important}}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
@@ -1087,9 +1149,75 @@ button,input,select,textarea{font-family:inherit}
     <p id="localAiStatus" class="local-ai-status" role="status" aria-live="polite">First-time setup downloads model files from the public model host. The files are cached by your browser; a large download and available storage are required. Wi-Fi is recommended.</p>
     <div class="local-ai-limitations"><strong>Important:</strong> A browser cannot report exact free RAM or GPU memory on every device. Local mode is text-only; images, file extraction and web research use the cloud route. If local mode is selected, a failed local request is not silently sent to the cloud.</div>
   </section>
+
+  <section class="quantum-lab panel" aria-labelledby="quantumLabTitle">
+    <div class="quantum-lab-header">
+      <div>
+        <div class="kicker">QUANTUM COMPUTING · QBRAID</div>
+        <h3 id="quantumLabTitle">Quantum Circuit Lab</h3>
+        <p>Explore how gates change qubits, compare measurement probabilities, and take your OpenQASM circuit to qBraid.</p>
+      </div>
+      <span class="quantum-lab-badge">qBraid-ready · OpenQASM 3.0</span>
+    </div>
+    <div class="quantum-lab-layout">
+      <div class="quantum-lab-settings">
+        <label class="quantum-lab-label" for="quantumCircuitSelect">Choose a starter circuit</label>
+        <select id="quantumCircuitSelect">
+          <option value="bell" selected>Bell state · entanglement</option>
+          <option value="superposition">Superposition · one qubit</option>
+          <option value="ghz">GHZ state · three qubits</option>
+          <option value="interference">Interference · phase</option>
+        </select>
+        <div class="quantum-lab-concept" id="quantumCircuitConcept" aria-live="polite">
+          <span class="quantum-concept-eyebrow">TWO QUBITS</span>
+          <p>An H gate followed by a controlled-X gate entangles two qubits. Ideal measurements agree: 00 or 11.</p>
+        </div>
+        <div class="quantum-lab-actions">
+          <button type="button" class="btn btn-blue" id="quantumRunSimulation">Run simulation</button>
+          <button type="button" class="btn btn-light" id="quantumAskAi">Ask AI to explain</button>
+        </div>
+        <div class="quantum-lab-actions-secondary">
+          <button type="button" id="quantumCopyQasm">Copy OpenQASM</button>
+          <button type="button" id="quantumDownloadQasm">Download .qasm</button>
+          <a class="qbraid-open" href="https://lab.qbraid.com" target="_blank" rel="noopener noreferrer">Open qBraid Lab ↗</a>
+        </div>
+        <p class="quantum-lab-status" id="quantumLabStatus" role="status" aria-live="polite">Preview ready. Choose Run simulation to calculate ideal measurement probabilities.</p>
+      </div>
+      <div class="quantum-lab-output">
+        <div class="quantum-lab-output-head">
+          <h4 id="quantumCircuitTitle">Bell state</h4>
+          <span id="quantumQubitCount">2 qubits · 2 gates</span>
+        </div>
+        <p class="quantum-lab-output-title">Gate sequence and measurement</p>
+        <div class="quantum-circuit-diagram" id="quantumCircuitDiagram" aria-label="Quantum circuit diagram">
+          <p class="quantum-lab-output-title">H gate → controlled-X → measurement</p>
+        </div>
+        <div class="quantum-probability-title">
+          <h4>Expected measurement results</h4>
+          <span>Exact ideal probabilities</span>
+        </div>
+        <div class="quantum-probability-results" id="quantumProbabilityResults" role="list" aria-label="Exact measurement probabilities">
+          <div class="quantum-probability-row" role="listitem"><code class="quantum-result-bits">00</code><div class="quantum-probability-track"><span class="quantum-probability-bar" style="width:50%"></span></div><strong class="quantum-result-percent">50%</strong></div>
+          <div class="quantum-probability-row" role="listitem"><code class="quantum-result-bits">11</code><div class="quantum-probability-track"><span class="quantum-probability-bar" style="width:50%"></span></div><strong class="quantum-result-percent">50%</strong></div>
+        </div>
+        <details class="quantum-qasm">
+          <summary>View OpenQASM 3.0 source</summary>
+          <textarea id="quantumQasmOutput" rows="7" readonly spellcheck="false" aria-label="OpenQASM 3.0 circuit source">OPENQASM 3.0;
+include "stdgates.inc";
+qubit[2] q;
+bit[2] c;
+h q[0];
+cx q[0], q[1];
+c = measure q;</textarea>
+        </details>
+      </div>
+    </div>
+    <div class="quantum-lab-footnote"><strong>Good to know</strong><span>This preview runs a noise-free state-vector simulation in your browser and uses no qBraid credits. Download the OpenQASM file to continue in qBraid Lab. Submitting jobs to quantum hardware can cost credits, so this tool never launches a paid job automatically.</span></div>
+  </section>
+
   <div class="chat-context panel" role="group" aria-label="Study preferences">
     <div class="chat-select-field"><label for="chatClass">Class</label><select id="chatClass"><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
-    <div class="chat-select-field"><label for="chatSubject">Subject</label><select id="chatSubject"><option>Mathematics</option><option>Science</option><option>English</option><option>Social Science</option><option>Computer Applications</option></select></div>
+    <div class="chat-select-field"><label for="chatSubject">Subject</label><select id="chatSubject"><option>Mathematics</option><option>Science</option><option>English</option><option>Social Science</option><option>Computer Applications</option><option value="Quantum computing">Quantum computing</option></select></div>
     <div class="chat-select-field"><label for="chatMode">Study mode</label><select id="chatMode"><option value="explain">Explain a concept</option><option value="notes">Chapter notes</option><option value="revision">Quick revision</option><option value="questions">Practice questions</option><option value="solve">Solve step by step</option></select></div>
   </div>
   <div class="chat-layout">
@@ -1213,5 +1341,6 @@ button,input,select,textarea{font-family:inherit}
 <script src="/local-ai.js" defer></script>
 <script src="/app.js" defer></script>
 <script src="/smart-system-client.js" defer></script>
+<script src="/quantum-study-lab.js" defer></script>
 </body>
 </html>
