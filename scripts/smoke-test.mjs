@@ -90,6 +90,9 @@ assert.ok(studyLibrary.includes('printButton.addEventListener("click", startPrin
 assert.ok(!studyLibrary.includes('downloadButton.addEventListener("click", startPrint)'), "Download PDF must never be wired to the print action");
 assert.ok(studyLibrary.includes('pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal")'), "PDF export should embed a Unicode-capable font for science notation");
 assert.ok(studyLibrary.includes("createAndDownloadChapterPdf(") && studyLibrary.includes("@page chapter-map{size:A4 landscape") && studyLibrary.includes("@page chapter-notes{size:A4 portrait"), "chapter PDF export must create a downloadable vector map and portrait notes");
+assert.ok(studyLibrary.includes("function measureChapterPacketPage(blocks, scale)") && studyLibrary.includes("function fitChapterPacketPage(blocks)"), "PDF export should calculate a per-page fit before laying out detailed note pages");
+assert.ok(studyLibrary.includes('article.classList.contains("packet-page")') && studyLibrary.includes("pageTextScale = isFixedChapterPage ? fitChapterPacketPage(blocks) : 1"), "single-chapter exports should fit each of their eleven detailed pages instead of overflowing into additional sheets");
+
 assert.doesNotMatch(studyLibrary, /html2pdf\(\)\.set\(|html2canvas:/, "chapter export should not rasterize or crop the mind map in a PDF canvas");
 assert.ok(studyLibrary.includes("const pageTitle = fileStem;") && studyLibrary.includes('fileStem + ".pdf"'), "the generated PDF should use a chapter-specific filename");
 assert.ok(studyLibrary.includes("<title>' + esc(pageTitle) + '</title><style>'"), "the chapter PDF HTML should use its defined title");
