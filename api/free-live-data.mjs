@@ -233,8 +233,8 @@ async function getWeather(input, signal) {
 }
 
 async function getExchangeRate(input, signal) {
-  const base = cleanString(input.baseCurrency, 3).toUpperCase();
-  const quote = cleanString(input.quoteCurrency, 3).toUpperCase();
+  const base = String(input.baseCurrency == null ? "" : input.baseCurrency).trim().toUpperCase();
+  const quote = String(input.quoteCurrency == null ? "" : input.quoteCurrency).trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(base) || !/^[A-Z]{3}$/.test(quote)) {
     return { ok: false, error: "Use three-letter ISO currency codes, for example USD and INR." };
   }
@@ -332,7 +332,7 @@ async function getNews(input, signal) {
 }
 
 async function getPublicHolidays(input, signal) {
-  const countryCode = cleanString(input.countryCode, 2).toUpperCase();
+  const countryCode = String(input.countryCode == null ? "" : input.countryCode).trim().toUpperCase();
   const year = input.year == null ? new Date().getUTCFullYear() : Number(input.year);
   if (!/^[A-Z]{2}$/.test(countryCode)) return { ok: false, error: "Use an ISO 3166-1 alpha-2 country code, such as IN, GB or US." };
   if (!Number.isInteger(year) || year < 1900 || year > 2100) return { ok: false, error: "Provide a year from 1900 through 2100." };
