@@ -326,7 +326,7 @@ async function withSandbox(work, signal) {
   let sandbox;
   try {
     const module = await import("e2b");
-    const Sandbox = module.default || module.Sandbox;
+    const Sandbox = module.Sandbox || module.default?.Sandbox || module.default;
     if (!Sandbox || typeof Sandbox.create !== "function") throw new Error("The E2B SDK is not available in this deployment.");
     sandbox = await Sandbox.create({ apiKey: String(process.env.E2B_API_KEY).trim() });
     if (signal?.aborted) throw signal.reason || new Error("Client disconnected");
@@ -502,7 +502,8 @@ async function browserAgent(input, signal) {
       return { ok: false, configured: true, error: "Browserbase could not create a browser session. Verify the project/API key and current quota." };
     }
     sessionId = String(sessionData.id);
-    const { chromium } = await import("playwright-core");
+    const playwright = await import("playwright-core");
+    const chromium = playwright.chromium || playwright.default?.chromium;
     browser = await chromium.connectOverCDP(String(sessionData.connectUrl));
     const context = browser.contexts()[0] || await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = context.pages()[0] || await context.newPage();
