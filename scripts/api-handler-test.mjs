@@ -1,8 +1,43 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import handler, { createPinnedLookup } from "../api/study-guide.mjs";
+import handler, { createPinnedLookup, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS } from "../api/study-guide.mjs";
 import { zipSync, strToU8 } from "fflate";
 import sharp from "sharp";
+
+const bellQasm = [
+  "OPENQASM 3.0;",
+  'include "stdgates.inc";',
+  "qubit[2] q;",
+  "bit[2] c;",
+  "h q[0];",
+  "cx q[0], q[1];",
+  "c = measure q;"
+].join("\n");
+assert.equal(isQuantumIntent("Please simulate this quantum circuit"), true, "quantum prompts should route through the tool-calling agent");
+assert.equal(isQuantumIntent("Help me write an English essay"), false, "ordinary requests should retain the regular study route");
+assert.deepEqual(
+  QUANTUM_TOOL_DEFINITIONS.map((tool) => tool.function.name),
+  ["quantum_validate_qasm", "quantum_simulate_qasm", "qbraid_list_devices", "qbraid_estimate_job_cost"],
+  "the model should receive the expected safe quantum tool definitions"
+);
+const bellValidation = await executeQuantumTool("quantum_validate_qasm", { qasm: bellQasm });
+assert.equal(bellValidation.ok, true, "the Bell-state QASM should pass the learning parser");
+assert.equal(bellValidation.stats.numQubits, 2);
+assert.equal(bellValidation.stats.gateCount, 2);
+const bellSimulation = await executeQuantumTool("quantum_simulate_qasm", { qasm: bellQasm });
+assert.equal(bellSimulation.ok, true);
+assert.equal(bellSimulation.qbraidRemoteExecution, false, "local simulation must not be mistaken for a remote qBraid run");
+assert.ok(Math.abs(bellSimulation.outcomes.find((outcome) => outcome.bitstring === "00").probability - 0.5) < 1e-9);
+assert.ok(Math.abs(bellSimulation.outcomes.find((outcome) => outcome.bitstring === "11").probability - 0.5) < 1e-9);
+const invalidQuantum = await executeQuantumTool("quantum_simulate_qasm", { qasm: "OPENQASM 3.0; qubit[1] q; magic q[0];" });
+assert.equal(invalidQuantum.ok, false, "unsupported gates should never receive invented simulation results");
+const priorQbraidKey = process.env.QBRAID_API_KEY;
+delete process.env.QBRAID_API_KEY;
+const noQbraidKey = await executeQuantumTool("qbraid_list_devices", {});
+assert.equal(noQbraidKey.configured, false, "the qBraid server tools should require a server-side API key");
+assert.match(noQbraidKey.error, /QBRAID_API_KEY/i);
+if (priorQbraidKey === undefined) delete process.env.QBRAID_API_KEY; else process.env.QBRAID_API_KEY = priorQbraidKey;
+
 
 function makeResponse({ blockFirstWrite = false, disconnectOnFirstWrite = false } = {}) {
   const events = new EventEmitter();
@@ -74,7 +109,7 @@ assert.equal(health.headers["cache-control"], "no-store, max-age=0", "health dat
 assert.equal(health.headers["x-content-type-options"], "nosniff", "JSON API responses should disable MIME sniffing");
 assert.equal(health.headers["referrer-policy"], "no-referrer", "JSON API responses should not leak referrers");
 assert.match(health.headers["x-request-id"], /^[0-9a-f-]{36}$/i, "every API response should have a server-generated request ID");
-assert.deepEqual(health.payload.features, { liveSearch: true, readPublicUrls: true, imageAnalysis: true });
+assert.deepEqual(health.payload.features, { liveSearch: true, readPublicUrls: true, imageAnalysis: true, quantumTools: true, qBraidCloud: Boolean(process.env.QBRAID_API_KEY) });
 assert.doesNotMatch(JSON.stringify(health.payload), /model|provider|qwen|kilo|inclusionai|webgpu/i, "health output must not reveal model/provider/runtime metadata");
 
 const methodNotAllowed = await call({ method: "OPTIONS", headers: {} });
@@ -206,6 +241,38 @@ globalThis.fetch = async (url, options = {}) => {
   if (requestText.includes("AUTH_FALLBACK_TEST") && options.headers && options.headers.Authorization) return new Response(JSON.stringify({ error: { message: "invalid optional key" } }), { status: 401, headers: { "content-type": "application/json; charset=utf-8" } });
   if (requestText.includes("ENDPOINT_FALLBACK_TEST") && String(url).includes("api.kilo.ai/api/gateway")) return new Response(JSON.stringify({ error: { message: "temporary gateway response" } }), { status: 503, headers: { "content-type": "application/json; charset=utf-8" } });
   if (requestText.includes("RATE_LIMIT_TEST")) return new Response(JSON.stringify({ error: { message: "rate limit reached" } }), { status: 429, headers: { "content-type": "application/json; charset=utf-8" } });
+  if (payload.tools && payload.messages.some((message) => message.role === "tool")) {
+    const toolMessages = payload.messages.filter((message) => message.role === "tool");
+    const resultText = toolMessages.map((message) => String(message.content || "")).join("\\n");
+    return new Response(JSON.stringify({
+      id: "mock-quantum-final",
+      choices: [{ message: { content: "The Bell circuit was validated and simulated. The ideal results are 00 and 11 at 50% each." } }]
+    }), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
+  }
+  if (payload.tools && requestText.includes("QUANTUM_AGENT_TEST")) {
+    const source = [
+      "OPENQASM 3.0;",
+      'include "stdgates.inc";',
+      "qubit[2] q;",
+      "bit[2] c;",
+      "h q[0];",
+      "cx q[0], q[1];",
+      "c = measure q;"
+    ].join("\\n");
+    return new Response(JSON.stringify({
+      id: "mock-quantum-call",
+      choices: [{
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            { id: "call_validate", type: "function", function: { name: "quantum_validate_qasm", arguments: JSON.stringify({ qasm: source }) } },
+            { id: "call_simulate", type: "function", function: { name: "quantum_simulate_qasm", arguments: JSON.stringify({ qasm: source }) } }
+          ]
+        }
+      }]
+    }), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
+  }
   if (payload.stream) {
     const encoder = new TextEncoder();
     const disconnectTest = requestText.includes("DISCONNECT_TEST");
@@ -284,6 +351,24 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.equal(svgRoundtrip.statusCode, 200, "valid SVG image uploads should be rasterized before model submission");
   const svgParts = mockedRequests[3].messages.at(-1).content;
   assert.match(svgParts.find((part) => part.type === "image_url").image_url.url, /^data:image\/jpeg;base64,/, "vector formats should be rasterized to a provider-supported image type");
+
+
+  const quantumAgentResponse = await call({
+    method: "POST",
+    headers: {},
+    body: { prompt: "QUANTUM_AGENT_TEST: validate and simulate this Bell state circuit", stream: true }
+  });
+  assert.equal(quantumAgentResponse.statusCode, 200, "quantum prompts should complete through the AI's tool-calling flow");
+  assert.match(quantumAgentResponse.payload.text, /Bell circuit was validated and simulated/i);
+  assert.equal(quantumAgentResponse.payload.quantumToolsUsed, true, "the API should report that its quantum tools were invoked");
+  assert.equal(quantumAgentResponse.payload.quantumToolsAvailable, true);
+  const quantumAgentRequest = mockedRequests.find((request) => request.tools && request.messages.some((message) => message.role === "tool"));
+  assert.ok(quantumAgentRequest, "the model should receive structured quantum tool results on its next turn");
+  const quantumToolResults = quantumAgentRequest.messages.filter((message) => message.role === "tool").map((message) => JSON.parse(message.content));
+  assert.equal(quantumToolResults.length, 2);
+  assert.equal(quantumToolResults[0].valid, true, "the validation tool should return its real structured result");
+  assert.ok(Math.abs(quantumToolResults[1].outcomes.find((outcome) => outcome.bitstring === "00").probability - 0.5) < 1e-9);
+  assert.ok(Math.abs(quantumToolResults[1].outcomes.find((outcome) => outcome.bitstring === "11").probability - 0.5) < 1e-9);
 
   const countBeforeInvalidImage = mockedRequests.length;
   const invalidImage = await call({
