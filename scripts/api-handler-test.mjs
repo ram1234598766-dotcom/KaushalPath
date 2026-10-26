@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import handler, { createPinnedLookup, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS } from "../api/study-guide.mjs";
+import handler, { createPinnedLookup, executeAITool, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS, remoteQasmFingerprint } from "../api/study-guide.mjs";
+import { AI_SKILLS, AI_SKILL_COUNT, selectActiveSkills, selectToolDomains } from "../api/ai-skill-registry.mjs";
 import { zipSync, strToU8 } from "fflate";
 import sharp from "sharp";
 
@@ -15,6 +16,22 @@ const bellQasm = [
 ].join("\n");
 assert.equal(isQuantumIntent("Please simulate this quantum circuit"), true, "quantum prompts should route through the tool-calling agent");
 assert.equal(isQuantumIntent("Help me write an English essay"), false, "ordinary requests should retain the regular study route");
+
+assert.ok(AI_SKILL_COUNT >= 150, "the private AI skill registry must contain at least 150 skills");
+assert.equal(AI_SKILLS.length, AI_SKILL_COUNT, "the registry count should match its actual private catalogue");
+assert.equal(new Set(AI_SKILLS.map((skill) => skill.id)).size, AI_SKILL_COUNT, "each private skill should have a unique ID");
+assert.ok(selectActiveSkills("solve quantum QAOA optimization on qBraid", 12).length >= 5, "base skills should always be auto-activated");
+assert.ok(selectToolDomains("design and simulate a quantum circuit").has("quantum"), "quantum prompts should automatically enable quantum tools");
+assert.ok(selectToolDomains("calculate statistics from this CSV dataset").has("data"), "data tasks should automatically enable data tools");
+assert.equal((await executeAITool("math_evaluate_expression", { expression: "sqrt(81) + pi^0" })).result, 10, "restricted expression evaluation should calculate without eval");
+assert.equal((await executeAITool("matrix_compute", { operation: "determinant", matrixA: [[1, 2], [3, 4]] })).determinant, -2, "matrix utilities should calculate real results");
+const quboBaseline = await executeAITool("quantum_solve_qubo", { variables: 2, linear: [-1, 2], quadratic: [{ i: 0, j: 1, coefficient: 4 }], sense: "minimize" });
+assert.equal(quboBaseline.ok, true);
+assert.deepEqual(quboBaseline.assignment, [1, 0], "exact QUBO baseline should return the minimizing bit assignment");
+assert.equal(quboBaseline.bestValue, -1);
+const truthTable = await executeAITool("boolean_truth_table", { expression: "A & !B" });
+assert.equal(truthTable.ok, true);
+assert.equal(truthTable.rows.length, 4);
 assert.deepEqual(
   QUANTUM_TOOL_DEFINITIONS.map((tool) => tool.function.name),
   ["quantum_validate_qasm", "quantum_simulate_qasm", "qbraid_list_devices", "qbraid_estimate_job_cost"],
@@ -43,9 +60,14 @@ const originalKeyForQbraidTest = process.env.QBRAID_API_KEY;
 const qbraidRequests = [];
 process.env.QBRAID_API_KEY = "unit-test-qbraid-key";
 globalThis.fetch = async (url, options = {}) => {
-  qbraidRequests.push({ url: String(url), headers: options.headers || {} });
+  qbraidRequests.push({ url: String(url), method: options.method || "GET", headers: options.headers || {} });
   assert.ok(String(url).startsWith("https://api-v2.qbraid.com/api/v1/"), "qBraid calls should use its fixed HTTPS REST host");
   assert.equal(options.headers && options.headers["X-API-KEY"], "unit-test-qbraid-key", "the key must be sent only from the server");
+  if (String(url).endsWith("/jobs") && options.method === "POST") {
+    return new Response(JSON.stringify({ success: true, data: { jobQrn: "job.test", status: "QUEUED" } }), {
+      status: 200, headers: { "content-type": "application/json; charset=utf-8" }
+    });
+  }
   if (String(url).includes("/jobs/cost-estimate?")) {
     return new Response(JSON.stringify({ success: true, data: { deviceQrn: "simulator.test", shots: 512, pricingAvailable: true, estimatedCost: 2.5 } }), {
       status: 200, headers: { "content-type": "application/json; charset=utf-8" }
@@ -67,6 +89,30 @@ try {
   assert.equal(estimate.shots, 512);
   assert.equal(qbraidRequests.length, 2);
   assert.doesNotMatch(JSON.stringify([devices, estimate]), /unit-test-qbraid-key/, "qBraid API keys must never appear in tool results");
+
+  const remoteQasm = [
+    "OPENQASM 3.0;",
+    'include "stdgates.inc";',
+    "qubit[1] q;",
+    "bit[1] c;",
+    "x q[0];",
+    "c = measure q;"
+  ].join("\n");
+  const request = { qasm: remoteQasm, deviceQrn: "simulator.test", shots: 512, expectedCost: 2.5 };
+  const countBeforeConfirmation = qbraidRequests.filter((item) => item.method === "POST" && item.url.endsWith("/jobs")).length;
+  const preview = await executeQuantumTool("qbraid_submit_job", request);
+  assert.equal(preview.requiresConfirmation, true, "remote quantum jobs must ask for exact cost/device/circuit confirmation");
+  assert.equal(preview.circuitFingerprint, remoteQasmFingerprint(remoteQasm));
+  assert.match(preview.confirmationText, /CONFIRM QUANTUM RUN/);
+  assert.equal(qbraidRequests.filter((item) => item.method === "POST" && item.url.endsWith("/jobs")).length, countBeforeConfirmation, "a first tool call must never submit a paid job");
+  const approved = await executeQuantumTool("qbraid_submit_job", request, undefined, {
+    confirmed: true, complete: true, deviceQrn: "simulator.test", shots: 512, estimatedCost: 2.5,
+    circuitFingerprint: remoteQasmFingerprint(remoteQasm)
+  });
+  assert.equal(approved.ok, true);
+  assert.equal(approved.submitted, true, "the exact confirmed run should pass the guarded path against a mocked qBraid API");
+  assert.equal(approved.jobQrn, "job.test");
+  assert.equal(qbraidRequests.filter((item) => item.method === "POST" && item.url.endsWith("/jobs")).length, countBeforeConfirmation + 1);
 } finally {
   globalThis.fetch = originalFetchForQbraidTest;
   if (originalKeyForQbraidTest === undefined) delete process.env.QBRAID_API_KEY; else process.env.QBRAID_API_KEY = originalKeyForQbraidTest;
@@ -395,8 +441,8 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   });
   assert.equal(quantumAgentResponse.statusCode, 200, "quantum prompts should complete through the AI's tool-calling flow");
   assert.match(quantumAgentResponse.payload.text, /Bell circuit was validated and simulated/i);
-  assert.equal(quantumAgentResponse.payload.quantumToolsUsed, true, "the API should report that its quantum tools were invoked");
-  assert.equal(quantumAgentResponse.payload.quantumToolsAvailable, true);
+  assert.equal(Object.hasOwn(quantumAgentResponse.payload, "quantumToolsUsed"), false, "tool-use metadata should not be exposed in the public response");
+  assert.equal(Object.hasOwn(quantumAgentResponse.payload, "skills"), false, "private skill metadata should not be exposed in the public response");
   const quantumAgentRequest = mockedRequests.find((request) => request.tools && request.messages.some((message) => message.role === "tool"));
   assert.ok(quantumAgentRequest, "the model should receive structured quantum tool results on its next turn");
   const quantumToolResults = quantumAgentRequest.messages.filter((message) => message.role === "tool").map((message) => JSON.parse(message.content));
