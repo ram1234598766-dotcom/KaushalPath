@@ -12,7 +12,7 @@ import XLSX from "xlsx";
 import { unzipSync, strFromU8 } from "fflate";
 import sharp from "sharp";
 import quantumLab from "../quantum-study-lab.js";
-import { AI_SKILL_COUNT, formatActiveSkills, selectActiveSkills, selectToolDomains } from "./ai-skill-registry.mjs";
+import { formatActiveSkills, selectActiveSkills, selectToolDomains } from "./ai-skill-registry.mjs";
 
 const MODEL = "kilo-auto/free";
 const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
@@ -992,7 +992,7 @@ function convertUnit(input) {
     angle: { rad: 1, radians: 1, deg: Math.PI / 180, degree: Math.PI / 180, degrees: Math.PI / 180 },
     data: { bit: 1, b: 1, byte: 8, bytes: 8, kb: 8000, mb: 8e6, gb: 8e9, kib: 8192, mib: 8388608, gib: 8589934592 },
     energy: { j: 1, kj: 1000, cal: 4.184, kcal: 4184, ev: 1.602176634e-19, wh: 3600, kwh: 3.6e6 },
-    volume: { l: 1, liter: 1, ml: 0.001, m3: 1000, m^3: 1000, gallon: 3.785411784 },
+    volume: { l: 1, liter: 1, ml: 0.001, m3: 1000, "m^3": 1000, gallon: 3.785411784 },
     speed: { "m/s": 1, "km/h": 1 / 3.6, mph: 0.44704, knot: 0.5144444444444445 },
     pressure: { pa: 1, kpa: 1000, bar: 100000, atm: 101325, psi: 6894.757293168 }
   };
