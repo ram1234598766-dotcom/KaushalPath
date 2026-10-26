@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import handler, { createPinnedLookup, executeAITool, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS, remoteQasmFingerprint, shouldAutoBrowse } from "../api/study-guide.mjs";
+import handler, { createPinnedLookup, executeAITool, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS, remoteQasmFingerprint, shouldAutoBrowse, getToolDefinitionsForQuery } from "../api/study-guide.mjs";
 import { AGENTIC_TOOL_DEFINITIONS, executeAgenticTool } from "../api/agentic-tools.mjs";
 import { AI_SKILLS, AI_SKILL_COUNT, selectActiveSkills, selectToolDomains } from "../api/ai-skill-registry.mjs";
 import { zipSync, strToU8 } from "fflate";
@@ -29,6 +29,10 @@ assert.deepEqual(
 assert.equal(shouldAutoBrowse("Compare the latest Python packaging options", false), true, "technical/research questions should browse by default");
 assert.equal(shouldAutoBrowse("Translate this paragraph into Hindi", false), false, "straight translation requests should not incur unnecessary browsing");
 assert.equal(shouldAutoBrowse("What is shown in this worksheet?", true), false, "image questions should focus on the supplied image rather than sending it to web search");
+assert.ok(getToolDefinitionsForQuery("Create a downloadable PDF handout").some((tool) => tool.function.name === "create_pdf_document"), "PDF tasks should automatically select the private PDF generator");
+assert.ok(getToolDefinitionsForQuery("Interact with browser by clicking a button on this website").some((tool) => tool.function.name === "browser_agent"), "website click workflows should automatically select the private browser agent");
+assert.ok(getToolDefinitionsForQuery("Write some code and run tests").some((tool) => tool.function.name === "coding_workflow"), "coding tasks should automatically select the agentic coding workflow");
+assert.ok(getToolDefinitionsForQuery("Execute this Python script in a sandbox").some((tool) => tool.function.name === "sandbox_execute"), "explicit command execution should select the isolated execution tool");
 assert.ok(selectActiveSkills("solve quantum QAOA optimization on qBraid", 12).length >= 5, "base skills should always be auto-activated");
 assert.ok(selectToolDomains("design and simulate a quantum circuit").has("quantum"), "quantum prompts should automatically enable quantum tools");
 assert.ok(selectToolDomains("calculate statistics from this CSV dataset").has("data"), "data tasks should automatically enable data tools");
