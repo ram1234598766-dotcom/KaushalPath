@@ -364,6 +364,168 @@ async function getPublicHolidays(input, signal) {
   };
 }
 
+
+export function detectFreeLiveDataIntent(prompt) {
+  const text = String(prompt || "").trim();
+  if (!text || text.length > 12000) return null;
+
+  if (/\b(?:weather|forecast|temperature|rainfall|rain|humidity)\b/i.test(text)) {
+    const match = text.match(/\b(?:weather|forecast|temperature|rainfall|rain|humidity)\b[\s\S]{0,140}?\b(?:in|for|at)\s+([^?!;\n]+)/i);
+    if (match) {
+      let location = match[1]
+        .replace(/\s+(?:right now|currently|today|tomorrow|at the moment|this week|for the next|please|use the live|include its source|include the source|and show|and include|with source).*$/i, "")
+        .replace(/[.,\s]+$/, "").trim().slice(0, 120);
+      if (location.length >= 2) return { name: "live_weather", args: { location: location } };
+    }
+  }
+
+  const pair = text.match(/\b([A-Za-z]{3})\s*(?:to|into|\/)\s*([A-Za-z]{3})\b/i);
+  if (pair && /\b(?:exchange rate|currency rate|forex|foreign exchange|convert|how much|rate)\b/i.test(text)) {
+    const amountMatch = text.match(/\b(?:convert|how much|calculate|value of)\s+([\d,]+(?:\.\d+)?)\s+/i);
+    const parsedAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, "")) : null;
+    const args = { baseCurrency: pair[1].toUpperCase(), quoteCurrency: pair[2].toUpperCase() };
+    if (Number.isFinite(parsedAmount) && parsedAmount >= 0 && parsedAmount <= 1000000000000) args.amount = parsedAmount;
+    return { name: "live_exchange_rate", args: args };
+  }
+
+  const recentEventIntent = /\b(?:recent|latest|current|live|today|last hour|past hour|last day|past day|last 24 hours|past 24 hours|last week|past week|last 7 days)\b/i.test(text);
+  if (recentEventIntent && /\bearthquakes?\b/i.test(text)) {
+    const placePhrase = text.match(/\b(?:in|near|around)\s+([a-z]+)/i);
+    const timeWords = ["the", "last", "past", "next", "one", "previous", "24", "7"];
+    if (!placePhrase || timeWords.includes(placePhrase[1].toLowerCase())) {
+      let sinceHours = 24;
+      if (/\b(?:last|past|previous)\s+hour\b/i.test(text)) sinceHours = 1;
+      else if (/\b(?:last|past|previous)\s+week\b|\blast\s+7\s+days\b/i.test(text)) sinceHours = 168;
+      return { name: "live_earthquakes", args: { sinceHours: sinceHours } };
+    }
+  }
+
+  if (/\b(?:latest news|news headlines|breaking news|top headlines|recent headlines|latest headlines|latest (?:world|technology|tech|science|business) news)\b/i.test(text)) {
+    let topic = "top";
+    if (/\b(?:technology|tech)\b/i.test(text)) topic = "technology";
+    else if (/\bscience\b/i.test(text)) topic = "science";
+    else if (/\bbusiness\b/i.test(text)) topic = "business";
+    else if (/\bworld\b/i.test(text)) topic = "world";
+    return { name: "live_news", args: { topic: topic } };
+  }
+
+  if (/\b(?:public holidays?|national holidays?|holiday calendar)\b/i.test(text)) {
+    const countries = [
+      ["united arab emirates", "AE"], ["united states of america", "US"], ["united states", "US"],
+      ["united kingdom", "GB"], ["new zealand", "NZ"], ["south africa", "ZA"], ["south korea", "KR"],
+      ["saudi arabia", "SA"], ["sri lanka", "LK"], ["the netherlands", "NL"], ["netherlands", "NL"],
+      ["bangladesh", "BD"], ["pakistan", "PK"], ["philippines", "PH"], ["singapore", "SG"],
+      ["australia", "AU"], ["canada", "CA"], ["india", "IN"], ["usa", "US"], ["america", "US"],
+      ["britain", "GB"], ["uk", "GB"], ["france", "FR"], ["germany", "DE"], ["japan", "JP"],
+      ["china", "CN"], ["brazil", "BR"], ["mexico", "MX"], ["italy", "IT"], ["spain", "ES"],
+      ["ireland", "IE"], ["nepal", "NP"], ["indonesia", "ID"], ["malaysia", "MY"], ["thailand", "TH"],
+      ["sweden", "SE"], ["norway", "NO"], ["denmark", "DK"], ["finland", "FI"], ["poland", "PL"],
+      ["portugal", "PT"], ["switzerland", "CH"], ["austria", "AT"], ["belgium", "BE"], ["greece", "GR"],
+      ["turkey", "TR"]
+    ];
+    let countryCode = "";
+    for (const entry of countries) {
+      if (text.toLowerCase().includes(entry[0])) { countryCode = entry[1]; break; }
+    }
+    const explicitCode = text.match(/\b(?:country code|ISO code)\s*[:=]?\s*([A-Za-z]{2})\b/i);
+    if (explicitCode) countryCode = explicitCode[1].toUpperCase();
+    if (countryCode) {
+      const yearMatch = text.match(/\b(?:19|20|21)\d{2}\b/);
+      return { name: "live_public_holidays", args: { countryCode: countryCode, ...(yearMatch ? { year: Number(yearMatch[0]) } : {}) } };
+    }
+  }
+  return null;
+}
+
+export function formatFreeLiveDataResponse(name, data, args) {
+  const input = args && typeof args === "object" ? args : {};
+  const source = data && data.sourceUrl ? String(data.sourceUrl) : "";
+  const retrievedAt = data && data.retrievedAt ? String(data.retrievedAt) : new Date().toISOString();
+  const lines = [];
+  if (!data || data.ok !== true) return String(data && data.error || "The live-data provider did not return usable data.");
+
+  if (name === "live_weather") {
+    const location = data.location || {};
+    const current = data.current || {};
+    const units = current.units || {};
+    const place = [location.name, location.admin1, location.country].filter(Boolean).join(", ");
+    lines.push("## Current weather: " + (place || "requested location"));
+    if (current.description) lines.push("- Conditions: " + current.description);
+    if (current.temperature != null) lines.push("- Temperature: " + current.temperature + " " + (units.temperature_2m || ""));
+    if (current.feelsLike != null) lines.push("- Feels like: " + current.feelsLike + " " + (units.apparent_temperature || units.temperature_2m || ""));
+    if (current.relativeHumidity != null) lines.push("- Relative humidity: " + current.relativeHumidity + " " + (units.relative_humidity_2m || "%"));
+    if (current.windSpeed != null) lines.push("- Wind: " + current.windSpeed + " " + (units.wind_speed_10m || ""));
+    if (current.precipitation != null) lines.push("- Precipitation: " + current.precipitation + " " + (units.precipitation || "mm"));
+    if (current.observedAt) lines.push("- Observation time: " + current.observedAt + (location.timezone ? " (" + location.timezone + ")" : ""));
+    if (Array.isArray(data.forecastDays) && data.forecastDays.length) {
+      lines.push("", "### Three-day forecast");
+      for (const day of data.forecastDays) {
+        lines.push("- " + day.date + ": " + (day.minimum == null ? "n/a" : day.minimum + " " + ((data.dailyUnits || {}).temperature_2m_min || "")) +
+          " to " + (day.maximum == null ? "n/a" : day.maximum + " " + ((data.dailyUnits || {}).temperature_2m_max || "")) +
+          (day.precipitationProbabilityMax == null ? "" : "; max precipitation probability " + day.precipitationProbabilityMax + "%"));
+      }
+    }
+    lines.push("", "Source: Open-Meteo (" + source + ")");
+    lines.push("Retrieved: " + retrievedAt);
+    lines.push(data.updateNote || data.attribution || "");
+    return lines.filter((line) => line !== "").join("\n");
+  }
+
+  if (name === "live_exchange_rate") {
+    const amount = Number(input.amount);
+    const hasAmount = Number.isFinite(amount) && amount >= 0 && amount <= 1000000000000;
+    const base = data.baseCurrency || input.baseCurrency || "";
+    const quote = data.quoteCurrency || input.quoteCurrency || "";
+    const converted = Number(data.rate) * (hasAmount ? amount : 1);
+    lines.push("## Latest available reference exchange rate");
+    lines.push((hasAmount ? amount : 1) + " " + base + " = " + converted.toLocaleString("en-US", { maximumFractionDigits: 6 }) + " " + quote);
+    lines.push("Reference-rate date: " + (data.date || "not supplied by provider"));
+    lines.push("Source: Frankfurter (" + source + ")");
+    lines.push("Retrieved: " + retrievedAt);
+    lines.push(data.note || "");
+    return lines.filter(Boolean).join("\n");
+  }
+
+  if (name === "live_earthquakes") {
+    lines.push("## Recent reported earthquakes");
+    lines.push("Window: last " + data.timeWindowHours + " hours; " + (data.matchingEventCount || 0) + " matching event(s).");
+    const events = Array.isArray(data.events) ? data.events : [];
+    if (!events.length) lines.push("No events were returned in this feed window.");
+    for (const event of events) {
+      lines.push("- Magnitude " + (event.magnitude == null ? "n/a" : event.magnitude) + " — " + (event.place || "location unavailable") +
+        (event.time ? "; " + event.time : "") + (event.depthKm == null ? "" : "; depth " + event.depthKm + " km") +
+        (event.eventUrl ? "\n  " + event.eventUrl : ""));
+    }
+    lines.push("", "Source: USGS (" + source + ")", "Retrieved: " + retrievedAt, data.note || "");
+    return lines.filter((line) => line !== "").join("\n");
+  }
+
+  if (name === "live_news") {
+    lines.push("## Recent headlines: " + (data.provider || "BBC News"));
+    const headlines = Array.isArray(data.headlines) ? data.headlines : [];
+    if (!headlines.length) lines.push("The feed returned no headlines.");
+    for (const item of headlines) {
+      const title = String(item.title || "Untitled headline").replace(/[\[\]]/g, "");
+      lines.push("- " + title + (item.publishedAt ? " — " + item.publishedAt : "") + "\n  " + item.link +
+        (item.summary ? "\n  " + item.summary : ""));
+    }
+    lines.push("", "Feed: " + source, "Retrieved: " + retrievedAt, data.note || "");
+    return lines.filter((line) => line !== "").join("\n");
+  }
+
+  if (name === "live_public_holidays") {
+    lines.push("## Public holidays: " + data.countryCode + " (" + data.year + ")");
+    const holidays = Array.isArray(data.upcoming) && data.upcoming.length ? data.upcoming : (Array.isArray(data.holidays) ? data.holidays : []);
+    if (!holidays.length) lines.push("No holiday entries were returned for this country/year.");
+    for (const item of holidays.slice(0, 15)) {
+      lines.push("- " + item.date + ": " + (item.localName || item.name) + (item.localName && item.name && item.localName !== item.name ? " (" + item.name + ")" : ""));
+    }
+    lines.push("", "Source: Nager.Date (" + source + ")", "Retrieved: " + retrievedAt, data.note || "");
+    return lines.filter((line) => line !== "").join("\n");
+  }
+  return "Live data retrieved from " + (data.provider || "public provider") + ". Source: " + source;
+}
+
 export async function executeFreeLiveDataTool(name, args, signal) {
   const input = args && typeof args === "object" && !Array.isArray(args) ? args : {};
   const providers = {

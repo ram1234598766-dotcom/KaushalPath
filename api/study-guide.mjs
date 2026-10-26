@@ -14,7 +14,7 @@ import sharp from "sharp";
 import quantumLab from "../quantum-study-lab.js";
 import { formatActiveSkills, selectActiveSkills, selectToolDomains } from "./ai-skill-registry.mjs";
 import { AGENTIC_TOOL_DEFINITIONS, executeAgenticTool } from "./agentic-tools.mjs";
-import { FREE_LIVE_DATA_TOOL_DEFINITIONS, executeFreeLiveDataTool } from "./free-live-data.mjs";
+import { FREE_LIVE_DATA_TOOL_DEFINITIONS, executeFreeLiveDataTool, detectFreeLiveDataIntent, formatFreeLiveDataResponse } from "./free-live-data.mjs";
 
 const MODEL = "kilo-auto/free";
 const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
@@ -1918,6 +1918,36 @@ export default async function handler(req, res) {
   const visualInputs = imageData ? [imageData] : fileImages;
   const requestedModel = hasVisualInput ? VISION_MODEL : MODEL;
   const query = String(body.searchQuery || body.userPrompt || prompt).trim().slice(0, 260);
+  // Direct provider fallback for concise supported live-data asks. This avoids
+  // returning an AI-gateway error before a selected function tool can execute.
+  if (!hasVisualInput && urls.length === 0) {
+    const directLiveRequest = detectFreeLiveDataIntent(prompt);
+    if (directLiveRequest) {
+      let liveResult;
+      try {
+        liveResult = await executeFreeLiveDataTool(directLiveRequest.name, directLiveRequest.args, clientAbortController.signal);
+      } catch (error) {
+        if (clientAbortController.signal.aborted) return;
+        return send(res, { error: "The public live-data provider could not complete this request. Please retry shortly.", requestId }, 503);
+      }
+      if (!liveResult || liveResult.ok !== true) {
+        return send(res, {
+          error: String(liveResult && liveResult.error || "The public live-data provider did not return usable data."),
+          provider: liveResult && liveResult.provider || directLiveRequest.name,
+          requestId
+        }, 503);
+      }
+      const sourceUrl = String(liveResult.sourceUrl || "");
+      return send(res, {
+        text: formatFreeLiveDataResponse(directLiveRequest.name, liveResult, directLiveRequest.args),
+        sources: sourceUrl ? [{ title: String(liveResult.provider || "Live data provider"), url: sourceUrl }] : [],
+        liveSources: Boolean(sourceUrl),
+        mode: "explain",
+        requestId,
+        liveData: true
+      });
+    }
+  }
   const explicitNoBrowser = body.webSearch === false || /\b(?:don't browse|do not browse|no web|offline only|without web search|don't search the web)\b/i.test(prompt);
   const directKeylessDataIntent = /\b(?:weather|forecast|temperature|rain forecast|exchange rates?|currency rates?|forex|foreign exchange|convert [a-z]{3} (?:to|into) [a-z]{3}|earthquakes?|seismic activity|recent tremors?|latest news|news headlines?|breaking news|top headlines|recent headlines|latest headlines|current events|public holidays?|national holidays?|holiday calendar|holidays in [a-z])\b/i.test(prompt);
   // Prefer direct keyless providers for supported live-data questions rather than
