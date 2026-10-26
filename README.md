@@ -10,6 +10,9 @@ KaushalPath is a responsive student workspace with a purple learning dashboard, 
 - Kilo Auto Free inference through the OpenAI-compatible Kilo AI Gateway endpoint, with a separate local-only text chat option. Web research and attachments still use the cloud route.
 - Quantum-enabled AI Study Guide with model-invoked tools to validate supported OpenQASM circuits, calculate ideal measurement probabilities using the tested local state-vector simulator, list live qBraid devices and estimate qBraid job costs. Tool execution stays server-side and the AI never submits a paid hardware job automatically.
 - Private AI capability layer with 258 server-only skill recipes, selected automatically by task; server-side quantum problem planning, a bounded exact QUBO baseline, restricted arithmetic, matrix, statistics, unit-conversion and Boolean truth-table tools, plus qBraid job/status integration. Skill/tool menus and their registry are not shipped to the frontend. Remote qBraid submission requires a live cost estimate and an exact confirmation of circuit fingerprint, device QRN, shots and estimated credits.
+- Agentic tools selected privately from the user's task: real downloadable, professionally formatted PDFs; isolated shell/Python/Node command execution; short coding workflows that write files and run tests/builds in a disposable workspace; and cloud-browser interactions that inspect a rendered public page, click visible buttons/links, fill non-password fields, press keys, and optionally capture screenshots. These tools and schemas are not exposed in the frontend UI.
+- Default public web research for most factual, technical, current and research questions, unless browsing is explicitly disabled or the task is better handled offline. Research results are treated as untrusted source material and cited only when content was actually retrieved. Interactive browser automation is separate from ordinary search/page reading and needs a server-side Browserbase configuration.
+- Higher-detail visual analysis for supplied diagrams, worksheets, screenshots and charts, with a larger image-preparation budget and explicit instructions to preserve symbols/line order and flag uncertain characters rather than hallucinate text.
 - 120 additional original exam-style MCQs across JEE mathematics/physics/chemistry and NEET physics/chemistry/biology, with +4/-1 scoring and exam-proportional mini-set timers. These are not represented as copied previous-year questions; official past-paper sources remain linked.
 - Timed tests with autosave and resume after refresh, one-click retakes of missed or unanswered questions, answer explanations, result history, CSV exports and downloadable PDF/JSON reports.
 - A focus timer with persistent countdowns, completed-session tracking, accuracy summaries and active-day streaks.
@@ -79,6 +82,16 @@ Built-in questions are original practice samples, not a verified archive of auth
 
 - Images are decoded, pixel-limited, orientation-corrected and re-encoded server-side; PNG/WebP are preserved where possible, vector/other formats are normalized, and damaged image bytes are rejected.
 
+
+## Agentic browser, coding and PDF setup
+
+PDF generation is available without a third-party key. The server creates a real multi-page PDF and returns a download link in the Study Guide response; the PDF tool is selected automatically when the request asks for a PDF, handout, report or worksheet.
+
+To enable isolated commands and coding workflows, add `E2B_API_KEY` in **Vercel Project → Settings → Environment Variables**, for the environments where the API is deployed, then redeploy. These commands run inside a short-lived E2B sandbox, not in the KaushalPath server. A coding workflow can prepare a temporary project, run up to six test/build steps and return selected output files; it does not commit to GitHub or deploy changes.
+
+To enable interactive website automation, add `BROWSERBASE_API_KEY` to the same server-side Vercel environment settings. `BROWSERBASE_PROJECT_ID` can be set when a specific Browserbase project should be used. After redeployment, the private browser tool can inspect public pages, click visible UI controls and capture a screenshot. It refuses password/file inputs and known sensitive actions, blocks local/private URL targets, and closes its temporary browser session at the end. Do not add these keys to `app.js`, HTML, or any other frontend file.
+
+Most factual/technical/research prompts trigger public search and page reading by default; a request to click or interact with a website selects the separate Browserbase tool. A request can opt out of web research by saying “do not browse” or “offline only”. Remote actions are not claimed successful unless the provider returns a successful result. Provider usage, quotas and charges are controlled by their respective accounts, so enable these integrations only when you intend to use them.
 
 ## Cloudflare Workers deployment
 
