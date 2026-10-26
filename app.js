@@ -854,7 +854,42 @@ function describeApiFailure(response,data){
  if(response.status===429&&!/wait|retry/i.test(message))message+=" Please wait a short while before retrying.";
  return message+(requestId?" (Reference: "+requestId+")":"");
 }
+function isKeylessLiveDataQuestion(payload){
+ const text=String(payload&&(payload.prompt||payload.userPrompt||payload.searchQuery)||"").trim();
+ if(!text||text.length>12000||payload.imageData||payload.fileData||payload.attachmentData||(Array.isArray(payload.attachments)&&payload.attachments.length)||(Array.isArray(payload.urls)&&payload.urls.length)||(Array.isArray(payload.files)&&payload.files.length))return false;
+ const weatherWord=/\b(?:weather|forecast|temperature|rainfall|rain|humidity)\b/i;
+ if(weatherWord.test(text)&&/\b(?:weather|forecast|temperature|rainfall|rain|humidity)\b[\s\S]{0,140}?\b(?:in|for|at)\s+([^?!;\n]+)/i.test(text))return true;
+ const currencyPair=/\b([A-Za-z]{3})\s*(?:to|into|\/)\s*([A-Za-z]{3})\b/i;
+ if(currencyPair.test(text)&&/\b(?:exchange rate|currency rate|forex|foreign exchange|convert|how much|rate)\b/i.test(text))return true;
+ const recent=/\b(?:recent|latest|current|live|today|last hour|past hour|last day|past day|last 24 hours|past 24 hours|last week|past week|last 7 days)\b/i.test(text);
+ if(recent&&/\bearthquakes?\b/i.test(text)){
+  const phrase=text.match(/\b(?:in|near|around)\s+([a-z]+)/i);
+  const timeWords=["the","last","past","next","one","previous","24","7"];
+  if(!phrase||timeWords.includes(phrase[1].toLowerCase()))return true;
+ }
+ if(/\b(?:latest news|news headlines?|breaking news|top headlines|recent headlines|latest headlines|latest (?:world|technology|tech|science|business) news)\b/i.test(text))return true;
+ if(/\b(?:public holidays?|national holidays?|holiday calendar)\b/i.test(text)&&/\b(?:india|united kingdom|uk|britain|united states(?: of america)?|usa|america|canada|australia|new zealand|singapore|malaysia|south africa|sri lanka|bangladesh|pakistan|philippines|netherlands|the netherlands|united arab emirates|south korea|saudi arabia|france|germany|japan|china|brazil|mexico|italy|spain|ireland|nepal|indonesia|thailand|sweden|norway|denmark|finland|poland|portugal|switzerland|austria|belgium|greece|turkey)\b/i.test(text))return true;
+ return false;
+}
+async function requestKeylessLiveData(payload,onText,signal,onStatus,onSources){
+ if(onStatus)onStatus("Retrieving live data from a public provider…");
+ const response=await fetch("https://kaushalpath.kaushalpath.workers.dev/api/study-guide",{
+  method:"POST",
+  headers:{"content-type":"application/json","accept":"application/json"},
+  body:JSON.stringify(Object.assign({},payload,{stream:false,webSearch:false})),
+  signal:signal
+ });
+ const data=await response.json().catch(function(){return{};});
+ if(!response.ok)throw new Error(describeApiFailure(response,data));
+ if(data.liveData!==true||typeof data.text!=="string"||!data.text.trim()){
+  throw new Error("The keyless live-data route did not return a provider result. Please retry shortly.");
+ }
+ if(onSources&&Array.isArray(data.sources))onSources(data.sources,Array.isArray(data.artifacts)?data.artifacts:[]);
+ onText(data.text);
+ return data.text;
+}
 async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
+ if(isKeylessLiveDataQuestion(payload))return requestKeylessLiveData(payload,onText,signal,onStatus,onSources);
  const remoteTools=needsRemoteTools(payload);
  if(remoteTools&&onStatus)onStatus(payload&&payload.imageData?"Preparing your image…": "Checking relevant public sources…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"text/event-stream, application/json"},body:JSON.stringify(Object.assign({},payload,{stream:true})),signal:signal});
