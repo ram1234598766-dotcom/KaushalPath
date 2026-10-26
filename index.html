@@ -1037,6 +1037,16 @@ button,input,select,textarea{font-family:inherit}
 
 
 
+
+.quantum-qasm-label{display:block;margin-top:11px;color:#aebfe1;font-size:.69rem;font-weight:800}
+.quantum-qasm-help{margin:7px 0 0;color:#aab8d2;font-size:.68rem;line-height:1.55}
+#quantumQasmOutput{min-height:210px;max-height:440px;overflow:auto}
+#quantumQasmOutput:focus-visible{outline:3px solid #9a9bfd;outline-offset:2px}
+.quantum-lab-actions #quantumValidateQasm{border-color:#dde5f0;background:#fff;color:#42516d}
+.quantum-lab-actions #quantumValidateQasm:hover{background:#f2f4ff}
+.quantum-gate-column.is-controlled-gate .quantum-gate-cell .quantum-gate-cz,.quantum-gate-column.is-controlled-gate .quantum-gate-cell .quantum-gate-swap{min-width:25px}
+@media(max-width:760px){#quantumQasmOutput{min-height:190px}}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
@@ -1159,7 +1169,7 @@ button,input,select,textarea{font-family:inherit}
         <h3 id="quantumLabTitle">Quantum Circuit Lab</h3>
         <p>Explore how gates change qubits, compare measurement probabilities, and take your OpenQASM circuit to qBraid.</p>
       </div>
-      <span class="quantum-lab-badge">qBraid-ready · OpenQASM 3.0</span>
+      <span class="quantum-lab-badge">qBraid-ready · OpenQASM 2.0 / 3.0</span>
     </div>
     <div class="quantum-lab-layout">
       <div class="quantum-lab-settings">
@@ -1175,7 +1185,8 @@ button,input,select,textarea{font-family:inherit}
           <p>An H gate followed by a controlled-X gate entangles two qubits. Ideal measurements agree: 00 or 11.</p>
         </div>
         <div class="quantum-lab-actions">
-          <button type="button" class="btn btn-blue" id="quantumRunSimulation">Run simulation</button>
+          <button type="button" class="btn btn-blue" id="quantumRunSimulation">Simulate circuit</button>
+          <button type="button" class="btn btn-light" id="quantumValidateQasm">Validate QASM</button>
           <button type="button" class="btn btn-light" id="quantumAskAi">Ask AI to explain</button>
         </div>
         <div class="quantum-lab-actions-secondary">
@@ -1203,8 +1214,10 @@ button,input,select,textarea{font-family:inherit}
           <div class="quantum-probability-row" role="listitem"><code class="quantum-result-bits">11</code><div class="quantum-probability-track"><span class="quantum-probability-bar" style="width:50%"></span></div><strong class="quantum-result-percent">50%</strong></div>
         </div>
         <details class="quantum-qasm">
-          <summary>View OpenQASM 3.0 source</summary>
-          <textarea id="quantumQasmOutput" rows="7" readonly spellcheck="false" aria-label="OpenQASM 3.0 circuit source">OPENQASM 3.0;
+          <summary>Edit or inspect OpenQASM 2.0 / 3.0</summary>
+          <label class="quantum-qasm-label" for="quantumQasmOutput">OpenQASM source</label>
+          <p class="quantum-qasm-help" id="quantumQasmHelp">Edit this circuit, then select Simulate circuit. Supported starter gates: H, X, Y, Z, S, T, RX, RY, RZ, CX, CZ and SWAP. Use one register with up to 8 qubits.</p>
+          <textarea id="quantumQasmOutput" rows="9" maxlength="20000" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="quantumQasmHelp" aria-label="Editable OpenQASM circuit source">OPENQASM 3.0;
 include "stdgates.inc";
 qubit[2] q;
 bit[2] c;
