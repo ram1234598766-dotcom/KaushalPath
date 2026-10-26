@@ -146,12 +146,13 @@ function resizeImageFile(file){
   const url=URL.createObjectURL(file),image=new Image();
   image.onload=function(){
    try{
-    const max=(window.KP_DEVICE_PROFILE&&window.KP_DEVICE_PROFILE.imageMaxDimension)||1280,scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
+    const profileMax=(window.KP_DEVICE_PROFILE&&window.KP_DEVICE_PROFILE.imageMaxDimension)||1920,max=Math.min(2200,Math.max(1800,profileMax)),scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
     const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
     const ctx=canvas.getContext("2d");if(!ctx)throw new Error("This browser could not process the image.");
     ctx.fillStyle="#ffffff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
-    let data=canvas.toDataURL("image/jpeg",0.78);
-    if(data.length>2800000)data=canvas.toDataURL("image/jpeg",0.62);
+    let data=canvas.toDataURL("image/jpeg",0.88);
+    if(data.length>2800000)data=canvas.toDataURL("image/jpeg",0.78);
+    if(data.length>3500000)data=canvas.toDataURL("image/jpeg",0.68);
     if(data.length>3500000)throw new Error("That image is still too large after compression. Choose a smaller image.");
     URL.revokeObjectURL(url);resolve(data);
    }catch(error){URL.revokeObjectURL(url);reject(error);}
@@ -209,7 +210,7 @@ function attachmentLabel(attachment){
  if(!attachment)return "";
  return "[Attached file: "+String(attachment.name||"file").slice(0,120)+"]";
 }
-function renderSourceLinks(root,sources){
+function renderSourceLinks(root,sources,artifacts){
  if(!root)return;root.replaceChildren();
  (Array.isArray(sources)?sources:[]).slice(0,8).forEach(function(source,index){
   if(!source||typeof source.url!=="string")return;let url;
@@ -217,6 +218,17 @@ function renderSourceLinks(root,sources){
   const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
   const title=String(source.title||url.hostname).slice(0,140);link.textContent=(index+1)+". "+title;
   link.title=String(source.snippet||title).slice(0,500);root.appendChild(link);
+ });
+ (Array.isArray(artifacts)?artifacts:[]).slice(0,4).forEach(function(item){
+  if(!item||typeof item.base64!=="string"||item.base64.length>2600000)return;
+  const mime=String(item.mimeType||"");if(!["application/pdf","image/png","image/jpeg","image/webp"].includes(mime))return;
+  let binary;try{binary=atob(item.base64);}catch(e){return;}
+  const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  const href=URL.createObjectURL(new Blob([bytes],{type:mime}));
+  const link=document.createElement("a");link.href=href;link.download=String(item.name||"kaushalpath-download").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"-").slice(0,100);
+  link.rel="noopener";link.textContent=(mime==="application/pdf"?"Download PDF: ":"Download file: ")+link.download;
+  link.addEventListener("click",function(){setTimeout(function(){URL.revokeObjectURL(href);},60000);},{once:true});
+  root.appendChild(link);
  });
 }
 function searchIntent(text){return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text||""));}
@@ -855,7 +867,7 @@ async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
   return "";
  };
  if(!response.body||!contentType.includes("text/event-stream")){
-  const data=await response.json().catch(function(){return{};});if(data.error)throw new Error(data.error);if(onSources&&Array.isArray(data.sources))onSources(data.sources);
+  const data=await response.json().catch(function(){return{};});if(data.error)throw new Error(data.error);if(onSources&&Array.isArray(data.sources))onSources(data.sources,Array.isArray(data.artifacts)?data.artifacts:[]);
   const value=data.text||(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content);
   const text=contentText(value);if(text.trim()){onText(text);return text;}
   return retryCloudWithoutStream(payload,onText,signal,onStatus,onSources);
@@ -866,7 +878,7 @@ async function streamStudyRequest(payload,onText,signal,onStatus,onSources){
   const raw=clean.slice(5).trim();if(!raw||raw==="[DONE]")return;
   let event;try{event=JSON.parse(raw);}catch(e){return;}
   if(event.error){const message=typeof event.error==="string"?event.error:(event.error.message||"The study assistant stopped responding. Please try again.");const requestId=String(event.requestId||response.headers.get("x-request-id")||"").trim();streamError=new Error(message+(requestId?" (Reference: "+requestId+")":""));return;}
-  if(onSources&&Array.isArray(event.sources))onSources(event.sources);
+  if(onSources&&Array.isArray(event.sources))onSources(event.sources,Array.isArray(event.artifacts)?event.artifacts:[]);
   const choice=event.choices&&event.choices[0];
   if(choice&&choice.finish_reason==="error"){streamError=new Error("The study assistant stopped before returning an answer. Please try again.");return;}
   const delta=choice&&choice.delta,values=[delta&&delta.content,choice&&choice.message&&choice.message.content,choice&&choice.text,event.text,event.output_text,event.response&&event.response.output_text];
@@ -886,7 +898,7 @@ async function retryCloudWithoutStream(payload,onText,signal,onStatus,onSources)
  if(signal&&signal.aborted)throw new DOMException("Request aborted","AbortError");
  if(onStatus)onStatus("Trying an alternate response format…");
  const response=await fetch("/api/study-guide",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify(Object.assign({},payload,{stream:false})),signal:signal});
- const data=await response.json().catch(function(){return{};});if(onSources&&Array.isArray(data.sources))onSources(data.sources);
+ const data=await response.json().catch(function(){return{};});if(onSources&&Array.isArray(data.sources))onSources(data.sources,Array.isArray(data.artifacts)?data.artifacts:[]);
  if(!response.ok)throw new Error(describeApiFailure(response,data));
  let answer=typeof data.text==="string"?data.text:"";
  if(!answer.trim()){const choice=data.choices&&data.choices[0],content=choice&&choice.message&&choice.message.content;if(typeof content==="string")answer=content;else if(Array.isArray(content))answer=content.map(function(part){return part&&typeof part.text==="string"?part.text:"";}).join("");}
@@ -924,7 +936,7 @@ $("studyForm").addEventListener("submit",async function(ev){
   const urls=($("sourceUrls")?.value||"").split(/\n|,/).map(function(u){return u.trim();}).filter(Boolean);
   renderSourceLinks($("sourceList"),[]);
   const prompt=makePrompt(level,subject,chapter,mode,topic);
-  const answer=await streamStudyRequest(Object.assign({prompt:prompt,urls:urls,mode:mode,searchQuery:topic,userPrompt:topic},attachmentPayload(studyAttachment)),function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=false;},controller.signal,function(status){btn.textContent=String(status).includes("alternate response format")?"Retrying…":String(status).includes("Checking")?"Checking sources…":"Generating…";},function(sources){renderSourceLinks($("sourceList"),sources);});
+  const answer=await streamStudyRequest(Object.assign({prompt:prompt,urls:urls,mode:mode,searchQuery:topic,userPrompt:topic},attachmentPayload(studyAttachment)),function(delta){if(lastAnswerText==="")$("studyOutput").innerHTML="";lastAnswerText+="" + delta;renderMarkdownInto($("studyOutput"),lastAnswerText);$("copyAnswer").disabled=false;if($("saveStudyPdf"))$("saveStudyPdf").disabled=false;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=false;},controller.signal,function(status){btn.textContent=String(status).includes("alternate response format")?"Retrying…":String(status).includes("Checking")?"Checking sources…":"Generating…";},function(sources,artifacts){renderSourceLinks($("sourceList"),sources,artifacts);});
   lastAnswerText=answer;
   const note=document.createElement("p");note.className="tiny";note.textContent="Check important details against your prescribed textbook or official syllabus.";
   $("studyOutput").appendChild(note);
