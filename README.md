@@ -93,6 +93,18 @@ To enable interactive website automation, add `BROWSERBASE_API_KEY` to the same 
 
 Most factual/technical/research prompts trigger public search and page reading by default; a request to click or interact with a website selects the separate Browserbase tool. A request can opt out of web research by saying “do not browse” or “offline only”. Remote actions are not claimed successful unless the provider returns a successful result. Provider usage, quotas and charges are controlled by their respective accounts, so enable these integrations only when you intend to use them.
 
+## Free live-data tools (no API keys)
+
+The AI Study Guide has private server-side adapters for several open public data providers. It chooses a matching tool for supported requests and includes the provider URL, retrieval time, and freshness caveats in its result. No additional API keys or client-side plugins are needed.
+
+- **Weather and short forecasts:** [Open-Meteo](https://open-meteo.com/) plus its geocoding API. Attribution is required under CC BY 4.0; check the provider's current usage terms and quotas.
+- **Currency reference rates:** [Frankfurter](https://frankfurter.dev/). Rates are sourced from central banks and generally update on working days; they are not second-by-second trading quotes.
+- **Recent earthquakes:** [USGS real-time GeoJSON feeds](https://earthquake.usgs.gov/earthquakes/feed/v1.0/). Event details link back to USGS. These feeds report events and do not predict earthquakes.
+- **News headlines:** public BBC News RSS feeds. The integration returns a small set of headlines, short descriptions, publication timestamps and links, not full articles. Respect publisher terms and keep attribution.
+- **Public holidays:** [Nager.Date](https://github.com/nager/Nager.Date) public holiday API. Calendar data can be revised and some lunar holidays depend on local announcements.
+
+Responses have bounded timeouts and sizes with opportunistic in-process caching to reduce repeated requests. These services are free/keyless, but not unlimited or guaranteed; if one provider is unavailable or rate-limits traffic, the tool reports the failure rather than inventing data. The adapters are implemented as local source code in api/free-live-data.mjs, so no third-party SDK package is required.
+
 ## Cloudflare Workers deployment
 
 The Cloudflare build now uses a Worker with Static Assets instead of sending Pages-specific configuration to `wrangler deploy`. The Worker serves the static frontend from `dist/` and forwards only `/api/study-guide` to the existing Vercel Node API, where PDF, Office and image parsing runs in its supported runtime.
