@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaushalpath-shell-v32";
+const CACHE_NAME = "kaushalpath-shell-v33";
 const SHELL_FILES = [
   "/",
   "/index.html",
@@ -18,6 +18,7 @@ const SHELL_FILES = [
   "/study-library.js",
   "/question-bank.js",
   "/local-ai.js",
+  "/quantum-study-lab.js",
   "/manifest.webmanifest",
   "/app-icon.svg",
   "/offline.html",
@@ -46,7 +47,8 @@ const STATIC_FILES = new Set([
   "/ncert-physics-chapter-notes.js",
   "/ncert-chemistry-chapter-notes.js",
   "/ncert-mathematics-chapter-notes.js",
-  "/ncert-biology-chapter-notes.js"
+  "/ncert-biology-chapter-notes.js",
+  "/quantum-study-lab.js"
 ]);
 
 self.addEventListener("install", (event) => {
