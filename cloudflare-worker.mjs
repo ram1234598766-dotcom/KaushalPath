@@ -11,7 +11,7 @@ const STATIC_FILES = new Set([
   "cbse-biology-deep-notes.js", "cbse-remaining-chapter-notes.js",
   "cbse-humanities-computer-deep-notes.js", "ncert-physics-chapter-notes.js",
   "ncert-chemistry-chapter-notes.js", "ncert-mathematics-chapter-notes.js",
-  "ncert-biology-chapter-notes.js", "study-library.js", "local-ai.js", "question-bank.js"
+  "ncert-biology-chapter-notes.js", "study-library.js", "local-ai.js", "question-bank.js", "quantum-study-lab.js"
 ]);
 
 const SECURITY_HEADERS = {

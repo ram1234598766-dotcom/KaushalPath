@@ -651,9 +651,9 @@ function renderTests(){
 function renderStudyText(answer){const out=$("studyOutput");out.innerHTML=markdownToHtml(answer);lastAnswerText=answer;$("copyAnswer").disabled=!answer;if($("saveStudyPdf"))$("saveStudyPdf").disabled=!answer;if($("saveStudyLibrary"))$("saveStudyLibrary").disabled=!answer;}
 $("copyAnswer").addEventListener("click",async function(){if(!lastAnswerText)return;try{await navigator.clipboard.writeText(lastAnswerText);toast("Study text copied.");}catch(e){toast("Copy was blocked by this browser.");}});
 const subjectSets={
- "Class 10":["Mathematics","Science","English","Social Science","Hindi","Computer Applications","Physical Education","Other subject / language…"],
- "Class 11":["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education","Hindi","Applied Mathematics","Other subject / language…"],
- "Class 12":["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education","Hindi","Applied Mathematics","Other subject / language…"]
+ "Class 10":["Mathematics","Science","English","Social Science","Hindi","Computer Applications","Physical Education","Quantum computing","Other subject / language…"],
+ "Class 11":["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education","Hindi","Applied Mathematics","Quantum computing","Other subject / language…"],
+ "Class 12":["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Informatics Practices","Accountancy","Business Studies","Economics","Political Science","History","Geography","Psychology","Sociology","Physical Education","Hindi","Applied Mathematics","Quantum computing","Other subject / language…"]
 };
 const topicCatalog={
  "Mathematics":["Real numbers and proofs","Polynomials and zeroes","Linear equations","Quadratic equations","Arithmetic progressions","Triangles and similarity","Coordinate geometry","Trigonometry","Statistics and probability","Sets and functions","Complex numbers","Permutations and combinations","Limits and derivatives","Matrices and determinants","Integrals and applications","Differential equations","Vectors and 3D geometry","Probability distributions"],
@@ -677,7 +677,8 @@ const topicCatalog={
  "Physical Education":["Fitness and wellness","Training methods","Sports psychology","Nutrition","Yoga and lifestyle"],
  "Hindi":["अपठित गद्यांश","व्याकरण और लेखन","काव्य की व्याख्या","गद्य साहित्य","अभिव्यक्ति और माध्यम"],
  "Applied Mathematics":["Financial mathematics","Matrices","Probability distributions","Descriptive statistics","Linear programming","Calculus applications"],
- "Other subject / language…":["Reading and comprehension","Grammar practice","Writing practice","Key concepts and vocabulary"]
+ "Other subject / language…":["Reading and comprehension","Grammar practice","Writing practice","Key concepts and vocabulary"],
+ "Quantum computing":["Qubits and superposition","Quantum gates and measurement","Entanglement and Bell states","Quantum interference","OpenQASM 3.0 circuit simulation"]
 };
 function topicsFor(level,subject){
  let topics=(topicCatalog[subject]||["Key definitions and concepts","Important examples","Core formulas or facts","Common exam questions","Application-based questions","Quick revision"]);

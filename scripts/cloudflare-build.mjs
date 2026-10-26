@@ -52,6 +52,7 @@ const staticFiles = [
   "study-library.js",
   "local-ai.js",
   "question-bank.js",
+  "quantum-study-lab.js",
   "_headers"
 ];
 await rm(output, { recursive: true, force: true });
