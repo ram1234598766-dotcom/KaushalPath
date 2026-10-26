@@ -23,6 +23,7 @@ const ncertBiology = readFileSync(new URL("../ncert-biology-chapter-notes.js", i
 const localAI = readFileSync(new URL("../local-ai.js", import.meta.url), "utf8");
 const quantumStudyLab = readFileSync(new URL("../quantum-study-lab.js", import.meta.url), "utf8");
 const cloudflareBuild = readFileSync(new URL("../scripts/cloudflare-build.mjs", import.meta.url), "utf8");
+const quantumCloudflareWorker = readFileSync(new URL("../cloudflare-worker.mjs", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
@@ -37,7 +38,7 @@ assert.ok(html.includes('value="Quantum computing">Quantum computing'), "the AI 
 assert.ok(quantumStudyLab.includes("function simulateCircuit(id)") && quantumStudyLab.includes("OPENQASM 3.0;"), "the quantum lab should simulate circuits and emit OpenQASM 3.0");
 assert.ok(vercel.builds.some(b => b.src === "quantum-study-lab.js" && b.use === "@vercel/static"), "Vercel should publish the quantum lab module");
 assert.ok(serviceWorker.includes('"/quantum-study-lab.js"'), "the PWA shell should cache the quantum lab module");
-assert.ok(cloudflareWorker.includes('"quantum-study-lab.js"') && cloudflareBuild.includes('"quantum-study-lab.js"'), "Cloudflare should allowlist and stage the quantum lab module");
+assert.ok(quantumCloudflareWorker.includes('"quantum-study-lab.js"') && cloudflareBuild.includes('"quantum-study-lab.js"'), "Cloudflare should allowlist and stage the quantum lab module");
 assert.match(pkg.scripts.test, /quantum-circuit-test\.mjs/, "CI must run the quantum circuit simulation tests");
 
 assert.match(html, /class="kp-skip-link" href="#main-content"/, "keyboard users should be able to skip the workspace navigation");
