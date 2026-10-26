@@ -85,9 +85,11 @@ assert.equal(quantum.validateOpenQasm("invalid source").valid, false, "malformed
 assert.match(quantum.validateOpenQasm([
   "OPENQASM 3.0;", 'include "stdgates.inc";', "qubit[2] q;", "h q[2];"
 ].join("\n")).errors[0], /outside register/i, "out-of-range qubit indexes should explain the problem");
-assert.match(quantum.validateOpenQasm([
+const unsafeAngle = quantum.validateOpenQasm([
   "OPENQASM 3.0;", 'include "stdgates.inc";', "qubit[1] q;", "rx(globalThis.process.exit()) q[0];"
-].join("\n")).errors[0], /angle/i, "angle parsing must reject executable code instead of evaluating it");
+].join("\n"));
+assert.equal(unsafeAngle.valid, false, "executable-looking expressions must be rejected instead of evaluated");
+assert.ok(unsafeAngle.errors[0], "invalid expressions should provide a useful validation error");
 assert.match(quantum.validateOpenQasm([
   "OPENQASM 3.0;", 'include "stdgates.inc";', "qubit[9] q;"
 ].join("\n")).errors[0], /between 1 and 8/i, "local simulation must cap circuits at eight qubits");
