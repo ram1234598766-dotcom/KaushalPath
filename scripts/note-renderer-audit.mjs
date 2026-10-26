@@ -93,6 +93,9 @@ assert.ok(sandbox.__practiceMarkup.includes("kp-practice-question") && sandbox._
 assert.ok(source.includes("highlightImportantPhrases(detail)"), "the on-screen notes reader should highlight important phrases");
 assert.ok(source.includes('className = "notes-common-mistakes kp-common-mistakes"'), "common mistakes should be emphasized on screen");
 assert.ok(source.includes("await engine.svg2pdf(vectorSvg, pdf, options)") && source.includes('pdf.output("blob")'), "chapter export should create a real PDF blob and render the cloned concept map as vector graphics");
+assert.ok(source.includes("function fitChapterPacketPage(blocks)") && source.includes("function measureChapterPacketPage(blocks, scale)"), "PDF pagination must measure and fit each fixed chapter section");
+assert.ok(source.includes("const isFixedChapterPage = Boolean(chapter && article.classList.contains(\"packet-page\"))") && source.includes("fitToCurrentPacketPage = isFixedChapterPage"), "the detailed single-chapter packet must retain one PDF page per article while preserving its vector map");
+
 assert.ok(!source.includes("printTarget.print()"), "chapter Download PDF must not open the browser print dialog");
 assert.ok(source.includes("@page chapter-map{size:A4 landscape"), "the mind map should use a landscape first page");
 assert.ok(source.includes("@page chapter-notes{size:A4 portrait"), "remaining note pages should remain portrait");
