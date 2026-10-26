@@ -332,7 +332,7 @@ function responseText(content) {
 }
 
 export function isQuantumIntent(value) {
-  return /\\b(?:quantum|qubits?|openqasm|qasm(?:\\s*[23](?:\\.0)?)?|bell\\s+state|ghz|grover|hadamard|cnot|qbraid|superposition|entanglement|quantum\\s+(?:circuit|computer|computing|algorithm|simulator|simulation|gate|register))\\b/i.test(String(value || ""));
+  return /\b(?:quantum|qubits?|openqasm|qasm(?:\s*[23](?:\.0)?)?|bell\s+state|ghz|grover|hadamard|cnot|qbraid|superposition|entanglement|quantum\s+(?:circuit|computer|computing|algorithm|simulator|simulation|gate|register))\b/i.test(String(value || ""));
 }
 
 export const QUANTUM_TOOL_DEFINITIONS = [
