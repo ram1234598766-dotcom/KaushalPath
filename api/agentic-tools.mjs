@@ -145,14 +145,27 @@ function safeArtifactName(value) {
   return name || "artifact";
 }
 
+function normalizePdfGlyphs(value) {
+  const substitutions = {
+    "—": "-", "–": "-", "−": "-", "…": "...", "‘": "'", "’": "'", "“": "\\"", "”": "\\"",
+    "•": "-", "→": "->", "←": "<-", "↔": "<->", "×": "x", "÷": "/", "≤": "<=", "≥": ">=", "≠": "!=", "≈": "~",
+    "∞": "infinity", "π": "pi", "θ": "theta", "α": "alpha", "β": "beta", "γ": "gamma", "δ": "delta",
+    "λ": "lambda", "μ": "mu", "σ": "sigma", "Σ": "Sigma", "Ω": "Ohm", "ω": "omega", "Δ": "Delta",
+    "√": "sqrt", "∑": "sum", "∫": "integral", "°": " degrees", "¹": "^1", "²": "^2", "³": "^3",
+    "₀": "_0", "₁": "_1", "₂": "_2", "₃": "_3", "₄": "_4", "₅": "_5", "₆": "_6", "₇": "_7", "₈": "_8", "₉": "_9"
+  };
+  return String(value || "").replace(/[—–−…‘’“”•→←↔×÷≤≥≠≈∞πθαβγδλμσΣΩωΔ√∑∫°¹²³₀₁₂₃₄₅₆₇₈₉]/g, (char) => substitutions[char] || "?")
+    .replace(/[^\x00-\xFF]/g, "?")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, " ");
+}
 function stripInlineMarkdown(value) {
-  return String(value || "").replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+  return normalizePdfGlyphs(String(value || "").replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1 ($2)")
     .replace(/[\x60*_~]/g, "")
-    .replace(/&nbsp;/g, " ");
+    .replace(/&nbsp;/g, " "));
 }
 function wrapLine(text, font, size, maxWidth) {
-  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const words = normalizePdfGlyphs(text).split(/\s+/).filter(Boolean);
   if (!words.length) return [""];
   const lines = [];
   let line = "";
@@ -181,8 +194,8 @@ function wrapLine(text, font, size, maxWidth) {
 }
 
 async function createPdf(input) {
-  const title = cleanText(input.title || "KaushalPath Report", 140).trim();
-  const content = cleanText(input.content, MAX_PDF_TEXT).trim();
+  const title = normalizePdfGlyphs(cleanText(input.title || "KaushalPath Report", 140).trim());
+  const content = normalizePdfGlyphs(cleanText(input.content, MAX_PDF_TEXT).trim());
   if (!title || !content) return { ok: false, error: "A non-empty title and content are required to create the PDF." };
   const pdf = await PDFDocument.create();
   pdf.setTitle(title);
@@ -207,9 +220,9 @@ async function createPdf(input) {
     page.drawRectangle({ x: 0, y: pageHeight - (first ? 118 : 48), width: pageWidth, height: first ? 118 : 48, color: purple });
     if (first) {
       page.drawText("KAUSHALPATH  /  AI DOCUMENT", { x: margin, y: pageHeight - 36, size: 8, font: bold, color: lilac, characterSpacing: 1.1 });
-      const titleLines = wrapLine(title, bold, 23, maxWidth).slice(0, 3);
+      const titleLines = wrapLine(title, bold, 21, maxWidth).slice(0, 2);
       let titleY = pageHeight - 70;
-      titleLines.forEach((line) => { page.drawText(line, { x: margin, y: titleY, size: 23, font: bold, color: white }); titleY -= 28; });
+      titleLines.forEach((line) => { page.drawText(line, { x: margin, y: titleY, size: 21, font: bold, color: white }); titleY -= 25; });
       page.drawText("Prepared with structured formatting and page navigation", { x: margin, y: pageHeight - 103, size: 8.8, font: regular, color: lilac });
       y = pageHeight - 148;
     } else {
@@ -531,7 +544,7 @@ async function browserAgent(input, signal) {
         await locator.fill(value, { timeout: 5000 });
       } else if (action === "click") {
         const label = cleanText(await locator.innerText().catch(() => target), 220).toLowerCase();
-        if (/\b(?:pay now|checkout|purchase|buy now|place order|delete account|delete permanently|remove account|transfer funds|confirm payment|publish|send message|log out|logout)\b/i.test(label)) {
+        if (/\b(?:pay now|checkout|purchase|buy now|place order|delete account|delete permanently|remove account|transfer funds|confirm payment|publish|send message|send email|sign in|sign up|log in|login|log out|logout)\b/i.test(label)) {
           throw new Error("This action could have a sensitive real-world effect, so the browser agent will not click it.");
         }
         await locator.click({ timeout: 5000 });
@@ -568,8 +581,8 @@ async function browserAgent(input, signal) {
     });
     const artifacts = [];
     if (input.screenshot === true) {
-      const image = await page.screenshot({ type: "png", fullPage: false, timeout: 5000 });
-      artifacts.push(artifact("browser-screenshot.png", "image/png", image));
+      const image = await page.screenshot({ type: "jpeg", quality: 78, fullPage: false, timeout: 5000 });
+      artifacts.push(artifact("browser-screenshot.jpg", "image/jpeg", image));
     }
     return {
       ok: true, browserUsed: true, goal: cleanText(input.goal, 500), url: snapshot.url,
