@@ -881,6 +881,98 @@ body.mock-test-window .mobile-dock{display:none!important}
 .written-self-mark-options .btn:focus-visible{outline:3px solid #c9b3fa;outline-offset:2px}
 #finalizeWrittenMarking:disabled{cursor:not-allowed;opacity:.6}
 @media(max-width:620px){.written-answer-wrap{padding:12px}.written-answer-label{align-items:flex-start;flex-direction:column;gap:3px}.written-review-head{align-items:flex-start;flex-direction:column}.written-self-mark-options .btn{flex:1 0 35px}}
+
+
+/* KaushalPath workspace refinement: clear study hierarchy, calmer surfaces, and accessible navigation. */
+:root{
+  --ink:#17233d;
+  --muted:#65718a;
+  --paper:#f5f7fb;
+  --white:#fff;
+  --line:#e1e7f1;
+  --navy:#131f38;
+  --blue:#3d5cde;
+  --teal:#138b7e;
+  --amber:#f5bb63;
+  --soft:#edf1ff;
+  --radius:18px;
+  --kp-focus:#82a5ff;
+}
+html{scroll-padding-top:88px}
+body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.58;text-rendering:optimizeLegibility}
+button,input,select,textarea{font-family:inherit}
+.kp-skip-link{position:fixed;z-index:2147483000;top:-80px;left:16px;padding:11px 15px;border-radius:10px;background:#fff;color:#17233d;border:2px solid var(--blue);box-shadow:0 8px 28px #17233d24;font-weight:800;transition:top .16s ease}
+.kp-skip-link:focus{top:12px;outline:3px solid var(--kp-focus);outline-offset:3px}
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:3px solid var(--kp-focus);outline-offset:3px}
+.content-shell{min-height:100vh;background:linear-gradient(180deg,#fafbff 0,#f5f7fb 320px)}
+.sidebar{background:linear-gradient(165deg,#182541 0%,#111b31 100%);box-shadow:5px 0 26px #17233d0b}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.94);color:var(--ink);border-bottom:1px solid #e2e7f0;box-shadow:0 3px 14px #17233d05;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.topbar .nav{height:70px;min-height:70px}
+.topbar .breadcrumb{color:#6b7690;font-size:.84rem}
+.topbar .breadcrumb strong{color:#1b2945;font-weight:800}
+.topbar .crumb-slash{color:#bbc4d3}
+.topbar .topbar-resource{color:#44516a;font-weight:700}
+.topbar .quick-launch-button{background:#f0f3ff;border:1px solid #dfe6ff;color:#30469d;box-shadow:none}
+.topbar .tour-launch{background:#fff;border:1px solid #e0e5ef;color:#3a465f;box-shadow:none}
+.topbar .btn{min-height:42px;border-radius:11px;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease}
+.dashboard-intro{padding-top:34px;padding-bottom:22px}
+.workspace-eyebrow{display:flex;align-items:center;gap:8px;color:#52617d;font-size:.72rem;font-weight:850;letter-spacing:.14em}
+.workspace-eyebrow .spark{color:#b57a1f}
+.overview-row{gap:28px;margin-top:7px}
+.overview-row h2{font-size:clamp(1.5rem,2.2vw,2rem);letter-spacing:-.045em;line-height:1.15;font-weight:820;color:#17233d}
+.overview-row p{max-width:590px;color:#66728a;font-size:.97rem;line-height:1.65}
+.overview-actions{margin-top:0;align-items:center}
+.workspace-meta{display:flex;align-items:center;gap:11px;margin-top:21px;color:#64718a;font-size:.77rem}
+.workspace-meta>span:first-child{display:inline-flex;align-items:center;gap:7px;font-weight:750;color:#40506d}
+.meta-dot{background:#1a9b81;box-shadow:0 0 0 3px #1a9b811a}
+.hero{background:linear-gradient(118deg,#111c33 0%,#152441 64%,#1b2b49 100%);padding:60px 0 50px}
+.hero h1{letter-spacing:-.072em;font-weight:850}
+.hero h1 em{color:#ffd078}
+.hero p{color:#d3dcec;max-width:600px}
+.hero-card{border-color:#3b4c6b;background:#1a2a47;box-shadow:0 24px 54px #050d1f34}
+.hero-card .status{background:#164d48;color:#b6f2e4;border:1px solid #237a70}
+.quickstats{gap:12px;padding-top:18px;padding-bottom:14px}
+.stat{border:1px solid #e3e8f1;border-radius:17px;padding:18px 19px;box-shadow:0 4px 16px #1c2e4a05;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.stat strong{color:#1a2945;font-variant-numeric:tabular-nums}
+.stat span{color:#66728a}
+.section{padding-top:58px;scroll-margin-top:84px}
+.section-head{margin-bottom:22px}
+.section h2{letter-spacing:-.045em;font-weight:820}
+.section-head p{line-height:1.68}
+.panel{border-color:#e2e8f1;border-radius:19px;box-shadow:0 6px 22px #1c2e4a06}
+.path-grid{gap:14px}
+.path-card{position:relative;min-height:222px;padding:20px 18px;border-color:#e1e7f0;border-radius:18px;box-shadow:0 5px 18px #17233d05;overflow:hidden}
+.path-card:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:#3d5cde}
+.path-card.jee-card:before{background:#7a65d8}
+.path-card.neet-card:before{background:#168f81}
+.path-card.ai-card:before{background:#d99a35}
+.path-card h3{color:#1c2943;font-size:1.04rem;font-weight:820;letter-spacing:-.025em}
+.path-card p{color:#65718a;line-height:1.6}
+.path-card strong{color:#3d54bd}
+.notes-toolbar.panel{padding:19px;border-radius:18px}
+.notes-toolbar .field label,.field label{color:#34425e}
+.field input,.field select,.field textarea,.notes-toolbar input,.notes-toolbar select{border-color:#d8e0ed;border-radius:12px;background:#fff;min-height:44px;transition:border-color .16s ease,box-shadow .16s ease}
+.field input:hover,.field select:hover,.field textarea:hover,.notes-toolbar input:hover,.notes-toolbar select:hover{border-color:#aab9de}
+.field input:focus,.field select:focus,.field textarea:focus,.notes-toolbar input:focus,.notes-toolbar select:focus{border-color:#526fe0;box-shadow:0 0 0 3px #526fe01b}
+.notes-card{border-color:#e0e6f0;border-radius:18px;padding:20px;box-shadow:0 4px 16px #17233d05;animation-duration:.22s}
+.notes-card h3{color:#1a2944;font-size:1.06rem;letter-spacing:-.025em}
+.notes-card p{color:#65718a;line-height:1.65}
+.notes-card-actions{gap:8px}
+.notes-card-actions .btn{min-height:38px;border-radius:10px}
+.notes-count{border:1px solid #dde5f1;background:#fff;color:#485873;padding:8px 11px;border-radius:11px;font-size:.78rem;font-weight:750}
+.notes-promise{border-color:#d6ebe5;background:#f0faf6;color:#355a54;border-radius:14px}
+.notes-promise strong{color:#1f5d52}
+.btn{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease}
+.btn-purple{background:#6748d3;box-shadow:0 4px 12px #6748d31a}
+.btn-blue{background:#3d5cde}
+.btn-light{border:1px solid #e1e7f0;box-shadow:none}
+.btn:active{transform:translateY(0)}
+@media(hover:hover){.btn:hover{transform:translateY(-1px)}.btn-purple:hover{background:#5738c5;box-shadow:0 8px 18px #6748d32c}.btn-light:hover{background:#f7f8ff;border-color:#cfd8eb}.stat:hover{transform:translateY(-2px);border-color:#ccd7ec;box-shadow:0 10px 24px #17233d0b}.path-card:hover{transform:translateY(-3px);border-color:#cdd8ee;box-shadow:0 14px 30px #17233d10}.notes-card:hover{transform:translateY(-2px);border-color:#cfd9eb;box-shadow:0 12px 24px #17233d0b}}
+#main-content{outline:none}
+@media(max-width:900px){.topbar .nav{height:auto;min-height:62px;padding-top:9px;padding-bottom:9px;gap:12px}.topbar .topbar-actions{gap:7px}.topbar .topbar-resource{display:none}.dashboard-intro{padding-top:26px}.overview-row{align-items:flex-start;flex-direction:column;gap:12px}.overview-actions{margin-top:3px}.section{padding-top:46px}}
+@media(max-width:650px){.topbar .nav{align-items:flex-start;flex-direction:column;gap:8px;padding:11px 16px}.topbar .topbar-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.topbar .quick-launch-button,.topbar .tour-launch{width:100%;white-space:nowrap;padding:9px 10px;font-size:.78rem;min-height:40px}.topbar .quick-launch-button kbd{display:none}.dashboard-intro{padding-top:23px;padding-bottom:16px}.workspace-meta{align-items:flex-start;flex-wrap:wrap;gap:7px;margin-top:16px}.workspace-meta .meta-divider{display:none}.overview-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}.overview-actions .btn{white-space:normal;padding:11px 12px;font-size:.82rem}.hero{padding:43px 0 34px}.hero h1{font-size:clamp(2.65rem,12vw,3.6rem)}.quickstats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding-top:12px}.stat{padding:14px;border-radius:14px}.stat strong{font-size:1.28rem}.path-grid{grid-template-columns:1fr}.path-card{min-height:0;padding:18px}.section{padding-top:39px}.section-head{align-items:flex-start;flex-direction:column;gap:12px}.notes-toolbar.panel{padding:13px}.notes-card{padding:16px}.notes-card-actions .btn{flex:1 1 auto}}
+@media(prefers-reduced-motion:reduce){.kp-skip-link,.btn,.stat,.path-card,.notes-card{transition:none!important}.btn:hover,.stat:hover,.path-card:hover,.notes-card:hover{transform:none!important}}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/app-icon.svg">
@@ -889,6 +981,7 @@ body.mock-test-window .mobile-dock{display:none!important}
 <meta name="apple-mobile-web-app-title" content="KaushalPath">
 </head>
 <body>
+<a class="kp-skip-link" href="#main-content">Skip to main content</a>
 <div class="workspace-shell">
 <aside class="sidebar" aria-label="Workspace navigation">
   <a class="side-brand" href="#overview" data-view="overview" aria-label="KaushalPath overview">
@@ -915,7 +1008,7 @@ body.mock-test-window .mobile-dock{display:none!important}
 </aside>
 <div class="content-shell">
 <header class="topbar"><div class="wrap nav"><div class="breadcrumb"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumbPage">Overview</strong></div><div class="topbar-actions"><button class="btn btn-light quick-launch-button" id="openCommandPalette" type="button" aria-haspopup="dialog" aria-controls="commandPalette"><span aria-hidden="true">⌕</span> Quick search <kbd>Ctrl K / ⌘K</kbd></button><a class="topbar-resource" href="#resources" data-view="resources"><span>↗</span> Official source links</a><button class="btn btn-light tour-launch" id="startTour" type="button" aria-haspopup="dialog">Guided tour ✦</button></div></div></header>
-<main>
+<main id="main-content" tabindex="-1">
 <section class="dashboard-intro wrap" id="overview">
   <div class="workspace-eyebrow"><span class="spark">✦</span> YOUR WORKSPACE</div>
   <div class="overview-row">
@@ -938,7 +1031,7 @@ body.mock-test-window .mobile-dock{display:none!important}
 <section class="section wrap" id="learn">
   <div class="section-head notes-section-head">
     <div><div class="kicker">01 / CBSE chapter notes</div><h2>Real notes. No AI required.</h2>
-    <p>Browse structured revision notes, key formulas, worked examples and self-check questions. Open a chapter and use <strong>Save as PDF</strong>; choose “Save as PDF” in the browser print dialog.</p></div>
+    <p>Browse structured revision notes, key formulas, worked examples and self-check questions. Choose <strong>Download PDF</strong> to save a real chapter file directly. <strong>Print / Save PDF</strong> remains a separate option when you need the browser print dialog.</p></div>
     <span class="notes-count" id="notesCount">Individual chapter notes + formula cheat sheets</span>
   </div>
   <div class="notes-promise"><span class="notes-promise-icon" aria-hidden="true">✓</span><div><strong>Prepared notes, not generated answers</strong><p>The CBSE Study Hub uses a built-in notes catalogue. It does not send your chapter selection to the AI endpoint. For the complete and current prescribed chapter list, use the official curriculum and textbook catalogue below.</p></div></div>
