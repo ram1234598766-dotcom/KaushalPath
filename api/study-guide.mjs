@@ -12,6 +12,7 @@ import XLSX from "xlsx";
 import { unzipSync, strFromU8 } from "fflate";
 import sharp from "sharp";
 import quantumLab from "../quantum-study-lab.js";
+import { AI_SKILL_COUNT, formatActiveSkills, selectActiveSkills, selectToolDomains } from "./ai-skill-registry.mjs";
 
 const MODEL = "kilo-auto/free";
 const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
@@ -394,6 +395,181 @@ export const QUANTUM_TOOL_DEFINITIONS = [
     }
   }
 ];
+
+const GENERAL_TOOL_DEFINITIONS = [
+  {
+    type: "function",
+    function: {
+      name: "quantum_plan_problem",
+      description: "Build a realistic quantum-algorithm plan for an optimization, search, chemistry, factoring, or machine-learning problem. Explain encoding, likely qubits/depth, a classical baseline, and practical limitations. Planning has no side effects.",
+      parameters: {
+        type: "object",
+        properties: {
+          problemType: { type: "string", enum: ["maxcut", "tsp", "scheduling", "sat", "qubo", "chemistry", "search", "factorization", "qml", "portfolio", "routing", "custom"] },
+          size: { type: "integer", minimum: 1, maximum: 100000 },
+          goal: { type: "string", maxLength: 1000 },
+          constraints: { type: "string", maxLength: 2000 }
+        },
+        required: ["problemType", "size", "goal"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "quantum_solve_qubo",
+      description: "Solve a small quadratic unconstrained binary optimization (QUBO) exactly as a checked classical baseline. Input variable indices are zero-based; objective is constant + sum(linear[i]*x[i]) + sum(quadratic.coefficient*x[i]*x[j]). Supports at most 18 binary variables and 200 quadratic terms.",
+      parameters: {
+        type: "object",
+        properties: {
+          variables: { type: "integer", minimum: 1, maximum: 18 },
+          linear: { type: "array", items: { type: "number" }, minItems: 1, maxItems: 18 },
+          quadratic: {
+            type: "array", maxItems: 200,
+            items: {
+              type: "object",
+              properties: {
+                i: { type: "integer", minimum: 0, maximum: 17 },
+                j: { type: "integer", minimum: 0, maximum: 17 },
+                coefficient: { type: "number" }
+              },
+              required: ["i", "j", "coefficient"],
+              additionalProperties: false
+            }
+          },
+          sense: { type: "string", enum: ["minimize", "maximize"] },
+          constant: { type: "number" }
+        },
+        required: ["variables", "linear"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "qbraid_submit_job",
+      description: "Submit a supplied OpenQASM 2.0 or 3.0 circuit to a qBraid device. This can spend credits. Only submit after the latest user message explicitly confirms the exact device QRN, shot count, and live estimated credit cost using the confirmation format requested by KaushalPath. Otherwise return a confirmation preview instead of submitting.",
+      parameters: {
+        type: "object",
+        properties: {
+          qasm: { type: "string", minLength: 1, maxLength: 50000 },
+          deviceQrn: { type: "string", minLength: 3, maxLength: 255 },
+          shots: { type: "integer", minimum: 1, maximum: 100000 },
+          expectedCost: { type: "number", minimum: 0 },
+          name: { type: "string", maxLength: 100 }
+        },
+        required: ["qasm", "deviceQrn", "shots", "expectedCost"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "qbraid_get_job",
+      description: "Read status and, if completed, measurement results for an existing qBraid job QRN. This does not submit a job or spend credits.",
+      parameters: {
+        type: "object",
+        properties: {
+          jobQrn: { type: "string", minLength: 5, maxLength: 255 },
+          includeResults: { type: "boolean" }
+        },
+        required: ["jobQrn"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "math_evaluate_expression",
+      description: "Evaluate a numeric arithmetic expression with a restricted parser (no code execution). Supports constants pi/e, parentheses, + - * / ^ and sqrt, sin, cos, tan, log, ln, abs, min, max, exp.",
+      parameters: {
+        type: "object",
+        properties: { expression: { type: "string", minLength: 1, maxLength: 1000 } },
+        required: ["expression"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "matrix_compute",
+      description: "Compute matrix transpose, matrix product, determinant, or solve a square linear system with Gaussian elimination.",
+      parameters: {
+        type: "object",
+        properties: {
+          operation: { type: "string", enum: ["multiply", "transpose", "determinant", "solve"] },
+          matrixA: { type: "array", minItems: 1, maxItems: 40, items: { type: "array", minItems: 1, maxItems: 40, items: { type: "number" } } },
+          matrixB: { type: "array", minItems: 1, maxItems: 40, items: { type: "array", minItems: 1, maxItems: 40, items: { type: "number" } } },
+          vectorB: { type: "array", minItems: 1, maxItems: 40, items: { type: "number" } }
+        },
+        required: ["operation", "matrixA"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "compute_statistics",
+      description: "Calculate reliable descriptive statistics for a numeric dataset: count, mean, median, sample standard deviation, variance, min, max, and quartiles.",
+      parameters: {
+        type: "object",
+        properties: { values: { type: "array", minItems: 1, maxItems: 10000, items: { type: "number" } } },
+        required: ["values"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "convert_units",
+      description: "Convert between supported length, mass, time, angle, data-size, energy, volume, speed, and temperature units.",
+      parameters: {
+        type: "object",
+        properties: {
+          value: { type: "number" },
+          from: { type: "string", minLength: 1, maxLength: 30 },
+          to: { type: "string", minLength: 1, maxLength: 30 }
+        },
+        required: ["value", "from", "to"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "boolean_truth_table",
+      description: "Build a truth table for a Boolean expression using NOT/!, AND/&, OR/|, XOR/^ and parentheses. Supports up to 8 variables and never evaluates JavaScript.",
+      parameters: {
+        type: "object",
+        properties: { expression: { type: "string", minLength: 1, maxLength: 300 } },
+        required: ["expression"],
+        additionalProperties: false
+      }
+    }
+  }
+];
+
+function getToolDefinitionsForQuery(query) {
+  const domains = selectToolDomains(query);
+  const result = [];
+  const add = (items) => { for (const tool of items) if (!result.some((item) => item.function.name === tool.function.name)) result.push(tool); };
+  if (domains.has("quantum")) add(QUANTUM_TOOL_DEFINITIONS);
+  if (domains.has("math")) add(GENERAL_TOOL_DEFINITIONS.filter((tool) => [
+    "quantum_plan_problem", "quantum_solve_qubo", "math_evaluate_expression",
+    "matrix_compute", "compute_statistics", "convert_units", "boolean_truth_table"
+  ].includes(tool.function.name)));
+  if (domains.has("data")) add(GENERAL_TOOL_DEFINITIONS.filter((tool) => ["compute_statistics", "math_evaluate_expression"].includes(tool.function.name)));
+  if (domains.has("logic")) add(GENERAL_TOOL_DEFINITIONS.filter((tool) => ["boolean_truth_table", "math_evaluate_expression"].includes(tool.function.name)));
+  return result.slice(0, 12);
+}
 
 function quantumQasmFromArgs(args) {
   const qasm = args && typeof args.qasm === "string" ? args.qasm : "";
