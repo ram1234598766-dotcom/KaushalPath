@@ -243,7 +243,7 @@ globalThis.fetch = async (url, options = {}) => {
   if (requestText.includes("RATE_LIMIT_TEST")) return new Response(JSON.stringify({ error: { message: "rate limit reached" } }), { status: 429, headers: { "content-type": "application/json; charset=utf-8" } });
   if (payload.tools && payload.messages.some((message) => message.role === "tool")) {
     const toolMessages = payload.messages.filter((message) => message.role === "tool");
-    const resultText = toolMessages.map((message) => String(message.content || "")).join("\\n");
+    const resultText = toolMessages.map((message) => String(message.content || "")).join("\n");
     return new Response(JSON.stringify({
       id: "mock-quantum-final",
       choices: [{ message: { content: "The Bell circuit was validated and simulated. The ideal results are 00 and 11 at 50% each." } }]
@@ -258,7 +258,7 @@ globalThis.fetch = async (url, options = {}) => {
       "h q[0];",
       "cx q[0], q[1];",
       "c = measure q;"
-    ].join("\\n");
+    ].join("\n");
     return new Response(JSON.stringify({
       id: "mock-quantum-call",
       choices: [{
