@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import handler, { createPinnedLookup, executeAITool, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS, remoteQasmFingerprint, shouldAutoBrowse, getToolDefinitionsForQuery } from "../api/study-guide.mjs";
 import { AGENTIC_TOOL_DEFINITIONS, executeAgenticTool } from "../api/agentic-tools.mjs";
+import { FREE_LIVE_DATA_TOOL_DEFINITIONS } from "../api/free-live-data.mjs";
 import { AI_SKILLS, AI_SKILL_COUNT, selectActiveSkills, selectToolDomains } from "../api/ai-skill-registry.mjs";
 import { zipSync, strToU8 } from "fflate";
 import sharp from "sharp";
@@ -33,11 +34,62 @@ assert.ok(getToolDefinitionsForQuery("Create a downloadable PDF handout").some((
 assert.ok(getToolDefinitionsForQuery("Interact with browser by clicking a button on this website").some((tool) => tool.function.name === "browser_agent"), "website click workflows should automatically select the private browser agent");
 assert.ok(getToolDefinitionsForQuery("Write some code and run tests").some((tool) => tool.function.name === "coding_workflow"), "coding tasks should automatically select the agentic coding workflow");
 assert.ok(getToolDefinitionsForQuery("Execute this Python script in a sandbox").some((tool) => tool.function.name === "sandbox_execute"), "explicit command execution should select the isolated execution tool");
+assert.deepEqual(
+  FREE_LIVE_DATA_TOOL_DEFINITIONS.map((tool) => tool.function.name),
+  ["live_weather", "live_exchange_rate", "live_earthquakes", "live_news", "live_public_holidays"],
+  "five public data tools should be registered without provider keys"
+);
+assert.ok(getToolDefinitionsForQuery("What is the current weather in Hyderabad?").some((tool) => tool.function.name === "live_weather"), "weather requests should select Open-Meteo");
+assert.ok(getToolDefinitionsForQuery("What is the latest USD to INR exchange rate?").some((tool) => tool.function.name === "live_exchange_rate"), "currency-rate requests should select Frankfurter");
+assert.ok(getToolDefinitionsForQuery("Show recent earthquakes in the last day").some((tool) => tool.function.name === "live_earthquakes"), "earthquake requests should select the USGS feed");
+assert.ok(getToolDefinitionsForQuery("Give me the latest technology news headlines").some((tool) => tool.function.name === "live_news"), "news headline requests should select the BBC RSS feed");
+assert.ok(getToolDefinitionsForQuery("List public holidays in India this year").some((tool) => tool.function.name === "live_public_holidays"), "holiday requests should select Nager.Date");
+
 assert.ok(selectActiveSkills("solve quantum QAOA optimization on qBraid", 12).length >= 5, "base skills should always be auto-activated");
 assert.ok(selectToolDomains("design and simulate a quantum circuit").has("quantum"), "quantum prompts should automatically enable quantum tools");
 assert.ok(selectToolDomains("calculate statistics from this CSV dataset").has("data"), "data tasks should automatically enable data tools");
 assert.equal((await executeAITool("math_evaluate_expression", { expression: "sqrt(81) + pi^0" })).result, 10, "restricted expression evaluation should calculate without eval");
 assert.equal((await executeAITool("matrix_compute", { operation: "determinant", matrixA: [[1, 2], [3, 4]] })).determinant, -2, "matrix utilities should calculate real results");
+const originalFetchForLiveData = globalThis.fetch;
+const liveDataFetchUrls = [];
+globalThis.fetch = async function (input) {
+  const url = String(input);
+  liveDataFetchUrls.push(url);
+  let payload;
+  if (url.startsWith("https://geocoding-api.open-meteo.com/")) {
+    payload = { results: [{ name: "Hyderabad", admin1: "Telangana", country: "India", latitude: 17.385, longitude: 78.4867 }] };
+  } else if (url.startsWith("https://api.open-meteo.com/v1/forecast")) {
+    payload = {
+      timezone: "Asia/Kolkata",
+      current: { time: "2026-10-26T12:00", temperature_2m: 30.5, apparent_temperature: 33.1, relative_humidity_2m: 48, precipitation: 0, weather_code: 2, wind_speed_10m: 8.5, wind_direction_10m: 120 },
+      current_units: { temperature_2m: "°C", wind_speed_10m: "km/h" },
+      daily: { time: ["2026-10-26", "2026-10-27"], temperature_2m_min: [24, 23], temperature_2m_max: [32, 31], precipitation_probability_max: [10, 20], sunrise: ["06:10", "06:10"], sunset: ["17:55", "17:54"] },
+      daily_units: { temperature_2m_min: "°C", temperature_2m_max: "°C" }
+    };
+  } else if (url === "https://api.frankfurter.dev/v2/rate/EUR/JPY") {
+    payload = { date: "2026-10-23", base: "EUR", quote: "JPY", rate: 176.42 };
+  } else {
+    throw new Error("Unexpected test URL: " + url);
+  }
+  return new Response(JSON.stringify(payload), { status: 200, headers: { "content-type": "application/json" } });
+};
+try {
+  const liveWeatherTest = await executeAITool("live_weather", { location: "Hyderabad" });
+  assert.equal(liveWeatherTest.ok, true, "weather tool should normalize a keyless provider response");
+  assert.equal(liveWeatherTest.current.temperature, 30.5);
+  assert.equal(liveWeatherTest.location.country, "India");
+  assert.equal(liveWeatherTest.forecastDays.length, 2);
+  const liveExchangeTest = await executeAITool("live_exchange_rate", { baseCurrency: "EUR", quoteCurrency: "JPY" });
+  assert.equal(liveExchangeTest.ok, true, "exchange tool should return latest reference-rate data");
+  assert.equal(liveExchangeTest.rate, 176.42);
+  assert.equal(liveExchangeTest.date, "2026-10-23");
+  const invalidCurrencyTest = await executeAITool("live_exchange_rate", { baseCurrency: "EURO", quoteCurrency: "INR" });
+  assert.equal(invalidCurrencyTest.ok, false, "currency codes should be validated before network access");
+  assert.equal(liveDataFetchUrls.length, 3, "mocked live data tests should make two weather and one FX request only");
+} finally {
+  globalThis.fetch = originalFetchForLiveData;
+}
+
 const quboBaseline = await executeAITool("quantum_solve_qubo", { variables: 2, linear: [-1, 2], quadratic: [{ i: 0, j: 1, coefficient: 4 }], sense: "minimize" });
 assert.equal(quboBaseline.ok, true);
 assert.deepEqual(quboBaseline.assignment, [1, 0], "exact QUBO baseline should return the minimizing bit assignment");
