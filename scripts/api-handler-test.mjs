@@ -44,7 +44,7 @@ const qbraidRequests = [];
 process.env.QBRAID_API_KEY = "unit-test-qbraid-key";
 globalThis.fetch = async (url, options = {}) => {
   qbraidRequests.push({ url: String(url), headers: options.headers || {} });
-  assert.match(String(url), /^https:\/\/api-v2\\.qbraid\\.com\/api\/v1\//, "qBraid calls should use its fixed HTTPS REST host");
+  assert.ok(String(url).startsWith("https://api-v2.qbraid.com/api/v1/"), "qBraid calls should use its fixed HTTPS REST host");
   assert.equal(options.headers && options.headers["X-API-KEY"], "unit-test-qbraid-key", "the key must be sent only from the server");
   if (String(url).includes("/jobs/cost-estimate?")) {
     return new Response(JSON.stringify({ success: true, data: { deviceQrn: "simulator.test", shots: 512, pricingAvailable: true, estimatedCost: 2.5 } }), {
