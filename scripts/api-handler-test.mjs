@@ -323,6 +323,7 @@ globalThis.fetch = async (url, options = {}) => {
   if (requestText.includes("ENDPOINT_FALLBACK_TEST") && String(url).includes("api.kilo.ai/api/gateway")) return new Response(JSON.stringify({ error: { message: "temporary gateway response" } }), { status: 503, headers: { "content-type": "application/json; charset=utf-8" } });
   if (requestText.includes("RATE_LIMIT_TEST")) return new Response(JSON.stringify({ error: { message: "rate limit reached" } }), { status: 429, headers: { "content-type": "application/json; charset=utf-8" } });
   if (payload.tools && payload.messages.some((message) => message.role === "tool")) {
+    if (JSON.stringify(payload.messages).includes("TOOL_FOLLOWUP_REJECT_TEST")) return new Response(JSON.stringify({ error: { message: "tool result follow-up not supported by this provider" } }), { status: 400, headers: { "content-type": "application/json; charset=utf-8" } });
     const toolMessages = payload.messages.filter((message) => message.role === "tool");
     const resultText = toolMessages.map((message) => String(message.content || "")).join("\n");
     return new Response(JSON.stringify({
@@ -330,7 +331,7 @@ globalThis.fetch = async (url, options = {}) => {
       choices: [{ message: { content: "The Bell circuit was validated and simulated. The ideal results are 00 and 11 at 50% each." } }]
     }), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
   }
-  if (payload.tools && requestText.includes("QUANTUM_AGENT_TEST")) {
+  if (payload.tools && (requestText.includes("QUANTUM_AGENT_TEST") || requestText.includes("TOOL_FOLLOWUP_REJECT_TEST"))) {
     const source = [
       "OPENQASM 3.0;",
       'include "stdgates.inc";',
@@ -450,6 +451,21 @@ assert.equal(imageRoundtrip.payload.requestId, imageRoundtrip.headers["x-request
   assert.equal(quantumToolResults[0].valid, true, "the validation tool should return its real structured result");
   assert.ok(Math.abs(quantumToolResults[1].outcomes.find((outcome) => outcome.bitstring === "00").probability - 0.5) < 1e-9);
   assert.ok(Math.abs(quantumToolResults[1].outcomes.find((outcome) => outcome.bitstring === "11").probability - 0.5) < 1e-9);
+
+  const beforeToolFallback = mockedRequests.length;
+  const fallbackResponse = await call({
+    method: "POST",
+    headers: {},
+    body: { prompt: "TOOL_FOLLOWUP_REJECT_TEST: validate and simulate this Bell state circuit", stream: false }
+  });
+  assert.equal(fallbackResponse.statusCode, 200, "a gateway rejection after tool execution should fall back instead of returning HTTP 502");
+  assert.match(fallbackResponse.payload.text, /Mocked study answer with checked steps/);
+  const fallbackRequest = mockedRequests.slice(beforeToolFallback).find((request) =>
+    !request.tools && request.messages.some((message) => message.role === "user" &&
+      typeof message.content === "string" && message.content.includes("Trusted backend tool results"))
+  );
+  assert.ok(fallbackRequest, "the safe plain-chat fallback should keep actual backend tool results while removing incompatible tool protocol messages");
+  assert.match(fallbackRequest.messages.at(-1).content, /idealProbabilities/, "fallback context should retain the true simulator output");
 
   const countBeforeInvalidImage = mockedRequests.length;
   const invalidImage = await call({
