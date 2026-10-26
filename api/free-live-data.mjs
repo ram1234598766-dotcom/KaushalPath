@@ -102,6 +102,11 @@ async function readPublicText(url, accept, signal, maxChars) {
     redirect: "error",
     signal: requestSignal
   });
+  if (response.status === 204) {
+    const error = new Error("Provider returned no records for this request.");
+    error.status = 204;
+    throw error;
+  }
   if (!response.ok) {
     const error = new Error("Provider returned HTTP " + response.status);
     error.status = response.status;
@@ -128,6 +133,7 @@ function publicError(provider, error, signal) {
   if (signal && signal.aborted) return "The request was cancelled.";
   const status = Number(error && error.status);
   if (status === 429) return provider + " is rate-limiting requests. Wait briefly and retry.";
+  if (status === 204) return provider + " returned no records for this request. Check whether the country and year are supported.";
   if (status === 404) return "No matching result was returned by " + provider + ". Check the requested place or codes.";
   if (status === 401 || status === 403) return provider + " refused the public request. Retry later or use the provider link.";
   if (error && (error.name === "TimeoutError" || error.name === "AbortError")) return provider + " timed out. Retry shortly.";
