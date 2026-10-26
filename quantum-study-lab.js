@@ -313,33 +313,6 @@
       }
     }
   }
-
-
-    const mask = 1 << qubit;
-    for (let index = 0; index < state.length; index += 1) {
-      if ((index & mask) !== 0) continue;
-      const zero = state[index];
-      const one = state[index | mask];
-      if (gateName === "H") {
-        state[index] = {
-          re: (zero.re + one.re) * SQRT_HALF,
-          im: (zero.im + one.im) * SQRT_HALF
-        };
-        state[index | mask] = {
-          re: (zero.re - one.re) * SQRT_HALF,
-          im: (zero.im - one.im) * SQRT_HALF
-        };
-      } else if (gateName === "X") {
-        state[index] = one;
-        state[index | mask] = zero;
-      } else if (gateName === "Z") {
-        state[index | mask] = { re: -one.re, im: -one.im };
-      } else {
-        throw new Error("Unsupported gate: " + gateName);
-      }
-    }
-  }
-
   function applyControlledX(state, control, target) {
     const controlMask = 1 << control;
     const targetMask = 1 << target;
