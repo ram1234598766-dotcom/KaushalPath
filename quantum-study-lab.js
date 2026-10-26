@@ -233,7 +233,7 @@
 
     function renderProbabilities(probabilities) {
       results.replaceChildren();
-      Object.keys(probabilities).forEach(function (bits) {
+      Object.keys(probabilities).sort().forEach(function (bits) {
         const probability = probabilities[bits];
         const percent = probability * 100;
         const row = makeNode("div", "quantum-probability-row");
@@ -330,7 +330,7 @@
           }
         }
         const result = simulateCircuit(currentCircuit.id);
-        const outcomes = Object.keys(result.probabilities).map(function (bits) {
+        const outcomes = Object.keys(result.probabilities).sort().map(function (bits) {
           return bits + ": " + (result.probabilities[bits] * 100).toFixed(result.probabilities[bits] > 0.9995 ? 0 : 1) + "%";
         }).join(", ");
         chatInput.value = "Explain the following qBraid-compatible quantum circuit in beginner-friendly steps. Circuit: " + currentCircuit.title + ". Main idea: " + currentCircuit.explanation + " Ideal measurement probabilities: " + outcomes + ". Explain what each gate does, what the result means, and then ask me one short check-for-understanding question.\n\nOpenQASM 3.0:\n" + result.qasm;
