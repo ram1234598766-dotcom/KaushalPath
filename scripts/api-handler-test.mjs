@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import handler, { createPinnedLookup, executeAITool, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS, remoteQasmFingerprint, shouldAutoBrowse, getToolDefinitionsForQuery } from "../api/study-guide.mjs";
 import { AGENTIC_TOOL_DEFINITIONS, executeAgenticTool } from "../api/agentic-tools.mjs";
-import { FREE_LIVE_DATA_TOOL_DEFINITIONS } from "../api/free-live-data.mjs";
+import { FREE_LIVE_DATA_TOOL_DEFINITIONS, detectFreeLiveDataIntent, formatFreeLiveDataResponse } from "../api/free-live-data.mjs";
 import { AI_SKILLS, AI_SKILL_COUNT, selectActiveSkills, selectToolDomains } from "../api/ai-skill-registry.mjs";
 import { zipSync, strToU8 } from "fflate";
 import sharp from "sharp";
@@ -44,6 +44,23 @@ assert.ok(getToolDefinitionsForQuery("What is the latest USD to INR exchange rat
 assert.ok(getToolDefinitionsForQuery("Show recent earthquakes in the last day").some((tool) => tool.function.name === "live_earthquakes"), "earthquake requests should select the USGS feed");
 assert.ok(getToolDefinitionsForQuery("Give me the latest technology news headlines").some((tool) => tool.function.name === "live_news"), "news headline requests should select the BBC RSS feed");
 assert.ok(getToolDefinitionsForQuery("List public holidays in India this year").some((tool) => tool.function.name === "live_public_holidays"), "holiday requests should select Nager.Date");
+assert.deepEqual(
+  detectFreeLiveDataIntent("What is the current weather in Hyderabad, India?"),
+  { name: "live_weather", args: { location: "Hyderabad, India" } },
+  "clear weather questions should have a direct keyless provider path"
+);
+assert.deepEqual(
+  detectFreeLiveDataIntent("What is the latest USD to INR exchange rate?"),
+  { name: "live_exchange_rate", args: { baseCurrency: "USD", quoteCurrency: "INR" } },
+  "clear currency questions should have a direct reference-rate path"
+);
+assert.equal(detectFreeLiveDataIntent("Explain how weather forecasting models work"), null, "conceptual questions should still go through the AI");
+assert.match(
+  formatFreeLiveDataResponse("live_exchange_rate", { ok: true, provider: "Frankfurter", baseCurrency: "EUR", quoteCurrency: "JPY", rate: 176.42, date: "2026-10-23", sourceUrl: "https://api.frankfurter.dev/v2/rate/EUR/JPY", retrievedAt: "2026-10-26T00:00:00.000Z", note: "Daily reference rate." }, { amount: 2 }),
+  /2 EUR = 352\.84 JPY/,
+  "the direct formatter should apply a requested conversion amount to the live reference rate"
+);
+
 
 assert.ok(selectActiveSkills("solve quantum QAOA optimization on qBraid", 12).length >= 5, "base skills should always be auto-activated");
 assert.ok(selectToolDomains("design and simulate a quantum circuit").has("quantum"), "quantum prompts should automatically enable quantum tools");
