@@ -35,6 +35,7 @@ assert.match(html, /KaushalPath/, "site brand should be present");
 assert.ok(html.includes('src="/quantum-study-lab.js" defer'), "the AI Study Guide should load the quantum lab");
 assert.ok(html.includes('id="quantumCircuitSelect"') && html.includes('id="quantumProbabilityResults"'), "the AI Study Guide should expose circuit selection and results");
 assert.ok(html.includes('value="Quantum computing">Quantum computing'), "the AI Study Guide should support quantum computing as a chat subject");
+assert.ok(app.includes('"Quantum computing":["Qubits and superposition"'), "the dynamic AI subject menu should retain quantum computing and useful topic prompts");
 assert.ok(quantumStudyLab.includes("function simulateCircuit(id)") && quantumStudyLab.includes("OPENQASM 3.0;"), "the quantum lab should simulate circuits and emit OpenQASM 3.0");
 assert.ok(vercel.builds.some(b => b.src === "quantum-study-lab.js" && b.use === "@vercel/static"), "Vercel should publish the quantum lab module");
 assert.ok(serviceWorker.includes('"/quantum-study-lab.js"'), "the PWA shell should cache the quantum lab module");
