@@ -580,17 +580,18 @@ function getToolDefinitionsForQuery(query) {
   if (/\b(?:pdf|downloadable report|export (?:this|it) as|create (?:a )?(?:report|handout|worksheet|study guide))\b/i.test(text)) {
     add(AGENTIC_TOOL_DEFINITIONS.filter((tool) => tool.function.name === "create_pdf_document"));
   }
-  if (/\b(?:browser agent|use (?:the )?browser|click (?:the )?(?:button|link)|click on|interact with (?:the )?(?:browser|website|webpage)|navigate to (?:the )?website|press the button|fill (?:in )?(?:the )?form|browser automation|open the website and)\b/i.test(text)) {
+  if (/\b(?:browser agent|use (?:the )?browser|click (?:the )?(?:button|link)|click on|interact with (?:the )?(?:browser|website|webpage)|navigate to (?:the )?website|press the button|fill (?:in )?(?:the )?form|browser automation|open the website and|open (?:the )?(?:site|page) and|visit the website and|go to https?:\/\/)\b/i.test(text)) {
     add(AGENTIC_TOOL_DEFINITIONS.filter((tool) => tool.function.name === "browser_agent"));
   }
-  if (/\b(?:execute (?:the )?(?:command|code|script)|run (?:this )?(?:command|script|code)|terminal|shell command|command line|python script|node script)\b/i.test(text)) {
+  if (/\b(?:(?:execute|run|start)\s+(?:(?:the|this|a)\s+)?(?:commands?|scripts?|code|program|shell|terminal)|terminal|shell command|command line|python script|node script|run this file)\b/i.test(text)) {
     add(AGENTIC_TOOL_DEFINITIONS.filter((tool) => tool.function.name === "sandbox_execute"));
   }
-  if (/\b(?:agentic coding|coding workflow|write (?:and )?test (?:the )?code|debug (?:this )?code|fix (?:this )?bug|run tests|run the test suite|build (?:this )?project|compile (?:this )?code|lint (?:this )?code|prototype (?:an )?app|create (?:a )?(?:script|program|web app)|implement (?:this )?feature|code review)\b/i.test(text)) {
+  if (/\b(?:agentic coding|coding workflow|write (?:and )?test (?:the )?code|write (?:some )?code|write (?:a|the) function|implement (?:this )?feature|debug (?:this )?code|fix (?:this )?bug|run tests|run the test suite|build (?:this )?project|build (?:a|an) (?:app|website|program)|compile (?:this )?code|lint (?:this )?code|prototype (?:an )?app|create (?:a )?(?:script|program|web app)|code review|refactor (?:this )?code|add tests|make a patch)\b/i.test(text)) {
     add(AGENTIC_TOOL_DEFINITIONS.filter((tool) => tool.function.name === "coding_workflow"));
   }
   if (result.some((tool) => ["browser_agent","sandbox_execute","coding_workflow","create_pdf_document"].includes(tool.function.name))) {
-    add(AGENTIC_TOOL_DEFINITIONS.filter((tool) => ["sandbox_execute","coding_workflow"].includes(tool.function.name) && /\b(?:agentic coding|coding workflow|debug|run tests|build|execute|command|code|program|implement|prototype)\b/i.test(text)));
+    add(AGENTIC_TOOL_DEFINITIONS.filter((tool) => ["sandbox_execute","coding_workflow"].includes(tool.function.name) &&
+      /\b(?:agentic coding|coding workflow|debug|run tests|build|execute|command|code|program|implement|prototype|write a function|test suite)\b/i.test(text)));
   }
   return result.slice(0, 14);
 }
@@ -1498,11 +1499,12 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
 function searchIntent(text) {
   return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text || ""));
 }
-export function shouldAutoBrowse(text, hasVisualInput = false) {
+export export function shouldAutoBrowse(text, hasVisualInput = false) {
   const value = String(text || "").trim();
   if (hasVisualInput || value.length < 10) return false;
   if (/^(?:hi|hello|hey|thanks|thank you|good morning|good evening|ok|okay|bye)\b[!. ]*$/i.test(value)) return false;
   if (/\b(?:don't browse|do not browse|no web|offline only|without web search|don't search the web)\b/i.test(value)) return false;
+  if (/\b(?:my password is|my api key is|my secret is|my token is|private key:|password:|api[_ -]?key:|secret:|bearer\s+[a-z0-9._-]{12,})\b/i.test(value)) return false;
   if (/\b(?:write a poem|creative story|fictional scene|brainstorm names|rewrite this|proofread this|translate this|correct my grammar)\b/i.test(value)) return false;
   if (/^[\s\dA-Za-z()+\-*/^=.,_]+$/.test(value) && /[=+*/^]/.test(value) && !/\b(?:explain|why|how|prove|derive)\b/i.test(value)) return false;
   return true;
@@ -1848,7 +1850,7 @@ export default async function handler(req, res) {
       if (!metadata.width || !metadata.height || !metadata.format) throw new Error("Unreadable image.");
       const createImage = () => sharp(parsedImage.buffer, imageOptions)
         .rotate()
-        .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true });
+        .resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true });
       let converted, normalizedMime;
       if (metadata.format === "png") {
         converted = await createImage().png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
@@ -1867,7 +1869,7 @@ export default async function handler(req, res) {
         const jpeg = await sharp(parsedImage.buffer, imageOptions)
           .rotate()
           .flatten({ background: "#ffffff" })
-          .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+          .resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true })
           .jpeg({ quality: 82, mozjpeg: true })
           .toBuffer();
         imageData = "data:image/jpeg;base64," + jpeg.toString("base64");
