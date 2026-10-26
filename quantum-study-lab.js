@@ -271,21 +271,6 @@
   }
 
 
-    const gateLines = circuit.gates.map(function (gate) {
-      if (gate.name === "CX") return "cx q[" + gate.control + "], q[" + gate.target + "];";
-      return gate.name.toLowerCase() + " q[" + gate.target + "];";
-    });
-    return [
-      "OPENQASM 3.0;",
-      'include "stdgates.inc";',
-      "qubit[" + circuit.qubits + "] q;",
-      "bit[" + circuit.qubits + "] c;",
-      gateLines.join("\n"),
-      "c = measure q;",
-      ""
-    ].join("\n");
-  }
-
   function applySingleQubitGate(state, qubit, gateName, angle) {
     const mask = 1 << qubit;
     const theta = Number(angle || 0);
