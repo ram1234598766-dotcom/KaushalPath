@@ -1501,7 +1501,7 @@ async function extractAttachmentText(fileData, fileName, fileType, fileText) {
 function searchIntent(text) {
   return /\b(search(?: the)? web|browse(?: the)? web|look up|find sources|cite sources|latest|current(?:ly)?|today(?:'s)?|this week|breaking news|recent news|open (?:this|the) (?:link|url|website|page)|read (?:this|the) (?:page|website|url)|what happened (?:today|recently))\b/i.test(String(text || ""));
 }
-export export function shouldAutoBrowse(text, hasVisualInput = false) {
+export function shouldAutoBrowse(text, hasVisualInput = false) {
   const value = String(text || "").trim();
   if (hasVisualInput || value.length < 10) return false;
   if (/^(?:hi|hello|hey|thanks|thank you|good morning|good evening|ok|okay|bye)\b[!. ]*$/i.test(value)) return false;
