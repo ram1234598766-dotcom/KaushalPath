@@ -484,8 +484,9 @@ export async function executeQuantumTool(name, args, signal) {
       idealProbabilities: true,
       qubits: result.qubits,
       gateCount: result.gateCount,
-      outcomes: outcomes,
-      qasm: clean.qasm,
+      outcomes: outcomes.slice(0, 64),
+      outcomeCount: outcomes.length,
+      omittedOutcomeCount: Math.max(0, outcomes.length - 64),
       note: "These are exact ideal probabilities, not sampled shots or noisy hardware results. No qBraid credits were spent."
     };
   }
@@ -505,15 +506,14 @@ export async function executeQuantumTool(name, args, signal) {
       count: entries.length,
       devices: entries.slice(0, 25).map(function (device) {
         return {
-          name: String(device.name || ""),
-          qrn: String(device.qrn || ""),
-          vendor: String(device.vendor || ""),
-          deviceType: String(device.deviceType || ""),
-          status: String(device.status || ""),
+          name: String(device.name || "").slice(0, 180),
+          qrn: String(device.qrn || "").slice(0, 255),
+          vendor: String(device.vendor || "").slice(0, 80),
+          deviceType: String(device.deviceType || "").slice(0, 40),
+          status: String(device.status || "").slice(0, 40),
           numberQubits: Number.isFinite(Number(device.numberQubits)) ? Number(device.numberQubits) : null,
           runInputTypes: Array.isArray(device.runInputTypes) ? device.runInputTypes.slice(0, 10) : [],
-          pricingModel: device.pricingModel || null,
-          pricing: device.pricing && typeof device.pricing === "object" ? device.pricing : null,
+          pricingModel: typeof device.pricingModel === "string" ? device.pricingModel.slice(0, 80) : null,
           directAccess: Boolean(device.directAccess)
         };
       })
@@ -851,8 +851,14 @@ async function runQuantumToolAgent(initialMessages, budget, requestedModel, sign
       if (!answer) throw new Error("The quantum study assistant did not return an answer.");
       return { text: answer, toolsUsed: toolCallUsed, toolsUnavailable: false };
     }
-    const calls = proposedCalls.slice(0, maxToolCalls - toolCallsMade);
-    if (!calls.length) break;
+    const calls = proposedCalls.slice(0, maxToolCalls - toolCallsMade).map(function (call, index) {
+      const fn = call && call.function && typeof call.function === "object" ? call.function : {};
+      return {
+        id: String(call && call.id || ("quantum_call_" + round + "_" + index)).slice(0, 180),
+        type: "function",
+        function: { name: String(fn.name || ""), arguments: typeof fn.arguments === "string" ? fn.arguments : "{}" }
+      };
+    });
     messages.push({
       role: "assistant",
       content: assistant.content == null ? null : assistant.content,
@@ -864,7 +870,7 @@ async function runQuantumToolAgent(initialMessages, budget, requestedModel, sign
       if (toolCallsMade >= maxToolCalls) break;
       const call = calls[index];
       const fn = call && call.function && typeof call.function === "object" ? call.function : {};
-      const id = String(call && call.id || ("quantum_call_" + round + "_" + index)).slice(0, 180);
+      const id = call.id;
       let args = {};
       try {
         const parsed = JSON.parse(typeof fn.arguments === "string" ? fn.arguments : "{}");
@@ -885,7 +891,7 @@ async function runQuantumToolAgent(initialMessages, budget, requestedModel, sign
         result = { ok: false, error: "The quantum tool could not complete this operation. Try a smaller circuit or retry shortly." };
       }
       let resultText = JSON.stringify(result);
-      if (resultText.length > 14000) resultText = resultText.slice(0, 14000);
+      if (resultText.length > 14000) resultText = JSON.stringify({ ok: false, error: "The tool result was too large to pass safely to the model. Narrow the circuit or device search and retry." });
       messages.push({ role: "tool", tool_call_id: id, content: resultText });
       toolCallsMade++;
     }
