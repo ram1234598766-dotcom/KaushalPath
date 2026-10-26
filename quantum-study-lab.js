@@ -442,6 +442,7 @@
     const conceptNode = doc.getElementById("quantumCircuitConcept");
     const qubitCountNode = doc.getElementById("quantumQubitCount");
     const runButton = doc.getElementById("quantumRunSimulation");
+    const validateButton = doc.getElementById("quantumValidateQasm");
     const askButton = doc.getElementById("quantumAskAi");
     const copyButton = doc.getElementById("quantumCopyQasm");
     const downloadButton = doc.getElementById("quantumDownloadQasm");
@@ -466,16 +467,14 @@
       const wireGrid = makeNode("div", "quantum-wire-grid");
       const labels = makeNode("div", "quantum-wire-labels");
       labels.style.gridTemplateRows = "repeat(" + circuit.qubits + ", 36px)";
-      for (let qubit = 0; qubit < circuit.qubits; qubit += 1) {
-        labels.appendChild(makeNode("span", "quantum-wire-label", "q" + qubit));
-      }
+      for (let qubit = 0; qubit < circuit.qubits; qubit += 1) labels.appendChild(makeNode("span", "quantum-wire-label", "q" + qubit));
       const columns = makeNode("div", "quantum-gate-columns");
       columns.style.gridTemplateColumns = "repeat(" + (circuit.gates.length + 1) + ", minmax(32px, 1fr))";
-      const allGates = circuit.gates.concat([{ name: "M", measurement: true }]);
-      allGates.forEach(function (gate) {
-        const column = makeNode("div", "quantum-gate-column" + (gate.name === "CX" ? " is-controlled-gate" : ""));
+      circuit.gates.concat([{ name: "M", measurement: true }]).forEach(function (gate) {
+        const multi = ["CX", "CZ", "SWAP"].includes(gate.name);
+        const column = makeNode("div", "quantum-gate-column" + (multi ? " is-controlled-gate" : ""));
         column.style.gridTemplateRows = "repeat(" + circuit.qubits + ", 36px)";
-        if (gate.name === "CX") {
+        if (multi) {
           column.style.setProperty("--q-first", Math.min(gate.control, gate.target));
           column.style.setProperty("--q-distance", Math.abs(gate.target - gate.control));
         }
@@ -483,16 +482,16 @@
           const cell = makeNode("div", "quantum-gate-cell");
           cell.appendChild(makeNode("span", "quantum-wire-line"));
           let gateNode = null;
-          if (gate.measurement) {
-            gateNode = makeNode("span", "quantum-gate quantum-gate-measurement", "M");
-          } else if (gate.name === "CX" && qubit === gate.control) {
-            gateNode = makeNode("span", "quantum-gate quantum-gate-control", "●");
-          } else if (gate.name === "CX" && qubit === gate.target) {
-            gateNode = makeNode("span", "quantum-gate quantum-gate-target", "⊕");
-          } else if (gate.name !== "CX" && qubit === gate.target) {
-            gateNode = makeNode("span", "quantum-gate quantum-gate-" + gate.name.toLowerCase(), gate.name);
+          if (gate.measurement) gateNode = makeNode("span", "quantum-gate quantum-gate-measurement", "M");
+          else if (gate.name === "CX" && qubit === gate.control) gateNode = makeNode("span", "quantum-gate quantum-gate-control", "●");
+          else if (gate.name === "CX" && qubit === gate.target) gateNode = makeNode("span", "quantum-gate quantum-gate-target", "⊕");
+          else if (gate.name === "CZ" && (qubit === gate.control || qubit === gate.target)) gateNode = makeNode("span", "quantum-gate quantum-gate-cz", "●");
+          else if (gate.name === "SWAP" && (qubit === gate.control || qubit === gate.target)) gateNode = makeNode("span", "quantum-gate quantum-gate-swap", "×");
+          else if (!multi && qubit === gate.target) gateNode = makeNode("span", "quantum-gate quantum-gate-" + gate.name.toLowerCase(), gate.name);
+          if (gateNode) {
+            gateNode.title = gate.source || (gate.name + " gate");
+            cell.appendChild(gateNode);
           }
-          if (gateNode) cell.appendChild(gateNode);
           column.appendChild(cell);
         }
         columns.appendChild(column);
@@ -519,31 +518,47 @@
       });
     }
 
-    function renderCircuit(runSimulation) {
-      currentCircuit = getCircuit(select.value);
-      const result = simulateCircuit(currentCircuit.id);
+    function renderCircuit(runSimulation, suppliedCircuit) {
+      currentCircuit = suppliedCircuit || getCircuit(select.value);
+      const result = simulateCircuit(currentCircuit);
       if (titleNode) titleNode.textContent = currentCircuit.title;
       if (conceptNode) {
         conceptNode.replaceChildren(
-          makeNode("span", "quantum-concept-eyebrow", currentCircuit.eyebrow),
-          makeNode("p", "", currentCircuit.description)
+          makeNode("span", "quantum-concept-eyebrow", currentCircuit.eyebrow || "CUSTOM CIRCUIT"),
+          makeNode("p", "", currentCircuit.description || "A custom OpenQASM circuit preview.")
         );
       }
-      if (qubitCountNode) {
-        qubitCountNode.textContent = result.qubits + " qubit" + (result.qubits === 1 ? "" : "s") + " · " + result.gateCount + " gate" + (result.gateCount === 1 ? "" : "s");
-      }
+      if (qubitCountNode) qubitCountNode.textContent = result.qubits + " qubit" + (result.qubits === 1 ? "" : "s") + " · " + result.gateCount + " gate" + (result.gateCount === 1 ? "" : "s");
       qasmOutput.value = result.qasm;
       renderDiagram(currentCircuit);
       renderProbabilities(result.probabilities);
       setStatus(runSimulation
         ? "Ideal simulation complete. Results were calculated in this browser; no qBraid credits were used."
-        : "Preview ready. Choose Run simulation to calculate these ideal measurement probabilities.",
+        : "Preview ready. Choose Simulate circuit to calculate ideal measurement probabilities.",
         "success");
       return result;
     }
 
     select.addEventListener("change", function () { renderCircuit(true); });
-    if (runButton) runButton.addEventListener("click", function () { renderCircuit(true); });
+    if (runButton) runButton.addEventListener("click", function () {
+      try {
+        renderCircuit(true, parseOpenQasm(qasmOutput.value));
+      } catch (error) {
+        setStatus(String(error && error.message || error), "error");
+      }
+    });
+    if (validateButton) validateButton.addEventListener("click", function () {
+      const result = validateOpenQasm(qasmOutput.value);
+      if (!result.valid) {
+        setStatus(result.errors[0], "error");
+        return;
+      }
+      const stats = result.stats;
+      setStatus("Valid OpenQASM " + result.circuit.version + " circuit · " + stats.numQubits + " qubits · " + stats.gateCount + " gates · depth " + stats.depth + ".", "success");
+    });
+    qasmOutput.addEventListener("input", function () {
+      setStatus("Circuit source changed. Validate or simulate to update the diagram and measurement results.", "neutral");
+    });
 
     if (copyButton) {
       copyButton.addEventListener("click", async function () {
@@ -567,8 +582,16 @@
 
     if (downloadButton) {
       downloadButton.addEventListener("click", function () {
-        const fileName = "KaushalPath-" + currentCircuit.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".qasm";
-        const blob = new win.Blob([qasmOutput.value], { type: "text/plain;charset=utf-8" });
+        let parsed;
+        try { parsed = parseOpenQasm(qasmOutput.value); }
+        catch (error) {
+          setStatus(String(error && error.message || error), "error");
+          return;
+        }
+        currentCircuit = parsed;
+        const fileName = "KaushalPath-" + String(parsed.title || "quantum-circuit").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".qasm";
+        const source = parsed.qasm.trim() + "\n";
+        const blob = new win.Blob([source], { type: "text/plain;charset=utf-8" });
         const url = win.URL.createObjectURL(blob);
         const anchor = doc.createElement("a");
         anchor.href = url;
@@ -578,7 +601,7 @@
         anchor.click();
         anchor.remove();
         win.setTimeout(function () { win.URL.revokeObjectURL(url); }, 30000);
-        setStatus("Downloaded " + fileName + ". Upload this OpenQASM file in qBraid Lab to continue.", "success");
+        setStatus("Downloaded " + fileName + ". Import this OpenQASM file in qBraid Lab to continue.", "success");
       });
     }
 
@@ -599,11 +622,17 @@
             chatSubject.dispatchEvent(new win.Event("change", { bubbles: true }));
           }
         }
-        const result = simulateCircuit(currentCircuit.id);
+        let result;
+        try {
+          result = renderCircuit(true, parseOpenQasm(qasmOutput.value));
+        } catch (error) {
+          setStatus(String(error && error.message || error), "error");
+          return;
+        }
         const outcomes = Object.keys(result.probabilities).sort().map(function (bits) {
           return bits + ": " + (result.probabilities[bits] * 100).toFixed(result.probabilities[bits] > 0.9995 ? 0 : 1) + "%";
         }).join(", ");
-        chatInput.value = "Explain the following qBraid-compatible quantum circuit in beginner-friendly steps. Circuit: " + currentCircuit.title + ". Main idea: " + currentCircuit.explanation + " Ideal measurement probabilities: " + outcomes + ". Explain what each gate does, what the result means, and then ask me one short check-for-understanding question.\n\nOpenQASM 3.0:\n" + result.qasm;
+        chatInput.value = "Explain the following qBraid-compatible quantum circuit in beginner-friendly steps. Circuit: " + currentCircuit.title + ". Main idea: " + currentCircuit.explanation + " Ideal measurement probabilities: " + outcomes + ". Explain what each gate does, what the result means, and then ask me one short check-for-understanding question.\n\nOpenQASM " + (currentCircuit.version || "3.0") + ":\n" + result.qasm;
         chatInput.focus();
         chatInput.scrollIntoView({ behavior: "smooth", block: "center" });
         setStatus("A quantum explanation prompt is ready in the AI conversation below. Review it and press Send when you are ready.", "success");
@@ -617,6 +646,9 @@
     listCircuits: listCircuits,
     getCircuit: getCircuit,
     qasmFor: qasmFor,
+    parseOpenQasm: parseOpenQasm,
+    validateOpenQasm: validateOpenQasm,
+    simulateOpenQasm: simulateOpenQasm,
     simulateCircuit: simulateCircuit,
     init: init
   };
