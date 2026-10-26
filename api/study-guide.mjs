@@ -11,6 +11,7 @@ import WordExtractor from "word-extractor";
 import XLSX from "xlsx";
 import { unzipSync, strFromU8 } from "fflate";
 import sharp from "sharp";
+import quantumLab from "../quantum-study-lab.js";
 
 const MODEL = "kilo-auto/free";
 const VISION_MODEL = process.env.KILO_VISION_MODEL || "inclusionai/ling-3.0-flash-vl:free";
@@ -329,6 +330,223 @@ function responseText(content) {
   if (Array.isArray(content)) return content.map((part) => typeof part?.text === "string" ? part.text : "").join("\n").trim();
   return "";
 }
+
+export function isQuantumIntent(value) {
+  return /\\b(?:quantum|qubits?|openqasm|qasm(?:\\s*[23](?:\\.0)?)?|bell\\s+state|ghz|grover|hadamard|cnot|qbraid|superposition|entanglement|quantum\\s+(?:circuit|computer|computing|algorithm|simulator|simulation|gate|register))\\b/i.test(String(value || ""));
+}
+
+export const QUANTUM_TOOL_DEFINITIONS = [
+  {
+    type: "function",
+    function: {
+      name: "quantum_validate_qasm",
+      description: "Validate an OpenQASM 2.0 or 3.0 circuit against KaushalPath's supported learning-simulator subset. Use before simulating. Supports 1–8 qubits, one quantum register, and up to 300 gates.",
+      parameters: {
+        type: "object",
+        properties: { qasm: { type: "string", minLength: 1, maxLength: 20000, description: "Complete OpenQASM source, including version header and register declarations." } },
+        required: ["qasm"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "quantum_simulate_qasm",
+      description: "Calculate exact ideal measurement probabilities for OpenQASM using KaushalPath's local state-vector simulator. This is not noisy hardware execution and spends no qBraid credits. Use for circuit outcomes instead of guessing.",
+      parameters: {
+        type: "object",
+        properties: { qasm: { type: "string", minLength: 1, maxLength: 20000, description: "Complete OpenQASM source to validate and simulate." } },
+        required: ["qasm"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "qbraid_list_devices",
+      description: "List currently online qBraid quantum devices and simulators visible to the configured server account. Requires QBRAID_API_KEY in server environment variables. This is read-only and does not submit jobs.",
+      parameters: {
+        type: "object",
+        properties: {
+          deviceType: { type: "string", enum: ["ALL", "SIMULATOR", "QPU"], description: "Restrict results to simulators, physical QPUs, or all online devices." },
+          search: { type: "string", maxLength: 120, description: "Optional search text for a device/provider name." }
+        },
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "qbraid_estimate_job_cost",
+      description: "Get a live qBraid credit cost estimate for an exact device QRN and shot count. Requires QBRAID_API_KEY in server environment variables. This estimate does not submit a job or spend credits. Report when pricing is unavailable instead of guessing.",
+      parameters: {
+        type: "object",
+        properties: {
+          deviceQrn: { type: "string", minLength: 3, maxLength: 255, description: "Exact device QRN from qbraid_list_devices." },
+          shots: { type: "integer", minimum: 1, maximum: 100000, description: "Requested number of shots." }
+        },
+        required: ["deviceQrn", "shots"],
+        additionalProperties: false
+      }
+    }
+  }
+];
+
+function quantumQasmFromArgs(args) {
+  const qasm = args && typeof args.qasm === "string" ? args.qasm : "";
+  if (!qasm.trim()) return { error: "Supply the complete OpenQASM source in qasm." };
+  if (qasm.length > 20000) return { error: "OpenQASM source must be at most 20,000 characters." };
+  return { qasm: qasm };
+}
+
+async function qbraidGet(path, signal) {
+  const apiKey = String(process.env.QBRAID_API_KEY || "").trim();
+  if (!apiKey) {
+    return {
+      ok: false,
+      configured: false,
+      error: "qBraid cloud tools are not configured on the KaushalPath server. Add QBRAID_API_KEY to Vercel Environment Variables. Local quantum validation and simulation still work without a key."
+    };
+  }
+  let response;
+  try {
+    const timeout = AbortSignal.timeout(9000);
+    const requestSignal = signal ? AbortSignal.any([timeout, signal]) : timeout;
+    response = await fetch("https://api-v2.qbraid.com/api/v1/" + path, {
+      method: "GET",
+      headers: { Accept: "application/json", "X-API-KEY": apiKey },
+      signal: requestSignal,
+      redirect: "error"
+    });
+  } catch (error) {
+    if (signal && signal.aborted) throw error;
+    return { ok: false, configured: true, error: "The qBraid service could not be reached right now. Try again shortly." };
+  }
+  let payload = {};
+  try { payload = await response.json(); } catch {}
+  if (!response.ok || payload.success === false) {
+    const status = response.status;
+    const error = status === 401 ? "The configured qBraid API key was rejected. Check QBRAID_API_KEY in Vercel." :
+      status === 403 ? "The configured qBraid account does not have access to this device or operation." :
+      status === 429 ? "qBraid is rate-limiting requests. Try again shortly." :
+      "qBraid returned an error (HTTP " + status + "). Check the device QRN and account permissions.";
+    return { ok: false, configured: true, error: error };
+  }
+  return { ok: true, configured: true, data: payload.data === undefined ? payload : payload.data };
+}
+
+export async function executeQuantumTool(name, args, signal) {
+  const input = args && typeof args === "object" && !Array.isArray(args) ? args : {};
+  if (name === "quantum_validate_qasm" || name === "quantum_simulate_qasm") {
+    const clean = quantumQasmFromArgs(input);
+    if (clean.error) return { ok: false, error: clean.error };
+    const validation = quantumLab.validateOpenQasm(clean.qasm);
+    if (!validation.valid) {
+      return {
+        ok: false,
+        valid: false,
+        errors: validation.errors,
+        note: "The circuit was rejected by the KaushalPath learning-simulator parser. It was not run on qBraid or any quantum device."
+      };
+    }
+    const circuit = validation.circuit;
+    const gateCounts = {};
+    circuit.gates.forEach(function (gate) { gateCounts[gate.name] = (gateCounts[gate.name] || 0) + 1; });
+    if (name === "quantum_validate_qasm") {
+      return {
+        ok: true,
+        valid: true,
+        version: circuit.version,
+        stats: circuit.stats,
+        gateCounts: gateCounts,
+        supportedGates: ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "ID", "RX", "RY", "RZ", "CX/CNOT", "CZ", "SWAP"],
+        note: "This validates the supported KaushalPath learning subset; it is not a claim of complete OpenQASM standard conformance."
+      };
+    }
+    let result;
+    try {
+      result = quantumLab.simulateOpenQasm(clean.qasm);
+    } catch (error) {
+      return { ok: false, valid: true, error: String(error && error.message || error).slice(0, 240) };
+    }
+    const outcomes = Object.entries(result.probabilities)
+      .map(function (entry) {
+        return { bitstring: entry[0], probability: entry[1], percentage: Number((entry[1] * 100).toFixed(6)) };
+      })
+      .sort(function (a, b) { return b.probability - a.probability || a.bitstring.localeCompare(b.bitstring); });
+    return {
+      ok: true,
+      engine: "KaushalPath ideal local state-vector simulator",
+      qbraidRemoteExecution: false,
+      idealProbabilities: true,
+      qubits: result.qubits,
+      gateCount: result.gateCount,
+      outcomes: outcomes,
+      qasm: clean.qasm,
+      note: "These are exact ideal probabilities, not sampled shots or noisy hardware results. No qBraid credits were spent."
+    };
+  }
+  if (name === "qbraid_list_devices") {
+    const deviceType = ["SIMULATOR", "QPU"].includes(input.deviceType) ? input.deviceType : "";
+    const search = typeof input.search === "string" ? input.search.trim().slice(0, 120) : "";
+    const query = new URLSearchParams({ status: "ONLINE", limit: "100" });
+    if (deviceType) query.set("deviceType", deviceType);
+    if (search) query.set("search", search);
+    const result = await qbraidGet("devices?" + query.toString(), signal);
+    if (!result.ok) return result;
+    const entries = Array.isArray(result.data) ? result.data : [];
+    return {
+      ok: true,
+      configured: true,
+      source: "qBraid REST API",
+      count: entries.length,
+      devices: entries.slice(0, 25).map(function (device) {
+        return {
+          name: String(device.name || ""),
+          qrn: String(device.qrn || ""),
+          vendor: String(device.vendor || ""),
+          deviceType: String(device.deviceType || ""),
+          status: String(device.status || ""),
+          numberQubits: Number.isFinite(Number(device.numberQubits)) ? Number(device.numberQubits) : null,
+          runInputTypes: Array.isArray(device.runInputTypes) ? device.runInputTypes.slice(0, 10) : [],
+          pricingModel: device.pricingModel || null,
+          pricing: device.pricing && typeof device.pricing === "object" ? device.pricing : null,
+          directAccess: Boolean(device.directAccess)
+        };
+      })
+    };
+  }
+  if (name === "qbraid_estimate_job_cost") {
+    const deviceQrn = typeof input.deviceQrn === "string" ? input.deviceQrn.trim() : "";
+    const shots = Number(input.shots);
+    if (deviceQrn.length < 3 || deviceQrn.length > 255 || /[\r\n]/.test(deviceQrn)) {
+      return { ok: false, error: "Supply a valid device QRN from qbraid_list_devices." };
+    }
+    if (!Number.isInteger(shots) || shots < 1 || shots > 100000) {
+      return { ok: false, error: "shots must be an integer between 1 and 100,000." };
+    }
+    const query = new URLSearchParams({ deviceQrn: deviceQrn, shots: String(shots) });
+    const result = await qbraidGet("jobs/cost-estimate?" + query.toString(), signal);
+    if (!result.ok) return result;
+    const quote = result.data && typeof result.data === "object" ? result.data : {};
+    return {
+      ok: true,
+      configured: true,
+      source: "qBraid REST API",
+      deviceQrn: String(quote.deviceQrn || deviceQrn),
+      shots: Number.isFinite(Number(quote.shots)) ? Number(quote.shots) : shots,
+      pricingAvailable: quote.pricingAvailable === true,
+      estimatedCost: quote.pricingAvailable === true && Number.isFinite(Number(quote.estimatedCost)) ? Number(quote.estimatedCost) : null,
+      reason: quote.pricingAvailable === false ? String(quote.reason || "qBraid did not provide a quote for this device.") : null,
+      note: "This is a pre-run estimate only. No job was submitted and no credits were spent."
+    };
+  }
+  return { ok: false, error: "That quantum tool is not available." };
+}
+
 function decodeXml(value) {
   return String(value || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
@@ -567,6 +785,130 @@ async function requestGateway(payload, signal, requestedModel) {
   throw new Error("The study service could not be reached.");
 }
 
+
+async function runQuantumToolAgent(initialMessages, budget, requestedModel, signal) {
+  const messages = initialMessages.slice();
+  messages.splice(1, 0, {
+    role: "system",
+    content: [
+      "You have quantum computing tools. Use quantum_validate_qasm to check QASM and quantum_simulate_qasm for actual numerical ideal probabilities; do not invent outputs.",
+      "qbraid_list_devices and qbraid_estimate_job_cost query live qBraid information only if QBRAID_API_KEY is configured server-side.",
+      "Never say a circuit ran on hardware unless an actual remote-job tool confirms it. No remote job submission tool exists in this session; never claim that you submitted one.",
+      "Local state-vector probabilities are exact ideal predictions, not noisy QPU results. Explain tool errors honestly and continue to teach clearly."
+    ].join("\n")
+  });
+  let toolCallsMade = 0;
+  let toolCallUsed = false;
+  const maxToolCalls = 4;
+  const maxRounds = 4;
+
+  async function plainFallback(reason) {
+    const fallbackMessages = messages.slice();
+    fallbackMessages.push({
+      role: "system",
+      content: "Quantum tool calling was unavailable because " + reason + ". Explain concepts normally, but do not invent numerical simulation outputs or claim that a circuit was validated, simulated, or run."
+    });
+    const response = await requestGateway({
+      model: requestedModel, messages: fallbackMessages, max_tokens: budget, temperature: 0.2, stream: false
+    }, signal, requestedModel);
+    if (!response.ok) {
+      const problem = new Error("The study service returned HTTP " + response.status + ".");
+      problem.status = response.status;
+      throw problem;
+    }
+    const payload = await response.json().catch(function () { return {}; });
+    const answer = responseText(payload?.choices?.[0]?.message?.content);
+    if (!answer) throw new Error("The quantum study assistant did not return a usable answer.");
+    return { text: answer, toolsUsed: false, toolsUnavailable: true };
+  }
+
+  for (let round = 0; round < maxRounds; round++) {
+    const response = await requestGateway({
+      model: requestedModel,
+      messages: messages,
+      max_tokens: budget,
+      temperature: 0.2,
+      stream: false,
+      tools: QUANTUM_TOOL_DEFINITIONS,
+      tool_choice: "auto"
+    }, signal, requestedModel);
+
+    if (!response.ok) {
+      if (!toolCallUsed && [400, 404, 422, 501].includes(response.status)) {
+        return await plainFallback("the selected inference route did not accept function tools");
+      }
+      const problem = new Error("The study service returned HTTP " + response.status + ".");
+      problem.status = response.status;
+      throw problem;
+    }
+
+    const payload = await response.json().catch(function () { return {}; });
+    const assistant = payload?.choices?.[0]?.message;
+    if (!assistant) throw new Error("The quantum study assistant returned an invalid tool response.");
+    const proposedCalls = Array.isArray(assistant.tool_calls) ? assistant.tool_calls : [];
+    if (!proposedCalls.length) {
+      const answer = responseText(assistant.content);
+      if (!answer) throw new Error("The quantum study assistant did not return an answer.");
+      return { text: answer, toolsUsed: toolCallUsed, toolsUnavailable: false };
+    }
+    const calls = proposedCalls.slice(0, maxToolCalls - toolCallsMade);
+    if (!calls.length) break;
+    messages.push({
+      role: "assistant",
+      content: assistant.content == null ? null : assistant.content,
+      tool_calls: calls
+    });
+    toolCallUsed = true;
+
+    for (let index = 0; index < calls.length; index++) {
+      if (toolCallsMade >= maxToolCalls) break;
+      const call = calls[index];
+      const fn = call && call.function && typeof call.function === "object" ? call.function : {};
+      const id = String(call && call.id || ("quantum_call_" + round + "_" + index)).slice(0, 180);
+      let args = {};
+      try {
+        const parsed = JSON.parse(typeof fn.arguments === "string" ? fn.arguments : "{}");
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed;
+      } catch {
+        messages.push({
+          role: "tool", tool_call_id: id,
+          content: JSON.stringify({ ok: false, error: "Tool arguments were not valid JSON. Retry with a JSON object." })
+        });
+        toolCallsMade++;
+        continue;
+      }
+      let result;
+      try {
+        result = await executeQuantumTool(String(fn.name || ""), args, signal);
+      } catch (error) {
+        if (signal.aborted) throw error;
+        result = { ok: false, error: "The quantum tool could not complete this operation. Try a smaller circuit or retry shortly." };
+      }
+      let resultText = JSON.stringify(result);
+      if (resultText.length > 14000) resultText = resultText.slice(0, 14000);
+      messages.push({ role: "tool", tool_call_id: id, content: resultText });
+      toolCallsMade++;
+    }
+  }
+
+  messages.push({
+    role: "user",
+    content: "Provide the final answer now using only the tool results available in this conversation. Do not claim an unperformed qBraid job or hardware run, and do not invent missing numerical results."
+  });
+  const response = await requestGateway({
+    model: requestedModel, messages: messages, max_tokens: budget, temperature: 0.2, stream: false
+  }, signal, requestedModel);
+  if (!response.ok) {
+    const problem = new Error("The study service returned HTTP " + response.status + ".");
+    problem.status = response.status;
+    throw problem;
+  }
+  const payload = await response.json().catch(function () { return {}; });
+  const answer = responseText(payload?.choices?.[0]?.message?.content);
+  if (!answer) throw new Error("The quantum study assistant did not return its final answer.");
+  return { text: answer, toolsUsed: toolCallUsed, toolsUnavailable: false };
+}
+
 function waitForResponseDrain(res, signal) {
   if (signal.aborted) return Promise.reject(signal.reason || new Error("Client disconnected"));
   if (typeof res.once !== "function") return Promise.resolve();
@@ -603,7 +945,7 @@ export default async function handler(req, res) {
     if (req.headers["x-kaushalpath-status"] !== "1") return send(res, { error: "Use POST to ask the study guide a question." }, 405);
     return send(res, {
       ready: true,
-      features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true },
+      features: { liveSearch: true, readPublicUrls: true, imageAnalysis: true, quantumTools: true, qBraidCloud: Boolean(process.env.QBRAID_API_KEY) },
       message: "The study route is configured; actual response availability can vary with the current public inference service.",
       notice: "Avoid submitting personal or confidential information."
     });
@@ -718,8 +1060,21 @@ export default async function handler(req, res) {
   const wantsStream = body.stream === true;
   let streamStarted = false;
   try {
-    const gatewayPayload = { model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream };
     const gatewaySignal = AbortSignal.any([AbortSignal.timeout(38000), clientAbortController.signal]);
+    const quantumContext = [prompt].concat(history.map(function (item) { return item.content; })).join("\n");
+    if (!hasVisualInput && isQuantumIntent(quantumContext)) {
+      const quantumAnswer = await runQuantumToolAgent(messages, budget, requestedModel, gatewaySignal);
+      return send(res, {
+        text: quantumAnswer.text,
+        sources: web.sources,
+        liveSources: web.sources.length > 0,
+        mode: mode,
+        requestId: requestId,
+        quantumToolsUsed: quantumAnswer.toolsUsed,
+        quantumToolsAvailable: !quantumAnswer.toolsUnavailable
+      });
+    }
+    const gatewayPayload = { model: requestedModel, messages, max_tokens: budget, temperature: 0.2, stream: wantsStream };
     const response = await requestGateway(gatewayPayload, gatewaySignal, requestedModel);
     if (!response.ok) {
       let payload = {};
