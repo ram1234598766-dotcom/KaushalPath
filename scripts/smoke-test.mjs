@@ -34,6 +34,12 @@ assert.match(html, /KaushalPath/, "site brand should be present");
 
 assert.ok(html.includes('src="/quantum-study-lab.js" defer'), "the AI Study Guide should load the quantum lab");
 assert.ok(html.includes('id="quantumCircuitSelect"') && html.includes('id="quantumProbabilityResults"'), "the AI Study Guide should expose circuit selection and results");
+
+assert.ok(html.includes('id="quantumValidateQasm"'), "the quantum lab should expose explicit OpenQASM validation");
+assert.ok(html.includes('<summary>Edit or inspect OpenQASM 2.0 / 3.0</summary>') && !/id="quantumQasmOutput"[^>]*readonly/.test(html), "students should be able to edit their OpenQASM circuit");
+assert.ok(quantumStudyLab.includes("function parseOpenQasm(source)") && quantumStudyLab.includes("function validateOpenQasm(source)") && quantumStudyLab.includes("function simulateOpenQasm(source)"), "the quantum lab should validate and simulate student-edited OpenQASM");
+assert.ok(quantumStudyLab.includes('["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "ID", "RX", "RY", "RZ", "CX", "CZ", "SWAP"]'), "the custom circuit editor should support the documented gate set");
+
 assert.ok(html.includes('value="Quantum computing">Quantum computing'), "the AI Study Guide should support quantum computing as a chat subject");
 assert.ok(app.includes('"Quantum computing":["Qubits and superposition"'), "the dynamic AI subject menu should retain quantum computing and useful topic prompts");
 assert.ok(quantumStudyLab.includes("function simulateCircuit(id)") && quantumStudyLab.includes("OPENQASM 3.0;"), "the quantum lab should simulate circuits and emit OpenQASM 3.0");
