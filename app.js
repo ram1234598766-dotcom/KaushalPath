@@ -873,7 +873,7 @@ function isKeylessLiveDataQuestion(payload){
 }
 async function requestKeylessLiveData(payload,onText,signal,onStatus,onSources){
  if(onStatus)onStatus("Retrieving live data from a public provider…");
- const response=await fetch("https://kaushalpath.kaushalpath.workers.dev/api/study-guide",{
+ const response=await fetch("/api/study-guide",{
   method:"POST",
   headers:{"content-type":"application/json","accept":"application/json"},
   body:JSON.stringify(Object.assign({},payload,{stream:false,webSearch:false})),
