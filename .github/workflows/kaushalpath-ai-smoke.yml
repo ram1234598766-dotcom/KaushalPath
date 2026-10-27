@@ -16,6 +16,11 @@ on:
     paths:
       - "index.html"
       - "api/**"
+      - "app.js"
+      - "functions/**"
+      - "cloudflare-worker.mjs"
+      - "smart-system/**"
+      - "wrangler.toml"
       - "vercel.json"
       - "package.json"
       - "scripts/**"
