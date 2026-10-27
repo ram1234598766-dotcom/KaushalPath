@@ -5,6 +5,11 @@ import { runInNewContext } from "node:vm";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const keylessLiveDataStart = app.indexOf("async function requestKeylessLiveData");
+assert.notEqual(keylessLiveDataStart, -1, "the keyless live-data frontend fallback must exist");
+const keylessLiveDataBlock = app.slice(keylessLiveDataStart, keylessLiveDataStart + 700);
+assert.ok(keylessLiveDataBlock.includes('fetch("/api/study-guide",{'), "keyless live-data requests must use the current site's same-origin API");
+assert.ok(!keylessLiveDataBlock.includes("workers.dev"), "keyless live-data requests must not depend on cross-origin Worker CORS");
 const api = readFileSync(new URL("../api/study-guide.mjs", import.meta.url), "utf8");
 const aiSkillRegistry = readFileSync(new URL("../api/ai-skill-registry.mjs", import.meta.url), "utf8");
 const questionBank = readFileSync(new URL("../question-bank.js", import.meta.url), "utf8");
