@@ -91,35 +91,27 @@ export async function onRequest(context) {
     if (input && !hasUploads && typeof input.prompt === "string") {
       const directIntent = detectFreeLiveDataIntent(input.prompt);
       if (directIntent) {
-        let result;
+        let result = null;
         try {
-          // The adapter uses a portable AbortController timeout; avoid relying on Request.signal availability in Workers.
+          // Prefer a direct Worker request when it works; the adapter uses a bounded timeout.
           result = await executeFreeLiveDataTool(directIntent.name, directIntent.args);
-        } catch (error) {
-          return json(503, {
-            error: "The public live-data provider could not complete this request. Please retry shortly.",
-            provider: directIntent.name,
+        } catch {
+          result = null;
+        }
+        if (result && result.ok === true) {
+          const sourceUrl = String(result.sourceUrl || "");
+          return json(200, {
+            text: formatFreeLiveDataResponse(directIntent.name, result, directIntent.args),
+            sources: sourceUrl ? [{ title: String(result.provider || "Public live-data provider"), url: sourceUrl }] : [],
+            liveSources: Boolean(sourceUrl),
+            mode: "explain",
             requestId,
-            liveData: false
+            liveData: true
           }, { "X-Request-Id": requestId }, origin);
         }
-        if (!result || result.ok !== true) {
-          return json(503, {
-            error: String(result && result.error || "The live-data provider did not return usable data."),
-            provider: result && result.provider || directIntent.name,
-            requestId,
-            liveData: false
-          }, { "X-Request-Id": requestId }, origin);
-        }
-        const sourceUrl = String(result.sourceUrl || "");
-        return json(200, {
-          text: formatFreeLiveDataResponse(directIntent.name, result, directIntent.args),
-          sources: sourceUrl ? [{ title: String(result.provider || "Public live-data provider"), url: sourceUrl }] : [],
-          liveSources: Boolean(sourceUrl),
-          mode: "explain",
-          requestId,
-          liveData: true
-        }, { "X-Request-Id": requestId }, origin);
+        // The cloned request body above leaves the original stream untouched. If
+        // Worker egress to the public provider fails, fall through to the existing
+        // Vercel API, whose same-purpose keyless provider path has been verified.
       }
     }
   }
