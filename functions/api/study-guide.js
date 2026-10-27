@@ -93,7 +93,8 @@ export async function onRequest(context) {
       if (directIntent) {
         let result;
         try {
-          result = await executeFreeLiveDataTool(directIntent.name, directIntent.args, request.signal);
+          // The adapter adds its own bounded timeout; avoid relying on Request.signal availability in Workers.
+          result = await executeFreeLiveDataTool(directIntent.name, directIntent.args);
         } catch (error) {
           return json(503, {
             error: "The public live-data provider could not complete this request. Please retry shortly.",
