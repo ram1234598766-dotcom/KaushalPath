@@ -88,8 +88,9 @@ export async function onRequest(context) {
       (Array.isArray(input.urls) && input.urls.length) ||
       (Array.isArray(input.files) && input.files.length)
     ));
-    if (input && !hasUploads && typeof input.prompt === "string") {
-      const directIntent = detectFreeLiveDataIntent(input.prompt);
+    const prompt = input && [input.prompt, input.userPrompt, input.searchQuery].find((value) => typeof value === "string" && value.trim());
+    if (input && !hasUploads && typeof prompt === "string") {
+      const directIntent = detectFreeLiveDataIntent(prompt);
       if (directIntent) {
         let result;
         try {
