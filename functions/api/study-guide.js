@@ -79,7 +79,7 @@ export async function onRequest(context) {
   // For clear direct live-data questions, call the no-key public providers in
   // the Worker itself. This keeps current weather/FX/news/etc. independent from
   // the Vercel AI gateway and provides a cross-origin fallback to the Vercel UI.
-  if (method === "POST" && /application\\/json/i.test(request.headers.get("content-type") || "")) {
+  if (method === "POST" && /application\/json/i.test(request.headers.get("content-type") || "")) {
     let input = null;
     try { input = await request.clone().json(); } catch {}
     const hasUploads = Boolean(input && (
