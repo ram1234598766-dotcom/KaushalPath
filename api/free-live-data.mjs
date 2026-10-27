@@ -95,7 +95,12 @@ function cached(key, ttlMs, loader) {
 
 async function readPublicText(url, accept, signal, maxChars) {
   const deadline = AbortSignal.timeout(DEFAULT_TIMEOUT_MS);
-  const requestSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
+  // Some runtimes (including Workers without the request-signal compatibility flag)
+  // can provide no request signal. Only combine actual AbortSignal objects.
+  const usableSignal = signal && typeof signal.aborted === "boolean" && typeof signal.addEventListener === "function"
+    ? signal
+    : null;
+  const requestSignal = usableSignal ? AbortSignal.any([usableSignal, deadline]) : deadline;
   const response = await fetch(url, {
     method: "GET",
     headers: { Accept: accept || "application/json" },
