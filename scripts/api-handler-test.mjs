@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import handler, { createPinnedLookup, executeAITool, executeQuantumTool, isQuantumIntent, QUANTUM_TOOL_DEFINITIONS, remoteQasmFingerprint, shouldAutoBrowse, getToolDefinitionsForQuery } from "../api/study-guide.mjs";
 import { AGENTIC_TOOL_DEFINITIONS, executeAgenticTool } from "../api/agentic-tools.mjs";
+import { onRequest as handleWorkerStudyGuide } from "../functions/api/study-guide.js";
 import { FREE_LIVE_DATA_TOOL_DEFINITIONS, detectFreeLiveDataIntent, formatFreeLiveDataResponse } from "../api/free-live-data.mjs";
 import { AI_SKILLS, AI_SKILL_COUNT, selectActiveSkills, selectToolDomains } from "../api/ai-skill-registry.mjs";
 import { zipSync, strToU8 } from "fflate";
@@ -74,6 +75,7 @@ globalThis.fetch = async function (input) {
   liveDataFetchUrls.push(url);
   let payload;
   if (url.startsWith("https://geocoding-api.open-meteo.com/")) {
+    if (url.includes("name=Pune")) throw new TypeError("simulated Worker provider egress failure");
     payload = { results: [{ name: "Hyderabad", admin1: "Telangana", country: "India", latitude: 17.385, longitude: 78.4867 }] };
   } else if (url.startsWith("https://api.open-meteo.com/v1/forecast")) {
     payload = {
@@ -85,6 +87,13 @@ globalThis.fetch = async function (input) {
     };
   } else if (url === "https://api.frankfurter.dev/v2/rate/EUR/JPY") {
     payload = { date: "2026-10-23", base: "EUR", quote: "JPY", rate: 176.42 };
+  } else if (url === "https://kaushal-path.vercel.app/api/study-guide") {
+    return new Response(JSON.stringify({
+      text: "Live-data fallback answered by Vercel.",
+      sources: [{ title: "Open-Meteo", url: "https://open-meteo.com/" }],
+      liveSources: true,
+      liveData: true
+    }), { status: 200, headers: { "content-type": "application/json" } });
   } else {
     throw new Error("Unexpected test URL: " + url);
   }
@@ -105,6 +114,18 @@ try {
   const missingWorkerSignalTest = await executeAITool("live_weather", { location: "Pune" }, {});
   assert.equal(missingWorkerSignalTest.ok, true, "live-data tools should use their timeout signal when a runtime supplies no valid request AbortSignal");
   assert.equal(liveDataFetchUrls.length, 4, "mocked live-data tests should make two weather, one FX and one extra geocoding request for the signal compatibility check");
+
+  const fallbackRequest = new Request("https://kaushalpath.kaushalpath.workers.dev/api/study-guide", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ prompt: "What is the current weather in Pune?", webSearch: false, mode: "explain", stream: false })
+  });
+  const fallbackResponse = await handleWorkerStudyGuide({ request: fallbackRequest, env: {} });
+  const fallbackPayload = await fallbackResponse.json();
+  assert.equal(fallbackResponse.status, 200, "Worker should fall back to Vercel when a keyless public provider fails");
+  assert.equal(fallbackPayload.liveData, true, "the fallback should return the provider result, not a model error");
+  assert.match(fallbackPayload.text, /Live-data fallback answered by Vercel/);
+  assert.ok(liveDataFetchUrls.includes("https://kaushal-path.vercel.app/api/study-guide"), "provider failure should trigger the existing Vercel API as a fallback");
 } finally {
   globalThis.fetch = originalFetchForLiveData;
 }
