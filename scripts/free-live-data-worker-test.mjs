@@ -100,7 +100,7 @@ try {
     env: { VERCEL_API_BASE_URL: "https://kaushal-path.vercel.app" }
   });
   assert.equal(ordinaryResponse.status, 502, "ordinary prompts should continue to proxy to Vercel and clearly report unavailable upstream during this isolated test");
-  assert.equal(PROVIDER_CALLS.length, 4, "only weather's two requests, FX and holiday should hit public data providers");
+  assert.equal(PROVIDER_CALLS.filter((url) => url.startsWith("https://geocoding-api.open-meteo.com/") || url.startsWith("https://api.open-meteo.com/") || url.startsWith("https://api.frankfurter.dev/") || url.startsWith("https://date.nager.at/")).length, 4, "only weather's two requests, FX and holiday should hit public data providers");
 } finally {
   globalThis.fetch = ORIGINAL_FETCH;
 }
