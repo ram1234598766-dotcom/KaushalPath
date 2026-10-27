@@ -94,32 +94,46 @@ function cached(key, ttlMs, loader) {
 }
 
 async function readPublicText(url, accept, signal, maxChars) {
-  const deadline = AbortSignal.timeout(DEFAULT_TIMEOUT_MS);
-  // Some runtimes (including Workers without the request-signal compatibility flag)
-  // can provide no request signal. Only combine actual AbortSignal objects.
-  const usableSignal = signal && typeof signal.aborted === "boolean" && typeof signal.addEventListener === "function"
-    ? signal
-    : null;
-  const requestSignal = usableSignal ? AbortSignal.any([usableSignal, deadline]) : deadline;
-  const response = await fetch(url, {
-    method: "GET",
-    headers: { Accept: accept || "application/json" },
-    redirect: "error",
-    signal: requestSignal
-  });
-  if (response.status === 204) {
-    const error = new Error("Provider returned no records for this request.");
-    error.status = 204;
-    throw error;
+  // Use portable AbortController + setTimeout rather than AbortSignal.timeout().
+  // Some runtimes require an active request context to create timeout signals.
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const usableSignal = signal &&
+    typeof signal.aborted === "boolean" &&
+    typeof signal.addEventListener === "function" &&
+    typeof signal.removeEventListener === "function"
+      ? signal
+      : null;
+  const abortFromParent = () => controller.abort();
+  if (usableSignal) {
+    if (usableSignal.aborted) controller.abort();
+    else usableSignal.addEventListener("abort", abortFromParent, { once: true });
   }
-  if (!response.ok) {
-    const error = new Error("Provider returned HTTP " + response.status);
-    error.status = response.status;
-    throw error;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { Accept: accept || "application/json" },
+      redirect: "error",
+      signal: controller.signal
+    });
+    if (response.status === 204) {
+      const error = new Error("Provider returned no records for this request.");
+      error.status = 204;
+      throw error;
+    }
+    if (!response.ok) {
+      const error = new Error("Provider returned HTTP " + response.status);
+      error.status = response.status;
+      throw error;
+    }
+    const content = await response.text();
+    if (content.length > (maxChars || 1500000)) throw new Error("Provider response exceeded the safety size limit.");
+    return content;
+  } finally {
+    clearTimeout(timeoutHandle);
+    if (usableSignal) usableSignal.removeEventListener("abort", abortFromParent);
   }
-  const content = await response.text();
-  if (content.length > (maxChars || 1500000)) throw new Error("Provider response exceeded the safety size limit.");
-  return content;
 }
 
 async function readPublicJson(url, provider, signal, ttlMs) {
