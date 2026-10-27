@@ -102,7 +102,9 @@ try {
   assert.equal(liveExchangeTest.date, "2026-10-23");
   const invalidCurrencyTest = await executeAITool("live_exchange_rate", { baseCurrency: "EURO", quoteCurrency: "INR" });
   assert.equal(invalidCurrencyTest.ok, false, "currency codes should be validated before network access");
-  assert.equal(liveDataFetchUrls.length, 3, "mocked live data tests should make two weather and one FX request only");
+  const missingWorkerSignalTest = await executeAITool("live_weather", { location: "Pune" }, {});
+  assert.equal(missingWorkerSignalTest.ok, true, "live-data tools should use their timeout signal when a runtime supplies no valid request AbortSignal");
+  assert.equal(liveDataFetchUrls.length, 4, "mocked live-data tests should make two weather, one FX and one extra geocoding request for the signal compatibility check");
 } finally {
   globalThis.fetch = originalFetchForLiveData;
 }
