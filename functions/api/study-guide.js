@@ -93,7 +93,7 @@ export async function onRequest(context) {
       if (directIntent) {
         let result;
         try {
-          // The adapter adds its own bounded timeout; avoid relying on Request.signal availability in Workers.
+          // The adapter uses a portable AbortController timeout; avoid relying on Request.signal availability in Workers.
           result = await executeFreeLiveDataTool(directIntent.name, directIntent.args);
         } catch (error) {
           return json(503, {
